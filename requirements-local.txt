@@ -1,0 +1,5 @@
+# Optional: enables EMBEDDING_PROVIDER=local (free embeddings) and
+# RERANKER_PROVIDER=cross_encoder (free reranking) -- both use
+# sentence-transformers, so one install covers both.
+-r requirements.txt
+sentence-transformers>=3.2.0

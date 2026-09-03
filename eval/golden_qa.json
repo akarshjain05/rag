@@ -1,0 +1,571 @@
+[
+  {
+    "id": "L01",
+    "question": "How many vacation days do full-time employees accrue per month?",
+    "golden_answer": "1.5 days per month.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "vacation_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L02",
+    "question": "What is the maximum number of vacation days that can carry over into the next year?",
+    "golden_answer": "10 days.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "vacation_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L03",
+    "question": "How far in advance must vacation requests be submitted?",
+    "golden_answer": "At least two weeks in advance, through the HR portal.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "vacation_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L04",
+    "question": "What vacation accrual rate applies to part-time employees who work fewer than 30 hours a week?",
+    "golden_answer": "0.75 days per month.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "vacation_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L05",
+    "question": "How many days per week can employees work remotely?",
+    "golden_answer": "Up to three days per week, with manager approval.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "remote_work_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L06",
+    "question": "What are the core hours for remote employees?",
+    "golden_answer": "10am-4pm in the employee's local timezone.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "remote_work_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L07",
+    "question": "What is the minimum internet speed required for remote work?",
+    "golden_answer": "25 Mbps.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "remote_work_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L08",
+    "question": "How much notice is required before working internationally for more than 30 consecutive days?",
+    "golden_answer": "60 days.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "remote_work_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L09",
+    "question": "How often must passwords be rotated?",
+    "golden_answer": "Every 90 days.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "security_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L10",
+    "question": "Within what time frame must a lost or stolen device be reported?",
+    "golden_answer": "Within 4 hours.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "security_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L11",
+    "question": "What is the minimum password length required?",
+    "golden_answer": "12 characters.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "security_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L12",
+    "question": "Within what time frame must suspected security incidents be reported?",
+    "golden_answer": "Within 1 hour of discovery.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "security_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L13",
+    "question": "Above what dollar amount is a receipt required for an expense?",
+    "golden_answer": "$50 -- receipts are required for expenses over $50.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L14",
+    "question": "What is the domestic meal per diem for business travel?",
+    "golden_answer": "$75 per day.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L15",
+    "question": "How long does expense reimbursement take once approved?",
+    "golden_answer": "Within two weeks, through the finance portal.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L16",
+    "question": "When is security training given to new hires during onboarding?",
+    "golden_answer": "On day two.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "onboarding.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L17",
+    "question": "When does the structured check-in with a new hire's manager happen?",
+    "golden_answer": "At the 90-day mark.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "onboarding.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L18",
+    "question": "How long do departing employees have to return company equipment?",
+    "golden_answer": "5 business days.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "offboarding.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L19",
+    "question": "How quickly is system access revoked after an employee's last day?",
+    "golden_answer": "Within 24 hours.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "offboarding.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L20",
+    "question": "What percentage of the employee's health insurance premium does the company cover?",
+    "golden_answer": "80%.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "benefits.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L21",
+    "question": "What is the company's 401k matching rate?",
+    "golden_answer": "The company matches 50% of employee contributions, up to 6% of salary contributed -- a maximum company match of 3% of salary.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "benefits.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L22",
+    "question": "How many weeks of paid parental leave do primary caregivers receive?",
+    "golden_answer": "16 weeks.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "benefits.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L23",
+    "question": "How many times per year are formal performance reviews conducted?",
+    "golden_answer": "Twice a year, in June and December.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "performance_reviews.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "L24",
+    "question": "How long is a Performance Improvement Plan (PIP)?",
+    "golden_answer": "60 days, with check-ins at the 30-day and 60-day marks.",
+    "category": "lookup",
+    "expected_source_documents": [
+      "performance_reviews.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M01",
+    "question": "Does the $500 home office stipend for remote employees need a receipt, and how is it reimbursed?",
+    "golden_answer": "Yes. It's reimbursed through the same finance portal process as any other expense, and since $500 is over the $50 receipt threshold, a receipt is required.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "remote_work_policy.md",
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M02",
+    "question": "If an employee leaves the company, what happens to their unused vacation days?",
+    "golden_answer": "Unused accrued vacation, up to the 10-day carryover cap, is paid out in the employee's final paycheck.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "vacation_policy.md",
+      "offboarding.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M03",
+    "question": "Does the security training new hires receive on day two of onboarding cover the same requirements described in the security policy?",
+    "golden_answer": "Yes -- onboarding day-two security training draws directly from the security policy, which covers 90-day password rotation, a 12-character minimum, and mandatory MFA.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "onboarding.md",
+      "security_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M04",
+    "question": "Is a new hire's laptop encrypted before or after it's issued to them?",
+    "golden_answer": "Before. Full-disk encryption must be enabled before a laptop is issued, and onboarding has equipment ready before the new hire's first day.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "security_policy.md",
+      "onboarding.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M05",
+    "question": "How quickly is access revoked when an employee leaves, and is that timeline related to how the company handles security incidents?",
+    "golden_answer": "Access is revoked within 24 hours of the employee's last day -- offboarding explicitly follows the same urgency as a security incident.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "offboarding.md",
+      "security_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M06",
+    "question": "How is the monthly wellness stipend submitted, and would it need a receipt attached?",
+    "golden_answer": "It's submitted the same way as any other expense. At $50/month it sits at, not over, the $50 receipt threshold, so a receipt would not be required.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "benefits.md",
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M07",
+    "question": "If an employee leaves the company partway through a month, do their health benefits end immediately?",
+    "golden_answer": "No -- health benefits continue through the end of the month in which the employee departs.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "benefits.md",
+      "offboarding.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M08",
+    "question": "What security requirements apply specifically when working remotely?",
+    "golden_answer": "VPN use when accessing internal systems, and full-disk encryption on any device used for work.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "remote_work_policy.md",
+      "security_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M09",
+    "question": "Would the $500 home office equipment stipend ever require pre-approval before an employee spends it?",
+    "golden_answer": "No -- pre-approval is only required for expenses over $500, and the stipend is exactly $500, not over it.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "remote_work_policy.md",
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M10",
+    "question": "Do fully remote new hires still need a dedicated workspace and minimum internet speed set up before their first day, even though IT handles their onboarding accounts and equipment?",
+    "golden_answer": "Yes -- the home office requirements (dedicated workspace, 25 Mbps minimum) apply to remote employees regardless of onboarding's account/equipment provisioning, which is a separate process.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "remote_work_policy.md",
+      "onboarding.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M11",
+    "question": "Is the vacation payout on termination processed through the same finance portal used for expense reimbursements?",
+    "golden_answer": "No -- the vacation payout is included in the employee's final paycheck through payroll, not the finance portal, which is specifically for expense reimbursements.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "vacation_policy.md",
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M12",
+    "question": "If an employee's device is lost while they're traveling on a business trip, does the incident reporting deadline change based on how the trip is expensed?",
+    "golden_answer": "No -- the 4-hour lost-device reporting window is unrelated to expense reimbursement or per diem; they are separate processes.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "security_policy.md",
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M13",
+    "question": "Does the 90-day onboarding check-in count as one of the twice-yearly formal performance reviews?",
+    "golden_answer": "No -- the 90-day check-in is a ramp-up and goal-setting conversation with a manager, separate from the formal June/December performance review cycle.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "onboarding.md",
+      "performance_reviews.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M14",
+    "question": "Are the required harassment prevention and code of conduct trainings from onboarding covered by the same security policy referenced for day-two training?",
+    "golden_answer": "No -- day-two security training draws from the security policy, but harassment prevention and code of conduct training (required within 30 days) are separate trainings not derived from the security policy.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "onboarding.md",
+      "security_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M15",
+    "question": "If an employee wants tuition reimbursement for a $3,000 course, do they need department-head pre-approval like larger general expenses, or manager pre-approval?",
+    "golden_answer": "Manager pre-approval specifically -- tuition reimbursement requires manager pre-approval before the course begins, distinct from the department-head pre-approval required for general expenses over $500.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "benefits.md",
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "M16",
+    "question": "If a Performance Improvement Plan starts right after the June review, would it be finished before the December review cycle where promotions are considered?",
+    "golden_answer": "Yes -- a PIP is a 60-day process, so one starting shortly after the June review would conclude around August or September, well before the December review cycle.",
+    "category": "multi_hop",
+    "expected_source_documents": [
+      "performance_reviews.md"
+    ],
+    "notes": "Technically resolvable from performance_reviews.md alone via date arithmetic, but treated as multi-hop reasoning across the two review-cycle facts it connects."
+  },
+  {
+    "id": "U01",
+    "question": "What is the company's parking policy?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "U02",
+    "question": "Can employees bring pets to the office?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "U03",
+    "question": "What notice period must an employee give before resigning?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": "Offboarding describes the company's process after departure, not what notice the employee owes."
+  },
+  {
+    "id": "U04",
+    "question": "Does the company offer a signing bonus for new hires?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "U05",
+    "question": "What is the company's dress code?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "U06",
+    "question": "Are there paid company holidays in addition to vacation days?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "U07",
+    "question": "Does parental leave get paused if an employee is also on a Performance Improvement Plan at the same time?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "U08",
+    "question": "What happens to unused sick days at the end of the year?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": "The corpus never mentions sick days as a category separate from vacation."
+  },
+  {
+    "id": "U09",
+    "question": "Is there a cap on remote days per month, in addition to the 3-per-week limit?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": "Only a weekly limit is specified."
+  },
+  {
+    "id": "A01",
+    "question": "What is the vacation policy?",
+    "golden_answer": "Underspecified -- could mean accrual rate (1.5 days/month), carryover cap (10 days), the request process (2 weeks notice), or the termination payout. A good answer should cover the main facets rather than guess which one was meant.",
+    "category": "ambiguous",
+    "expected_source_documents": [
+      "vacation_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "A02",
+    "question": "How much does the company pay toward retirement?",
+    "golden_answer": "Ambiguous between the match rate (50% of contributions) and the effective cap (3% of salary, since the match applies up to 6% of salary contributed).",
+    "category": "ambiguous",
+    "expected_source_documents": [
+      "benefits.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "A03",
+    "question": "When is the review?",
+    "golden_answer": "Ambiguous -- there are two formal review cycles (June and December) and the question doesn't specify which, or whether it means the review meeting date or the self-assessment deadline one week prior.",
+    "category": "ambiguous",
+    "expected_source_documents": [
+      "performance_reviews.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "A04",
+    "question": "How long does reimbursement take?",
+    "golden_answer": "The stated processing time is two weeks once approved, but larger expenses (over $500) also need pre-approval first, which has no fixed timeline -- so total time to reimbursement is conditional, not a single fixed number.",
+    "category": "ambiguous",
+    "expected_source_documents": [
+      "expense_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "A05",
+    "question": "What's required before I can work remotely?",
+    "golden_answer": "Ambiguous -- could mean the ongoing home-office requirements (workspace, internet speed), the approval step (manager approval), or, for international remote work specifically, the HR/Legal approval and 60-day notice.",
+    "category": "ambiguous",
+    "expected_source_documents": [
+      "remote_work_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "A06",
+    "question": "How soon do I get paid after leaving the company?",
+    "golden_answer": "Conditional, not a fixed answer -- the final paycheck (including vacation payout) is issued on the regular payroll schedule, unless state law requires immediate payment, in which case it's paid sooner.",
+    "category": "ambiguous",
+    "expected_source_documents": [
+      "offboarding.md",
+      "vacation_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "A07",
+    "question": "Is a $500 expense reimbursable?",
+    "golden_answer": "Ambiguous on two counts: general expenses over $500 need pre-approval but a $500 expense is not over $500, so no pre-approval is triggered either way; separately, $500 is also the specific amount of the remote-work home office stipend, so the question may be about that stipend rather than a general expense.",
+    "category": "ambiguous",
+    "expected_source_documents": [
+      "expense_policy.md",
+      "remote_work_policy.md"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "A08",
+    "question": "What training do I need to do?",
+    "golden_answer": "Underspecified -- onboarding alone lists three required trainings (security awareness, code of conduct, harassment prevention) at different points in the first 30 days; the question doesn't say which is meant or over what timeframe.",
+    "category": "ambiguous",
+    "expected_source_documents": [
+      "onboarding.md"
+    ],
+    "notes": ""
+  }
+]
