@@ -398,11 +398,7 @@ calls for a full run, not 114 × (number of claims per answer).
 Documented here rather than hidden, since knowing the edges of a system is
 part of building it honestly:
 
-- **PDF headings**: `pypdf`'s text extraction exposes no font size/weight, so
-  PDF chunks intentionally get no synthetic `section_heading` — a text-only
-  heading heuristic would misfire often enough to silently corrupt
-  structure-aware chunking. Page number is the reliable structural signal
-  for PDFs instead.
+- **PDF headings**: We use `pymupdf` or `pdfplumber` to synthesize markdown headings based on font size and alphanumeric density. This captures document structure without fragmenting Table of Contents entries or page numbers, though it may miss semantic headings that are identically sized to body text.
 - **Excel (.xlsx) Table Splitting**: Spreadsheets are loaded one section per
   sheet and serialized as markdown tables. The `RecursiveCharacterTextSplitter`
   will cut a large markdown table mid-row-block, meaning later chunks lose
