@@ -8,10 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY apps/api/requirements-image.txt apps/api/requirements.txt ./
+COPY requirements-image.txt requirements.txt ./
 RUN pip install --no-cache-dir -r requirements-image.txt
 
-COPY apps/api/src ./src
+COPY src ./src
 
 RUN mkdir -p /app/data/chroma /app/data/images \
     && useradd --create-home --uid 1000 appuser \

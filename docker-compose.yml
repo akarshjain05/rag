@@ -13,9 +13,7 @@ services:
     restart: unless-stopped
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
+    build: apps/api
     ports:
       # Host port is configurable via .env (API_PORT) -- handy if 8000 is
       # already taken by another project running locally.
@@ -48,9 +46,7 @@ services:
   # up` so a reviewer can start asking real questions immediately, with no
   # manual ingest step. Safe to re-run (checks first, see scripts/seed_corpus.py).
   seed:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
+    build: apps/api
     command: ["python", "scripts/seed_corpus.py"]
     volumes:
       - ./scripts:/app/scripts
@@ -63,9 +59,7 @@ services:
         condition: service_healthy
 
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.web
+    build: apps/web
     ports:
       - "${FRONTEND_PORT:-5173}:80"
     depends_on:
