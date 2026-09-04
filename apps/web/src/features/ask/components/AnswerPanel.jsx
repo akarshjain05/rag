@@ -8,7 +8,7 @@ const MODE_LABELS = {
 // Splits "...accrues monthly [1]. Remote work needs approval [2]." into
 // alternating text/citation segments so each [N] can be rendered as its
 // own clickable element instead of dead text.
-function splitOnCitations(text) {
+export function splitOnCitations(text) {
   const parts = [];
   const re = /\[(\d+)\]/g;
   let lastIndex = 0;

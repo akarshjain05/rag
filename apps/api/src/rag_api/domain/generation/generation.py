@@ -205,6 +205,7 @@ class AnswerGenerator:
         else:
             user_prompt = user_prompt_text
 
+        print(f"\n=== GENERATOR PROMPT ===\n{user_prompt}\n=== HISTORY ===\n{history}\n")
         raw_answer = self.llm_client.generate(SYSTEM_PROMPT, user_prompt, history=history)  # type: ignore[union-attr]
         valid, invalid = _extract_and_validate_citations(raw_answer, len(chunks))
 

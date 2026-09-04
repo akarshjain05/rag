@@ -7,17 +7,25 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "echo 'No lint configured yet' && exit 0",
-    "test": "echo 'No tests configured yet' && exit 0",
-    "format": "echo 'No format configured yet' && exit 0"
+    "lint": "eslint .",
+    "test": "vitest run",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@vitejs/plugin-react": "^4.3.2",
-    "vite": "^5.4.10"
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.9.6",
+    "vite": "^5.4.10",
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=18.0.0"

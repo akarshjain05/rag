@@ -19,5 +19,6 @@ def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> st
         llm_history.append({"role": "assistant", "content": turn.assistant})
         
     standalone_query = llm_client.generate(system, query, history=llm_history)
+    print(f"\n=== CONDENSED QUERY ===\n{standalone_query}\n")
     
     return standalone_query.strip()

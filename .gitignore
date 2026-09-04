@@ -19,3 +19,7 @@ htmlcov/
 .ruff_cache/
 
 .DS_Store
+apps/web/node_modules/
+test_*.py
+fix_*.py
+apps/web/dist/
