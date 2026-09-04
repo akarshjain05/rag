@@ -68,7 +68,6 @@ export async function ingest(files) {
   
   const res = await fetch("/v1/ingest", {
     method: "POST",
-    signal,
     body: formData,
   });
   
