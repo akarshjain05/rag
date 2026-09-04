@@ -47,7 +47,7 @@ export default function App() {
     if (!window.confirm(`Are you sure you want to delete "${sourceDocument}"?`)) return;
     try {
       await deleteDocument(sourceDocument);
-      loadDocs(); // refresh list
+      refreshIndexState(); // refresh list
     } catch (err) {
       alert(`Error deleting document: ${err.message}`);
     }
