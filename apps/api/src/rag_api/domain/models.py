@@ -122,6 +122,7 @@ class IngestReport:
     chunking_strategy: str
     chunks_created: int = 0
     chunks_inserted: int = 0
+    chunks_skipped_low_quality: int = 0
     duplicates_skipped: int = 0
     duplicate_of: list[str] = field(default_factory=list)
     error: str | None = None

@@ -29,6 +29,13 @@ _MD_HEADERS = [("#", "h1"), ("##", "h2"), ("###", "h3"), ("####", "h4"), ("#####
 _HEADER_LEVEL_KEYS = [k for _, k in _MD_HEADERS]
 
 
+def _is_low_quality_chunk(text: str, min_chars: int = 20, min_alpha_ratio: float = 0.2) -> bool:
+    stripped = text.strip()
+    if len(stripped) < min_chars:
+        return True
+    alpha = sum(c.isalpha() for c in stripped)
+    return (alpha / len(stripped)) < min_alpha_ratio
+
 def chunk_document(
     doc: LoadedDocument,
     strategy: ChunkingStrategy,
@@ -41,7 +48,7 @@ def chunk_document(
     semantic_max_chunk_chars: int = 1500,
     semantic_min_chunk_chars: int = 200,
     embedding_client: EmbeddingClient | None = None,
-) -> list[Chunk]:
+) -> tuple[list[Chunk], int]:
     if strategy == ChunkingStrategy.SEMANTIC and embedding_client is None:
         raise ValueError("semantic chunking requires an embedding_client")
 
@@ -67,11 +74,12 @@ def chunk_document(
         )
 
     chunks: list[Chunk] = []
+    skipped_low_quality = 0
     idx = 0
     img_map = {img.image_hash: img for img in getattr(doc, 'images', [])}
 
     def process_text_segment(text: str, page_number: int | None, extraction_method: str = "native"):
-        nonlocal idx
+        nonlocal idx, skipped_low_quality
         # Pre-split on image sentinels
         # Format: <!--IMG:{image_hash}-->\n\n{derived_text}\n\n<!--/IMG-->
         pattern = r"<!--IMG:(.*?)-->.*?<!--/IMG-->"
@@ -90,6 +98,9 @@ def chunk_document(
             if prose.strip():
                 for sub_text, heading in split_one(prose):
                     if not sub_text.strip():
+                        continue
+                    if _is_low_quality_chunk(sub_text):
+                        skipped_low_quality += 1
                         continue
                     enriched_text = f"Document: {doc.source_file}\nSection: {heading or 'None'}\n\n{sub_text.strip()}"
                     chunks.append(Chunk(
@@ -131,7 +142,7 @@ def chunk_document(
     else:
         process_text_segment(doc.text, None)
 
-    return chunks
+    return chunks, skipped_low_quality
 
 
 # --------------------------------------------------------------------------

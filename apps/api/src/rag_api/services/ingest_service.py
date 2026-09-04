@@ -64,7 +64,7 @@ class IngestionPipeline:
         except Exception as exc:  # noqa: BLE001 - reported, not raised, so batches survive one bad file
             return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=str(exc))
 
-        chunks = chunk_document(
+        chunks, skipped_low_quality = chunk_document(
             doc,
             strategy,
             fixed_chunk_size=self.fixed_chunk_size,
@@ -76,7 +76,12 @@ class IngestionPipeline:
             embedding_client=self.embedding_client if strategy in (ChunkingStrategy.SEMANTIC, ChunkingStrategy.STRUCTURE_AWARE) else None,
         )
 
-        report = IngestReport(source_file=doc.source_file, chunking_strategy=strategy.value, chunks_created=len(chunks))
+        report = IngestReport(
+            source_file=doc.source_file,
+            chunking_strategy=strategy.value,
+            chunks_created=len(chunks),
+            chunks_skipped_low_quality=skipped_low_quality
+        )
         if not chunks:
             return report
 
