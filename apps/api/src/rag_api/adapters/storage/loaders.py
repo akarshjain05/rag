@@ -534,25 +534,33 @@ def _load_pdf_pymupdf(path: Path, settings) -> LoadedDocument:
         elements = []
         for b in blocks:
             if b.get("type") == 0:
+                prefix = ""
+                if b.get("lines") and b["lines"][0].get("spans"):
+                    first_span = b["lines"][0]["spans"][0]
+                    size = first_span.get("size", 12.0)
+                    flags = first_span.get("flags", 0)
+                    is_bold = bool(flags & 2 ** 4)
+                    ratio = size / median_size if median_size else 1.0
+                    
+                    if ratio > settings.pdf_heading_font_ratio or is_bold:
+                        if ratio > 1.5: level = 1
+                        elif ratio > 1.25: level = 2
+                        else: level = 3
+                        level = min(level, settings.pdf_max_heading_levels)
+                        prefix = "#" * level + " "
+                        
+                lines_text = []
                 for l in b.get("lines", []):
+                    span_texts = []
                     for s in l.get("spans", []):
-                        text = s.get("text", "").strip()
-                        if not text: continue
-                        size = s.get("size", 12.0)
-                        flags = s.get("flags", 0)
-                        
-                        is_bold = bool(flags & 2 ** 4)
-                        ratio = size / median_size if median_size else 1.0
-                        
-                        prefix = ""
-                        if ratio > settings.pdf_heading_font_ratio or is_bold:
-                            if ratio > 1.5: level = 1
-                            elif ratio > 1.25: level = 2
-                            else: level = 3
-                            level = min(level, settings.pdf_max_heading_levels)
-                            prefix = "#" * level + " "
-                            
-                        elements.append(prefix + text)
+                        span_texts.append(s.get("text", ""))
+                    line_text = "".join(span_texts).strip()
+                    if line_text:
+                        lines_text.append(line_text)
+                
+                block_text = "\n".join(lines_text).strip()
+                if block_text:
+                    elements.append(prefix + block_text)
                         
         page_text_content = "\n\n".join(elements).strip()
         if page_text_content:
