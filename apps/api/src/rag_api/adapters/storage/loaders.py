@@ -199,8 +199,8 @@ def _load_pdf(path: Path, llm_client=None, image_store=None) -> LoadedDocument:
     settings = get_settings()
     if settings.image_indexing_enabled:
         return _load_pdf_pypdfium2(path, settings, llm_client, image_store)
-    if settings.pdf_extraction_backend == "pdfplumber":
-        return _load_pdf_pdfplumber(path, settings)
+    if settings.pdf_extraction_backend == "pdfplumber" or settings.pdf_extraction_backend == "pymupdf":
+        return _load_pdf_pymupdf(path, settings)
     elif settings.pdf_extraction_backend == "pymupdf":
         raise NotImplementedError("PyMuPDF extraction not yet implemented.")
     else:
@@ -501,3 +501,66 @@ def _load_pdf_pypdfium2(path: Path, settings, llm_client, image_store) -> Loaded
             
     full_text = "\n\n".join(p.text for p in pages)
     return LoadedDocument(source_file=path.name, format="pdf", text=full_text, pages=pages, images=extracted_images)
+
+
+def _load_pdf_pymupdf(path: Path, settings) -> LoadedDocument:
+    import fitz  # PyMuPDF
+    from rag_api.domain.models import PageText
+    
+    pages = []
+    doc = fitz.open(str(path))
+    
+    for i in range(len(doc)):
+        page = doc[i]
+        
+        # 1) Get text using PyMuPDF dict extraction to grab fonts
+        text_content = ""
+        blocks = page.get_text("dict").get("blocks", [])
+        
+        # Pass 1: compute doc-wide median font size for this page
+        all_sizes = []
+        for b in blocks:
+            if b.get("type") == 0:  # text block
+                for l in b.get("lines", []):
+                    for s in l.get("spans", []):
+                        if s.get("size"):
+                            all_sizes.append(s["size"])
+        
+        median_size = 12.0
+        if all_sizes:
+            all_sizes.sort()
+            median_size = all_sizes[len(all_sizes) // 2]
+            
+        elements = []
+        for b in blocks:
+            if b.get("type") == 0:
+                for l in b.get("lines", []):
+                    for s in l.get("spans", []):
+                        text = s.get("text", "").strip()
+                        if not text: continue
+                        size = s.get("size", 12.0)
+                        flags = s.get("flags", 0)
+                        
+                        is_bold = bool(flags & 2 ** 4)
+                        ratio = size / median_size if median_size else 1.0
+                        
+                        prefix = ""
+                        if ratio > settings.pdf_heading_font_ratio or is_bold:
+                            if ratio > 1.5: level = 1
+                            elif ratio > 1.25: level = 2
+                            else: level = 3
+                            level = min(level, settings.pdf_max_heading_levels)
+                            prefix = "#" * level + " "
+                            
+                        elements.append(prefix + text)
+                        
+        page_text_content = "
+
+".join(elements).strip()
+        if page_text_content:
+            pages.append(PageText(page_number=i + 1, text=page_text_content))
+            
+    full_text = "
+
+".join(p.text for p in pages)
+    return LoadedDocument(source_file=path.name, format="pdf", text=full_text, pages=pages)
