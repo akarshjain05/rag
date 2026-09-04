@@ -1,0 +1,31 @@
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY apps/api/requirements-image.txt apps/api/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements-image.txt
+
+COPY apps/api/src ./src
+
+RUN mkdir -p /app/data/chroma /app/data/images \
+    && useradd --create-home --uid 1000 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    CHROMA_PERSIST_DIR=/app/data/chroma \
+    PYTHONPATH=/app/src
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=120s --retries=5 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "rag_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
