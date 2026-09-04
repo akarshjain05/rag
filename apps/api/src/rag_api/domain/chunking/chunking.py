@@ -36,6 +36,7 @@ def chunk_document(
     fixed_chunk_size: int = 1000,
     fixed_chunk_overlap: int = 150,
     structure_max_section_size: int = 1200,
+    structure_min_section_size: int = 40,
     semantic_similarity_threshold: float = 0.55,
     semantic_max_chunk_chars: int = 1500,
     semantic_min_chunk_chars: int = 200,
@@ -51,6 +52,7 @@ def chunk_document(
             return _structure_aware_split(
                 text,
                 structure_max_section_size,
+                structure_min_section_size,
                 embedding_client,
                 semantic_similarity_threshold,
                 semantic_max_chunk_chars,
@@ -150,6 +152,7 @@ def _fixed_size_split(text: str, chunk_size: int, chunk_overlap: int) -> list[tu
 def _structure_aware_split(
     text: str,
     max_section_size: int,
+    min_section_chars: int = 40,
     embedding_client: EmbeddingClient | None = None,
     semantic_similarity_threshold: float = 0.55,
     semantic_max_chunk_chars: int = 1500,
@@ -184,6 +187,12 @@ def _structure_aware_split(
         if not content:
             continue
         heading = _deepest_heading(section.metadata)
+        
+        if len(content) < min_section_chars and out:
+            prev_text, prev_heading = out[-1]
+            out[-1] = (prev_text + "\n\n" + content, prev_heading)
+            continue
+            
         if len(content) <= max_section_size:
             out.append((content, heading))
         else:

@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     fixed_chunk_size: int = 1000
     fixed_chunk_overlap: int = 150
     structure_max_section_size: int = 1200  # sub-split sections larger than this
+    structure_min_section_size: int = 40    # merge micro-sections smaller than this
     semantic_similarity_threshold: float = 0.55  # lower => new chunk boundary
     semantic_max_chunk_chars: int = 1500  # safety cap regardless of similarity
     semantic_min_chunk_chars: int = 200  # avoid one-sentence micro-chunks
