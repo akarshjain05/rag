@@ -21,7 +21,7 @@ export default function Sidebar({ documents, totalChunks, onUpload, isUploading 
         <button 
           onClick={handleUploadClick} 
           disabled={isUploading}
-          style={{ padding: "2px 6px", fontSize: "11px", cursor: "pointer", background: "var(--accent-color)", color: "white", border: "none", borderRadius: "3px" }}
+          style={{ padding: "2px 6px", fontSize: "11px", cursor: "pointer", background: "var(--accent-hybrid)", color: "white", border: "none", borderRadius: "3px" }}
         >
           {isUploading ? "Uploading..." : "Upload Files"}
         </button>

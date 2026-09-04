@@ -128,7 +128,7 @@ export default function App() {
              <input type="checkbox" checked={verifyCitations} onChange={(e) => setVerifyCitations(e.target.checked)} />
              Verify Citations
           </label>
-          <button onClick={handleNewConversation} className="btn">New Conversation</button>
+          <button onClick={handleNewConversation} className="ask-button">New Conversation</button>
         </div>
         
         <div className="turns-list" style={{ display: "flex", flexDirection: "column", gap: "2rem", marginBottom: "2rem" }}>
@@ -140,7 +140,7 @@ export default function App() {
           )}
           {turns.map((turn, i) => (
             <div key={i} className="turn" style={{ border: "1px solid var(--border)", padding: "1rem", borderRadius: "8px" }}>
-              <div style={{ fontWeight: "bold", marginBottom: "1rem", color: "var(--fg-muted)" }}>Q: {turn.question}</div>
+              <div style={{ fontWeight: "bold", marginBottom: "1rem", color: "var(--ink-muted)" }}>Q: {turn.question}</div>
               <AnswerPanel result={turn.result} onCiteClick={handleCiteClick} />
               {i === turns.length - 1 && (
                 <>
