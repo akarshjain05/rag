@@ -24,6 +24,7 @@ export default function App() {
   const [verifyCitations, setVerifyCitations] = useState(true);
   const [highlightedMarker, setHighlightedMarker] = useState(null);
   const highlightTimeout = useRef(null);
+  const currentAskController = useRef(null);
   const turnsEndRef = useRef(null);
   useEffect(() => { turnsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [turns]);
 
@@ -58,6 +59,13 @@ export default function App() {
   async function handleAsk() {
     const currentQuestion = question.trim();
     if (!currentQuestion || loading) return;
+    
+    if (currentAskController.current) {
+      currentAskController.current.abort();
+    }
+    const controller = new AbortController();
+    currentAskController.current = controller;
+
     setLoading(true);
     setError(null);
     try {
