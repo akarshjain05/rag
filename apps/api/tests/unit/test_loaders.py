@@ -118,3 +118,26 @@ def test_xlsx_extracts_sheets_as_markdown_tables(xlsx_path):
     assert "## Sheet2" in doc.text
     assert "A | B | C" in doc.text
     assert "1 | 2 | 3" in doc.text
+
+from unittest.mock import patch
+from rag_api.adapters.storage.loaders import _is_heading_candidate, _load_pdf
+from rag_api.core.settings import get_settings
+
+def test_pdf_backend_dispatch(tmp_path):
+    settings = get_settings()
+    settings.pdf_extraction_backend = "pdfplumber"
+    settings.image_indexing_enabled = False
+    
+    with patch("rag_api.adapters.storage.loaders.get_settings", return_value=settings):
+        with patch("rag_api.adapters.storage.loaders._load_pdf_pdfplumber") as mock_pdfplumber:
+            with patch("rag_api.adapters.storage.loaders._load_pdf_pymupdf") as mock_pymupdf:
+                _load_pdf(tmp_path / "dummy.pdf")
+                mock_pdfplumber.assert_called_once()
+                mock_pymupdf.assert_not_called()
+
+def test_heading_candidate_rejects_bare_numbers():
+    assert _is_heading_candidate("325", size_ratio=2.0, is_bold=True, heading_font_ratio=1.15) is False
+    assert _is_heading_candidate("...", size_ratio=2.0, is_bold=True, heading_font_ratio=1.15) is False
+
+def test_heading_candidate_accepts_real_heading():
+    assert _is_heading_candidate("Chapter 4: Deadlocks", size_ratio=2.0, is_bold=True, heading_font_ratio=1.15) is True
