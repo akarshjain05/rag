@@ -231,9 +231,9 @@ def _load_pdf_pdfplumber(path: Path, settings) -> LoadedDocument:
     pages: list[PageText] = []
     
     with pdfplumber.open(path) as pdf:
-        # Pass 1: compute doc-wide median font size to anchor the heading heuristic
+        # Pass 1: compute doc-wide median font size (sampled from first 10 pages to save time)
         all_sizes = []
-        for page in pdf.pages:
+        for page in pdf.pages[:10]:
             for char in page.chars:
                 if char.get("size"):
                     all_sizes.append(char["size"])
