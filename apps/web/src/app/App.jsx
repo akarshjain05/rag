@@ -7,8 +7,6 @@ import SourcesList from "../features/retrieval-comparison/SourcesList.jsx";
 import { fetchHealth, fetchDocuments, ask, ingest } from "../lib/api.js";
 
 export default function App() {
-  const turnsEndRef = useRef(null);
-  useEffect(() => { turnsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [turns]);
   const [health, setHealth] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [totalChunks, setTotalChunks] = useState(0);
@@ -26,6 +24,8 @@ export default function App() {
   const [verifyCitations, setVerifyCitations] = useState(true);
   const [highlightedMarker, setHighlightedMarker] = useState(null);
   const highlightTimeout = useRef(null);
+  const turnsEndRef = useRef(null);
+  useEffect(() => { turnsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [turns]);
 
   async function refreshIndexState() {
     try {
