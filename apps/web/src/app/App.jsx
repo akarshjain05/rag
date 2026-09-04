@@ -61,7 +61,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const data = await ask({
+      const data = await ask({ signal: controller.signal,
         question: currentQuestion,
         conversationId,
         verifyCitations,
@@ -72,11 +72,16 @@ export default function App() {
       setConversationId(data.conversation_id);
       setTurns(prev => [...prev, { question: currentQuestion, result: data }]);
       setQuestion("");
+    
     } catch (err) {
+      if (err.name === 'AbortError') return;
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (currentAskController.current === controller) {
+        setLoading(false);
+      }
     }
+
   }
   
   function handleNewConversation() {
@@ -123,15 +128,15 @@ export default function App() {
       />
 
       <main className="main">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div className="app-header">
+          <label className="app-header-label">
              <input type="checkbox" checked={verifyCitations} onChange={(e) => setVerifyCitations(e.target.checked)} />
              Verify Citations
           </label>
           <button onClick={handleNewConversation} className="ask-button">New Conversation</button>
         </div>
         
-        <div className="turns-list" style={{ display: "flex", flexDirection: "column", gap: "2rem", marginBottom: "2rem" }}>
+        <div className="turns-list" >
           {turns.length === 0 && !loading && !error && (
             <div className="empty-state">
               <strong>Nothing asked yet.</strong>
@@ -139,28 +144,39 @@ export default function App() {
             </div>
           )}
           {turns.map((turn, i) => (
-            <div key={i} className="turn" style={{ border: "1px solid var(--border)", padding: "1rem", borderRadius: "8px" }}>
-              <div style={{ fontWeight: "bold", marginBottom: "1rem", color: "var(--ink-muted)" }}>Q: {turn.question}</div>
+            <div key={i} className="turn" >
+              <div className="turn-question">Q: {turn.question}</div>
+              
               <AnswerPanel result={turn.result} onCiteClick={handleCiteClick} />
-              {i === turns.length - 1 && (
-                <>
-                  <ConfidenceBreakdown result={turn.result} />
-                  <SourcesList
+              
+              <details style={{ marginTop: '1rem' }} open={i === turns.length - 1}>
+                <summary style={{ cursor: 'pointer', color: 'var(--ink-muted)', fontSize: '0.85rem' }}>Retrieval Details</summary>
+                <div style={{ marginTop: '1rem' }}>
+                  <ConfidenceBreakdown 
+                    retrieval={turn.result.retrieval_confidence}
+                    coverage={turn.result.citation_coverage}
+                    completeness={turn.result.completeness}
+                    composite={turn.result.composite_confidence}
+                    basis={turn.result.citation_coverage_basis}
+                  />
+                  <SourcesList 
                     sources={turn.result.sources}
                     denseOnlySources={turn.result.dense_only_sources}
                     highlightedMarker={highlightedMarker}
+                    compareDenseOnly={compareDenseOnly}
                   />
-                </>
-              )}
+                </div>
+              </details>
+
             </div>
           ))}
           <div ref={turnsEndRef} />
         </div>
 
         {loading && <p className="loading-line">retrieving &amp; generating</p>}
-        {error && <div className="error-banner">{error}</div>}
+        {error && <div className="error-banner" aria-live="polite">{error}</div>}
 
-        <div style={{ position: "sticky", bottom: 0, backgroundColor: "var(--bg)", paddingBottom: "1rem" }}>
+        <div className="sticky-query">
           <QueryPanel
             question={question}
             onQuestionChange={setQuestion}

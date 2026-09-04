@@ -50,6 +50,7 @@ export default function AnswerPanel({ result, onCiteClick }) {
                 (invalidSet.has(seg.value) ? " citation-mark--invalid" : "") +
                 (unsupportedSet.has(seg.value) ? " citation-mark--unsupported" : "")
               }
+              aria-label={`Citation ${seg.value}`}
               title={
                 invalidSet.has(seg.value)
                   ? "This citation number doesn't match any retrieved source"
