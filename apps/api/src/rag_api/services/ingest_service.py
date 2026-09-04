@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rag_api.domain.chunking.chunking import chunk_document
-from rag_api.adapters.storage.dedup import check_duplicate
+from rag_api.adapters.storage.dedup import check_duplicate, check_duplicate_batch
 from rag_api.adapters.vectorstore.embeddings import EmbeddingClient
 from rag_api.adapters.storage.loaders import load_document
 from rag_api.domain.models import ChunkingStrategy, IngestReport
@@ -85,17 +85,24 @@ class IngestionPipeline:
         inserted_ids = []
         inserted_texts = []
         inserted_metas = []
-        for chunk, embedding in zip(chunks, embeddings):
-            dedup = check_duplicate(embedding, self.vector_store, threshold=self.dedup_similarity_threshold)
+        inserted_embeddings = []
+        
+        # Batch dedup check
+        dedups = check_duplicate_batch(embeddings, self.vector_store, threshold=self.dedup_similarity_threshold)
+        
+        for chunk, embedding, dedup in zip(chunks, embeddings, dedups):
             if dedup.is_duplicate:
                 report.duplicates_skipped += 1
                 report.duplicate_of.append(dedup.duplicate_of)
                 continue
-            self.vector_store.add(chunk.chunk_id, embedding, chunk.text, chunk.metadata())
             inserted_ids.append(chunk.chunk_id)
             inserted_texts.append(chunk.text)
             inserted_metas.append(chunk.metadata())
+            inserted_embeddings.append(embedding)
             report.chunks_inserted += 1
+            
+        if inserted_ids:
+            self.vector_store.add_many(inserted_ids, inserted_embeddings, inserted_texts, inserted_metas)
 
         if inserted_ids:
             self.sparse_index.add_many(inserted_ids, inserted_texts, inserted_metas)

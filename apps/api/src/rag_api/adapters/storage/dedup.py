@@ -20,6 +20,23 @@ class DedupResult:
     similarity: float | None = None
 
 
+def check_duplicate_batch(embeddings: list[list[float]], store: VectorStore, threshold: float = 0.95) -> list[DedupResult]:
+    try:
+        batch_res = store.nearest_batch(embeddings, top_k=1)
+    except AttributeError:
+        # Fallback if vector store doesn't have nearest_batch
+        return [check_duplicate(emb, store, threshold) for emb in embeddings]
+        
+    results = []
+    for res in batch_res:
+        if not res:
+            results.append(DedupResult(is_duplicate=False))
+        elif res[0]["similarity"] >= threshold:
+            results.append(DedupResult(is_duplicate=True, duplicate_of=res[0]["chunk_id"]))
+        else:
+            results.append(DedupResult(is_duplicate=False))
+    return results
+
 def check_duplicate(embedding: list[float], store: VectorStore, threshold: float = 0.95) -> DedupResult:
     neighbors = store.nearest(embedding, top_k=1)
     if not neighbors:

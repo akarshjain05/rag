@@ -75,6 +75,19 @@ class VectorStore:
             out.append({"chunk_id": cid, "text": doc, "metadata": meta, "similarity": 1.0 - dist})
         return out
 
+    def nearest_batch(self, embeddings: list[list[float]], top_k: int = 1) -> list[list[dict]]:
+        if self.count() == 0:
+            return [[] for _ in embeddings]
+        n = min(top_k, self.count())
+        res = self._collection.query(query_embeddings=embeddings, n_results=n)
+        batch_out = []
+        for ids, docs, metas, dists in zip(res["ids"], res["documents"], res["metadatas"], res["distances"]):
+            out = []
+            for cid, doc, meta, dist in zip(ids, docs, metas, dists):
+                out.append({"chunk_id": cid, "text": doc, "metadata": meta, "similarity": 1.0 - dist})
+            batch_out.append(out)
+        return batch_out
+        
     def query(self, embedding: list[float], top_k: int = 10, where: dict | None = None) -> list[dict]:
         """Dense search for retrieval. Same shape as `nearest`."""
         if self.count() == 0:
