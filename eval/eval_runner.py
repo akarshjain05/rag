@@ -4,8 +4,8 @@ strategy comparison built on top of the same run.
 """
 from __future__ import annotations
 
-from app.generation import AnswerGenerator
-from app.retrieval import HybridRetriever
+from rag_api.domain.generation.generation import AnswerGenerator
+from rag_api.domain.retrieval.retrieval import HybridRetriever
 from eval.golden_dataset import GoldenExample
 from eval.judges import AnswerCorrectnessJudge, FaithfulnessJudge
 from eval.metrics import EvalCaseResult, compute_retrieval_relevance, summarize_results

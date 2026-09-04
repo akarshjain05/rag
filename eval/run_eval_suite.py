@@ -30,17 +30,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # allow `python eval/run_eval_suite.py`
 
-from app.config import get_settings  # noqa: E402
-from app.embeddings import build_embedding_client  # noqa: E402
-from app.generation import AnswerGenerator  # noqa: E402
-from app.llm_client import build_llm_client  # noqa: E402
-from app.loaders import SUPPORTED_EXTENSIONS  # noqa: E402
-from app.models import ChunkingStrategy  # noqa: E402
-from app.pipeline import IngestionPipeline  # noqa: E402
-from app.retrieval import HybridRetriever  # noqa: E402
-from app.sparse_index import SparseIndex  # noqa: E402
-from app.vector_store import VectorStore  # noqa: E402
-from app.verification import CitationVerifier  # noqa: E402
+from rag_api.core.settings import get_settings  # noqa: E402
+from rag_api.adapters.vectorstore.embeddings import build_embedding_client  # noqa: E402
+from rag_api.domain.generation.generation import AnswerGenerator  # noqa: E402
+from rag_api.adapters.llm.llm_client import build_llm_client  # noqa: E402
+from rag_api.adapters.storage.loaders import SUPPORTED_EXTENSIONS  # noqa: E402
+from rag_api.domain.models import ChunkingStrategy  # noqa: E402
+from rag_api.services.ingest_service import IngestionPipeline  # noqa: E402
+from rag_api.domain.retrieval.retrieval import HybridRetriever  # noqa: E402
+from rag_api.adapters.vectorstore.sparse_index import SparseIndex  # noqa: E402
+from rag_api.adapters.vectorstore.vector_store import VectorStore  # noqa: E402
+from rag_api.domain.generation.verification import CitationVerifier  # noqa: E402
 from eval.eval_runner import format_comparison_report, run_chunking_strategy_comparison, run_eval_suite  # noqa: E402
 from eval.golden_dataset import load_golden_dataset  # noqa: E402
 from eval.judges import AnswerCorrectnessJudge, FaithfulnessJudge  # noqa: E402

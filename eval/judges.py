@@ -23,9 +23,9 @@ import json
 import re
 from dataclasses import dataclass
 
-from app.llm_client import LLMClient
-from app.models import RetrievedChunk
-from app.verification import split_into_claims
+from rag_api.adapters.llm.llm_client import LLMClient
+from rag_api.domain.models import RetrievedChunk
+from rag_api.domain.generation.verification import split_into_claims
 from eval.golden_dataset import GoldenExample
 
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)

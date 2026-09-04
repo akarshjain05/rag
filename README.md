@@ -1,7 +1,7 @@
 # RAG Pipeline with Hybrid Search Over Internal Docs
 
 A retrieval-augmented generation system that ingests internal documentation
-(Markdown, HTML, plaintext, PDF), indexes it with both dense vector search
+(Markdown, HTML, plaintext, PDF, Word, PowerPoint, Excel), indexes it with both dense vector search
 and BM25 keyword search, fuses and reranks the candidates, and answers
 questions with inline `[1]`, `[2]` citations that are validated against the
 retrieved context — not just asserted.
@@ -9,7 +9,7 @@ retrieved context — not just asserted.
 ## Architecture
 
 ```
- documents (.md/.txt/.html/.pdf)
+ documents (.md/.txt/.html/.pdf/.docx/.pptx/.xlsx)
         │
         ▼
  ┌───────────────┐   normalize to plaintext + metadata
@@ -403,6 +403,11 @@ part of building it honestly:
   heading heuristic would misfire often enough to silently corrupt
   structure-aware chunking. Page number is the reliable structural signal
   for PDFs instead.
+- **Excel (.xlsx) Table Splitting**: Spreadsheets are loaded one section per
+  sheet and serialized as markdown tables. The `RecursiveCharacterTextSplitter`
+  will cut a large markdown table mid-row-block, meaning later chunks lose
+  the header row context. This is fine for small/medium sheets, but large sheets
+  would require a dedicated row-aware chunker for perfect results.
 - **BM25 has no incremental index**: `rank_bm25` rebuilds from the full
   corpus on every write. `SparseIndex.rebuild_from()` treats ChromaDB as the
   single source of truth and reconstructs BM25 from it, so the two indexes

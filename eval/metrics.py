@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.models import RetrievedChunk
+from rag_api.domain.models import RetrievedChunk
 
 
 def compute_retrieval_relevance(retrieved_chunks: list[RetrievedChunk], expected_source_documents: list[str]) -> float | None:

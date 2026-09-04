@@ -1,0 +1,29 @@
+from fastapi import Request
+from rag_api.core.settings import Settings
+
+def get_settings(request: Request) -> Settings:
+    return request.app.state.settings
+
+def get_pipeline(request: Request):
+    return request.app.state.pipeline
+
+def get_retriever(request: Request):
+    return request.app.state.retriever
+
+def get_generator(request: Request):
+    return request.app.state.generator
+
+def get_vector_store(request: Request):
+    return request.app.state.vector_store
+
+def get_sparse_index(request: Request):
+    return request.app.state.sparse_index
+
+def run_or_502(fn, *args, **kwargs):
+    from fastapi import HTTPException
+    from openai import OpenAIError
+    from anthropic import AnthropicError
+    try:
+        return fn(*args, **kwargs)
+    except (OpenAIError, AnthropicError) as exc:
+        raise HTTPException(status_code=502, detail=f"Upstream AI provider error: {exc}") from exc

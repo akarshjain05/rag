@@ -28,14 +28,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # allow `python eval/run_retrieval_eval.py`
 
-from app.config import get_settings  # noqa: E402
-from app.embeddings import build_embedding_client  # noqa: E402
-from app.loaders import SUPPORTED_EXTENSIONS  # noqa: E402
-from app.models import ChunkingStrategy  # noqa: E402
-from app.pipeline import IngestionPipeline  # noqa: E402
-from app.retrieval import reciprocal_rank_fusion  # noqa: E402
-from app.sparse_index import SparseIndex  # noqa: E402
-from app.vector_store import VectorStore  # noqa: E402
+from rag_api.core.settings import get_settings  # noqa: E402
+from rag_api.adapters.vectorstore.embeddings import build_embedding_client  # noqa: E402
+from rag_api.adapters.storage.loaders import SUPPORTED_EXTENSIONS  # noqa: E402
+from rag_api.domain.models import ChunkingStrategy  # noqa: E402
+from rag_api.services.ingest_service import IngestionPipeline  # noqa: E402
+from rag_api.domain.retrieval.retrieval import reciprocal_rank_fusion  # noqa: E402
+from rag_api.adapters.vectorstore.sparse_index import SparseIndex  # noqa: E402
+from rag_api.adapters.vectorstore.vector_store import VectorStore  # noqa: E402
 
 SAMPLE_DOCS = {
     "vacation_policy.md": (
