@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 # Optional: enables EMBEDDING_PROVIDER=local (free embeddings) and
 # RERANKER_PROVIDER=cross_encoder (free reranking) -- both use
 # sentence-transformers, so one install covers both.

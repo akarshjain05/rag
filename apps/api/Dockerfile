@@ -9,7 +9,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 COPY requirements-local.txt .
-RUN pip install --no-cache-dir -r requirements-local.txt
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements-local.txt
 
 COPY src ./src
 

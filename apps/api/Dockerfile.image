@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements-image.txt requirements.txt ./
-RUN pip install --no-cache-dir -r requirements-image.txt
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements-image.txt
 
 COPY src ./src
 
