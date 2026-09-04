@@ -199,10 +199,10 @@ def _load_pdf(path: Path, llm_client=None, image_store=None) -> LoadedDocument:
     settings = get_settings()
     if settings.image_indexing_enabled:
         return _load_pdf_pypdfium2(path, settings, llm_client, image_store)
-    if settings.pdf_extraction_backend == "pdfplumber" or settings.pdf_extraction_backend == "pymupdf":
+    if settings.pdf_extraction_backend == "pdfplumber":
+        return _load_pdf_pdfplumber(path, settings)
+    if settings.pdf_extraction_backend == "pymupdf":
         return _load_pdf_pymupdf(path, settings)
-    elif settings.pdf_extraction_backend == "pymupdf":
-        raise NotImplementedError("PyMuPDF extraction not yet implemented.")
     else:
         # Fallback to old pypdf logic
         from pypdf import PdfReader
