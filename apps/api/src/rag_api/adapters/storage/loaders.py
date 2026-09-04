@@ -215,6 +215,17 @@ def _load_pdf(path: Path, llm_client=None, image_store=None) -> LoadedDocument:
         full_text = "\n\n".join(p.text for p in pages)
         return LoadedDocument(source_file=path.name, format="pdf", text=full_text, pages=pages)
 
+def _is_heading_candidate(text: str, size_ratio: float, is_bold: bool, heading_font_ratio: float) -> bool:
+    """Visually distinct AND heading-shaped -- guards against page numbers,
+    table cells, and running headers/footers (often bold/larger) being
+    misdetected as section headings."""
+    if not (size_ratio > heading_font_ratio or is_bold):
+        return False
+    words = text.split()
+    if not (1 <= len(words) <= 15):
+        return False
+    return any(c.isalpha() for c in text)   # rejects pure numbers/punctuation
+
 def _load_pdf_pdfplumber(path: Path, settings) -> LoadedDocument:
     import pdfplumber
     pages: list[PageText] = []
@@ -277,7 +288,7 @@ def _load_pdf_pdfplumber(path: Path, settings) -> LoadedDocument:
                 
                 prefix = ""
                 ratio = avg_size / median_size if median_size else 1.0
-                if ratio > settings.pdf_heading_font_ratio:
+                if _is_heading_candidate(text, ratio, is_bold, settings.pdf_heading_font_ratio):
                     if ratio > 1.5: level = 1
                     elif ratio > 1.25: level = 2
                     else: level = 3
@@ -534,21 +545,6 @@ def _load_pdf_pymupdf(path: Path, settings) -> LoadedDocument:
         elements = []
         for b in blocks:
             if b.get("type") == 0:
-                prefix = ""
-                if b.get("lines") and b["lines"][0].get("spans"):
-                    first_span = b["lines"][0]["spans"][0]
-                    size = first_span.get("size", 12.0)
-                    flags = first_span.get("flags", 0)
-                    is_bold = bool(flags & 2 ** 4)
-                    ratio = size / median_size if median_size else 1.0
-                    
-                    if ratio > settings.pdf_heading_font_ratio:
-                        if ratio > 1.5: level = 1
-                        elif ratio > 1.25: level = 2
-                        else: level = 3
-                        level = min(level, settings.pdf_max_heading_levels)
-                        prefix = "#" * level + " "
-                        
                 lines_text = []
                 for l in b.get("lines", []):
                     span_texts = []
@@ -559,8 +555,25 @@ def _load_pdf_pymupdf(path: Path, settings) -> LoadedDocument:
                         lines_text.append(line_text)
                 
                 block_text = "\n".join(lines_text).strip()
-                if block_text:
-                    elements.append(prefix + block_text)
+                if not block_text:
+                    continue
+                    
+                prefix = ""
+                if b.get("lines") and b["lines"][0].get("spans"):
+                    first_span = b["lines"][0]["spans"][0]
+                    size = first_span.get("size", 12.0)
+                    flags = first_span.get("flags", 0)
+                    is_bold = bool(flags & 2 ** 4)
+                    ratio = size / median_size if median_size else 1.0
+                    
+                    if _is_heading_candidate(block_text, ratio, is_bold, settings.pdf_heading_font_ratio):
+                        if ratio > 1.5: level = 1
+                        elif ratio > 1.25: level = 2
+                        else: level = 3
+                        level = min(level, settings.pdf_max_heading_levels)
+                        prefix = "#" * level + " "
+                        
+                elements.append(prefix + block_text)
                         
         page_text_content = "\n\n".join(elements).strip()
         if page_text_content:
