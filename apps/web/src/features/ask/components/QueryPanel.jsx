@@ -26,8 +26,10 @@ export default function QueryPanel({
           onSubmit();
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, gap: "8px" }}>
+        <div className="query-input-group">
+          <label htmlFor="query-question" className="sr-only">Ask a question</label>
           <input
+            id="query-question"
             className="query-input"
             type="text"
             placeholder="Ask something about the indexed documents…"
@@ -35,14 +37,15 @@ export default function QueryPanel({
             onChange={(e) => onQuestionChange(e.target.value)}
             disabled={loading}
           />
+          <label htmlFor="query-image" className="sr-only">Optional image URL</label>
           <input
-            className="query-input"
+            id="query-image"
+            className="query-input query-image-input"
             type="text"
             placeholder="Optional image URL (e.g. for Moonshot vision models)..."
             value={imageUrl}
             onChange={(e) => onImageUrlChange(e.target.value)}
             disabled={loading}
-            style={{ fontSize: "0.9em", padding: "8px 12px" }}
           />
         </div>
         <button className="ask-button" type="submit" disabled={loading || !question.trim()}>

@@ -626,3 +626,40 @@ button {
   background-color: var(--bg);
   padding-bottom: 1rem;
 }
+
+/* Turn Details */
+.turn-details {
+  margin-top: 1rem;
+}
+.turn-details-summary {
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+.turn-details-content {
+  margin-top: 1rem;
+}
+
+/* Query Panel */
+.query-input-group {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 8px;
+}
+.query-image-input {
+  font-size: 0.9em;
+  padding: 8px 12px;
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}

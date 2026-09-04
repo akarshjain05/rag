@@ -157,16 +157,10 @@ export default function App() {
               
               <AnswerPanel result={turn.result} onCiteClick={handleCiteClick} />
               
-              <details style={{ marginTop: '1rem' }} open={i === turns.length - 1}>
-                <summary style={{ cursor: 'pointer', color: 'var(--ink-muted)', fontSize: '0.85rem' }}>Retrieval Details</summary>
-                <div style={{ marginTop: '1rem' }}>
-                  <ConfidenceBreakdown 
-                    retrieval={turn.result.retrieval_confidence}
-                    coverage={turn.result.citation_coverage}
-                    completeness={turn.result.completeness}
-                    composite={turn.result.composite_confidence}
-                    basis={turn.result.citation_coverage_basis}
-                  />
+              <details className="turn-details" open={i === turns.length - 1}>
+                <summary className="turn-details-summary">Retrieval Details</summary>
+                <div className="turn-details-content">
+                  <ConfidenceBreakdown result={turn.result} />
                   <SourcesList 
                     sources={turn.result.sources}
                     denseOnlySources={turn.result.dense_only_sources}
@@ -181,8 +175,10 @@ export default function App() {
           <div ref={turnsEndRef} />
         </div>
 
-        {loading && <p className="loading-line">retrieving &amp; generating</p>}
-        {error && <div className="error-banner" aria-live="polite">{error}</div>}
+        <div aria-live="polite" aria-atomic="true">
+          {loading && <p className="loading-line">retrieving &amp; generating</p>}
+          {error && <div className="error-banner">{error}</div>}
+        </div>
 
         <div className="sticky-query">
           <QueryPanel
