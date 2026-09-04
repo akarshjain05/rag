@@ -56,12 +56,13 @@ export default function App() {
   }
 
   async function handleAsk() {
-    if (!question.trim() || loading) return;
+    const currentQuestion = question.trim();
+    if (!currentQuestion || loading) return;
     setLoading(true);
     setError(null);
     try {
       const data = await ask({
-        question: question.trim(),
+        question: currentQuestion,
         conversationId,
         verifyCitations,
         chunkingStrategy: chunkingStrategy || null,
@@ -69,7 +70,7 @@ export default function App() {
         imageUrl: imageUrl.trim() || null,
       });
       setConversationId(data.conversation_id);
-      setTurns([...turns, { question: question.trim(), result: data }]);
+      setTurns(prev => [...prev, { question: currentQuestion, result: data }]);
       setQuestion("");
     } catch (err) {
       setError(err.message);
