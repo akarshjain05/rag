@@ -277,7 +277,7 @@ def _load_pdf_pdfplumber(path: Path, settings) -> LoadedDocument:
                 
                 prefix = ""
                 ratio = avg_size / median_size if median_size else 1.0
-                if ratio > settings.pdf_heading_font_ratio or is_bold:
+                if ratio > settings.pdf_heading_font_ratio:
                     if ratio > 1.5: level = 1
                     elif ratio > 1.25: level = 2
                     else: level = 3
@@ -542,7 +542,7 @@ def _load_pdf_pymupdf(path: Path, settings) -> LoadedDocument:
                     is_bold = bool(flags & 2 ** 4)
                     ratio = size / median_size if median_size else 1.0
                     
-                    if ratio > settings.pdf_heading_font_ratio or is_bold:
+                    if ratio > settings.pdf_heading_font_ratio:
                         if ratio > 1.5: level = 1
                         elif ratio > 1.25: level = 2
                         else: level = 3
