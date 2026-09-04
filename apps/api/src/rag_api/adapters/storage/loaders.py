@@ -554,13 +554,9 @@ def _load_pdf_pymupdf(path: Path, settings) -> LoadedDocument:
                             
                         elements.append(prefix + text)
                         
-        page_text_content = "
-
-".join(elements).strip()
+        page_text_content = "\n\n".join(elements).strip()
         if page_text_content:
             pages.append(PageText(page_number=i + 1, text=page_text_content))
             
-    full_text = "
-
-".join(p.text for p in pages)
+    full_text = "\n\n".join(p.text for p in pages)
     return LoadedDocument(source_file=path.name, format="pdf", text=full_text, pages=pages)
