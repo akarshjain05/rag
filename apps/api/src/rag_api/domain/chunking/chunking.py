@@ -41,9 +41,6 @@ def chunk_document(
     semantic_min_chunk_chars: int = 200,
     embedding_client: EmbeddingClient | None = None,
 ) -> list[Chunk]:
-    """Chunk a loaded document with the given strategy. Returns Chunks with
-    chunk_index assigned sequentially and page_number set when doc.pages
-    is populated (PDF)."""
     if strategy == ChunkingStrategy.SEMANTIC and embedding_client is None:
         raise ValueError("semantic chunking requires an embedding_client")
 
@@ -69,59 +66,68 @@ def chunk_document(
 
     chunks: list[Chunk] = []
     idx = 0
+    img_map = {img.image_hash: img for img in getattr(doc, 'images', [])}
 
-    if doc.pages:  # PDF: chunk each page separately so page_number stays exact
-        for page in doc.pages:
-            for text, heading in split_one(page.text):
-                if not text.strip():
-                    continue
-                enriched_text = f"Document: {doc.source_file}\nSection: {heading or 'None'}\n\n{text.strip()}"
-                image_ref = None
-                content_type = None
-                m = re.search(r"> Figure \(Ref: (.*?), Type: (.*?)\):", text)
-                if m:
-                    image_ref = m.group(1)
-                    content_type = m.group(2)
-                
-                chunks.append(
-                    Chunk(
+    def process_text_segment(text: str, page_number: int | None, extraction_method: str = "native"):
+        nonlocal idx
+        # Pre-split on image sentinels
+        # Format: <!--IMG:{image_hash}-->\n\n{derived_text}\n\n<!--/IMG-->
+        pattern = r"<!--IMG:(.*?)-->.*?<!--/IMG-->"
+        
+        # We use re.split with a capture group so we get [prose, hash, prose, hash, prose]
+        # But our regex above consumes the whole tag, we can capture the hash and the text
+        pattern_with_groups = r"<!--IMG:(.*?)-->\n\n(.*?)\n\n<!--/IMG-->"
+        
+        # Actually it's easier to use re.finditer or just split on exactly the marker and then process
+        segments = re.split(pattern_with_groups, text, flags=re.DOTALL)
+        
+        # segments: [prose1, hash1, text1, prose2, hash2, text2, prose3...]
+        # Step through by 3
+        for i in range(0, len(segments), 3):
+            prose = segments[i]
+            if prose.strip():
+                for sub_text, heading in split_one(prose):
+                    if not sub_text.strip():
+                        continue
+                    enriched_text = f"Document: {doc.source_file}\nSection: {heading or 'None'}\n\n{sub_text.strip()}"
+                    chunks.append(Chunk(
                         text=enriched_text,
                         source_document=doc.source_file,
                         chunking_strategy=strategy.value,
                         chunk_index=idx,
                         section_heading=heading,
-                        page_number=page.page_number,
-                        image_ref=image_ref,
-                        extraction_method=page.extraction_method,
-                        content_type=content_type,
-                    )
-                )
-                idx += 1
-    else:
-        for text, heading in split_one(doc.text):
-            if not text.strip():
-                continue
-            enriched_text = f"Document: {doc.source_file}\nSection: {heading or 'None'}\n\n{text.strip()}"
-            image_ref = None
-            content_type = None
-            m = re.search(r"> Figure \(Ref: (.*?), Type: (.*?)\):", text)
-            if m:
-                image_ref = m.group(1)
-                content_type = m.group(2)
-
-            chunks.append(
-                Chunk(
+                        page_number=page_number,
+                        extraction_method=extraction_method,
+                        content_type="text",
+                        image_ref=None
+                    ))
+                    idx += 1
+            
+            if i + 2 < len(segments):
+                img_hash = segments[i+1]
+                img_text = segments[i+2]
+                img = img_map.get(img_hash)
+                content_type = img.content_type if img else "image_untranscribed"
+                
+                enriched_text = f"Document: {doc.source_file}\nSection: Image\n\n{img_text.strip()}"
+                chunks.append(Chunk(
                     text=enriched_text,
                     source_document=doc.source_file,
                     chunking_strategy=strategy.value,
                     chunk_index=idx,
-                    section_heading=heading,
-                    page_number=None,
-                    image_ref=image_ref,
+                    section_heading=None,
+                    page_number=page_number,
+                    extraction_method=extraction_method,
                     content_type=content_type,
-                )
-            )
-            idx += 1
+                    image_ref=img_hash
+                ))
+                idx += 1
+
+    if doc.pages:
+        for page in doc.pages:
+            process_text_segment(page.text, page.page_number, getattr(page, 'extraction_method', 'native'))
+    else:
+        process_text_segment(doc.text, None)
 
     return chunks
 

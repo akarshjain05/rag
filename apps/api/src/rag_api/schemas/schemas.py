@@ -40,6 +40,8 @@ class SourceSchema(BaseModel):
     source_document: str | None = None
     section_heading: str | None = None
     page_number: int | None = None
+    content_type: str | None = None
+    image_url: str | None = None
     dense_rank: int | None = None
     sparse_rank: int | None = None
     rerank_score: float | None = None

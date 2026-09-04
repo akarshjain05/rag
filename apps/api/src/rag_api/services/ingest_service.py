@@ -25,6 +25,7 @@ class IngestionPipeline:
         vector_store: VectorStore,
         sparse_index: BaseSparseIndex,
         llm_client = None,
+        image_store = None,
         *,
         default_strategy: ChunkingStrategy = ChunkingStrategy.STRUCTURE_AWARE,
         fixed_chunk_size: int = 1000,
@@ -39,6 +40,8 @@ class IngestionPipeline:
         self.vector_store = vector_store
         self.sparse_index = sparse_index
         self.llm_client = llm_client
+        self.image_store = image_store
+        self.image_store = None
         self.default_strategy = default_strategy
         self.fixed_chunk_size = fixed_chunk_size
         self.fixed_chunk_overlap = fixed_chunk_overlap
@@ -57,7 +60,7 @@ class IngestionPipeline:
         source_name = Path(path).name
 
         try:
-            doc = load_document(path, llm_client=self.llm_client)
+            doc = load_document(path, llm_client=self.llm_client, image_store=self.image_store)
         except Exception as exc:  # noqa: BLE001 - reported, not raised, so batches survive one bad file
             return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=str(exc))
 

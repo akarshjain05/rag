@@ -26,6 +26,16 @@ class PageText:
 
 
 @dataclass
+class ExtractedImage:
+    image_hash: str
+    page_number: int | None
+    bbox: tuple[float, float, float, float] | None
+    reading_order_index: int
+    content_type: str
+    derived_text: str
+    ocr_confidence: float | None = None
+
+@dataclass
 class LoadedDocument:
     """Normalized output of a document loader, regardless of source format.
 
@@ -39,6 +49,7 @@ class LoadedDocument:
     format: str  # "md" | "txt" | "html" | "pdf"
     text: str
     pages: list[PageText] | None = None
+    images: list[ExtractedImage] = field(default_factory=list)
 
 
 @dataclass

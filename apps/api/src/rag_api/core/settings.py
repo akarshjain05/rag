@@ -80,10 +80,14 @@ class Settings(BaseSettings):
     low_confidence_threshold: float = 0.3  # retrieval confidence below this skips generation entirely
     image_indexing_enabled: bool = False
     ocr_engine: str = "tesseract"
+    ocr_dpi: int = 300
+    min_ocr_words_before_caption_fallback: int = 3
     scanned_page_text_threshold: int = 20
     image_captioning_enabled: bool = False
     image_store_backend: str = "local"
-    image_store_path: str = "/app/data/images"
+    image_store_path: str = "./data/images"
+    vision_caption_model: str = "claude-sonnet-4-5"
+    fetch_remote_html_images: bool = False
     sparse_index_provider: str = "in_memory"
     sparse_index_persist_dir: str = "/app/data/sparse_index"
     structure_aware_semantic_fallback_enabled: bool = True

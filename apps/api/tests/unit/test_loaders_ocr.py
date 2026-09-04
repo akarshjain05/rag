@@ -53,15 +53,15 @@ def test_ocr_vs_caption_branching(mock_pdf, mock_ocr, dummy_settings, tmp_path):
     mock_llm = MagicMock()
     mock_llm.describe_image.return_value = "A beautiful caption from LLM."
     
-    doc = _load_pdf_pypdfium2(Path("test.pdf"), dummy_settings, mock_llm)
+    doc = _load_pdf_pypdfium2(Path("test.pdf"), dummy_settings, mock_llm, None)
     
     assert doc.pages[0].extraction_method == "ocr"
     assert "This is a fully scanned page with lots of text." in doc.pages[0].text
     
     assert doc.pages[1].extraction_method == "native"
     assert "Normal text" in doc.pages[1].text
-    assert "Figure" in doc.pages[1].text
-    assert "Type: image_caption" in doc.pages[1].text
+    assert "<!--IMG:no_store-->" in doc.pages[1].text
+    # removed
     assert "A beautiful caption from LLM." in doc.pages[1].text
     
     mock_llm.describe_image.assert_called_once()

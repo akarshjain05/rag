@@ -91,6 +91,7 @@ def build_sources(chunks: list[RetrievedChunk]) -> list[dict]:
     sources = []
     for i, c in enumerate(chunks, start=1):
         page = c.metadata.get("page_number", -1)
+        img_ref = c.metadata.get("image_ref")
         sources.append(
             {
                 "marker": i,
@@ -98,6 +99,8 @@ def build_sources(chunks: list[RetrievedChunk]) -> list[dict]:
                 "source_document": c.metadata.get("source_document"),
                 "section_heading": c.metadata.get("section_heading") or None,
                 "page_number": page if page != -1 else None,
+                "content_type": c.metadata.get("content_type"),
+                "image_url": f"/v1/images/{img_ref}" if img_ref else None,
                 "dense_rank": c.dense_rank,
                 "sparse_rank": c.sparse_rank,
                 "rerank_score": c.rerank_score,
@@ -202,12 +205,18 @@ class AnswerGenerator:
         else:
             user_prompt = user_prompt_text
 
-        raw_answer = self.llm_client.generate(SYSTEM_PROMPT, user_prompt)  # type: ignore[union-attr]
+        raw_answer = self.llm_client.generate(SYSTEM_PROMPT, user_prompt, history=history)  # type: ignore[union-attr]
         valid, invalid = _extract_and_validate_citations(raw_answer, len(chunks))
 
         unsupported: list[int] = []
         completeness: float | None = None
-        if self.citation_verifier is not None:
+        
+        do_verify = self.citation_verifier is not None
+        if verify_citations is not None:
+            do_verify = verify_citations and self.citation_verifier is not None
+
+        if do_verify:
+
             verification = self.citation_verifier.verify(query, raw_answer, chunks)
             unsupported = unsupported_citation_markers(verification.claims)
             completeness = verification.completeness

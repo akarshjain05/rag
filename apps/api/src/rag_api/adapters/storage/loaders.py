@@ -44,12 +44,15 @@ class EmptyDocumentError(ValueError):
     pass
 
 
-def load_document(path: str | Path, llm_client=None) -> LoadedDocument:
+def load_document(path: str | Path, llm_client=None, image_store=None) -> LoadedDocument:
     """Load and normalize a single file. Raises UnsupportedFileTypeError /
     EmptyDocumentError / FileNotFoundError as appropriate."""
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"No such file: {path}")
+        
+    from rag_api.core.settings import get_settings
+    settings = get_settings()
 
     suffix = path.suffix.lower()
     if suffix in (".md", ".markdown"):
@@ -57,11 +60,11 @@ def load_document(path: str | Path, llm_client=None) -> LoadedDocument:
     elif suffix == ".txt":
         doc = _load_text(path)
     elif suffix in (".html", ".htm"):
-        doc = _load_html(path)
+        doc = _load_html(path, settings, llm_client, image_store)
     elif suffix == ".pdf":
-        doc = _load_pdf(path, llm_client)
+        doc = _load_pdf(path, llm_client, image_store)
     elif suffix == ".docx":
-        doc = _load_docx(path)
+        doc = _load_docx(path, settings, llm_client, image_store)
     elif suffix == ".pptx":
         doc = _load_pptx(path)
     elif suffix == ".xlsx":
@@ -77,7 +80,7 @@ def load_document(path: str | Path, llm_client=None) -> LoadedDocument:
     return doc
 
 
-def load_documents(paths: list[str | Path], llm_client=None) -> tuple[list[LoadedDocument], list[dict]]:
+def load_documents(paths: list[str | Path], llm_client=None, image_store=None) -> tuple[list[LoadedDocument], list[dict]]:
     """Load many files. Never raises for a single bad file — collects errors
     instead so one broken upload doesn't abort a whole ingestion batch.
     Returns (loaded_documents, errors) where each error is
@@ -86,7 +89,7 @@ def load_documents(paths: list[str | Path], llm_client=None) -> tuple[list[Loade
     errors: list[dict] = []
     for p in paths:
         try:
-            loaded.append(load_document(p, llm_client=llm_client))
+            loaded.append(load_document(p, llm_client=llm_client, image_store=image_store))
         except Exception as exc:  # noqa: BLE001 - intentionally broad, collected not raised
             errors.append({"source_file": str(Path(p).name), "error": str(exc)})
     return loaded, errors
@@ -123,7 +126,11 @@ _HEADING_TAGS = {"h1": "#", "h2": "##", "h3": "###", "h4": "####", "h5": "#####"
 _BLOCK_TAGS = _HEADING_TAGS.keys() | {"p", "li", "blockquote", "td", "th", "pre", "caption"}
 
 
-def _load_html(path: Path) -> LoadedDocument:
+def _load_html(path: Path, settings, llm_client, image_store) -> LoadedDocument:
+    import base64
+    import urllib.request
+    from rag_api.domain.models import ExtractedImage
+    
     raw = path.read_text(encoding="utf-8", errors="replace")
     soup = BeautifulSoup(raw, "html.parser")
 
@@ -131,24 +138,67 @@ def _load_html(path: Path) -> LoadedDocument:
         tag.decompose()
 
     lines: list[str] = []
-    for el in soup.find_all(list(_BLOCK_TAGS)):
-        content = " ".join(el.get_text(separator=" ", strip=True).split())
-        if not content:
-            continue
-        prefix = _HEADING_TAGS.get(el.name)
-        lines.append(f"{prefix} {content}" if prefix else content)
+    extracted_images = []
+    
+    # To keep reading order, we iterate over all tags we care about
+    for el in soup.find_all(list(_BLOCK_TAGS) + ["img"]):
+        if el.name == "img":
+            src = el.get("src", "")
+            img_bytes = None
+            content_type = "image/png"
+            if src.startswith("data:image/"):
+                try:
+                    header, encoded = src.split(",", 1)
+                    img_bytes = base64.b64decode(encoded)
+                    content_type = header.split(";")[0][5:]
+                except Exception:
+                    pass
+            elif settings.fetch_remote_html_images and src.startswith("http"):
+                try:
+                    import httpx
+                    resp = httpx.get(src, timeout=5.0)
+                    if resp.status_code == 200:
+                        img_bytes = resp.content
+                        content_type = resp.headers.get("content-type", "image/png")
+                except Exception:
+                    pass
+                    
+            if img_bytes:
+                try:
+                    derived_text, extracted_type = _extract_image_text(img_bytes, settings, llm_client)
+                    if extracted_type == "image_untranscribed" and not settings.image_captioning_enabled:
+                        continue
+                        
+                    image_hash = image_store.put(img_bytes, content_type) if image_store else "no_store"
+                    extracted_images.append(ExtractedImage(
+                        image_hash=image_hash,
+                        page_number=None,
+                        bbox=None,
+                        reading_order_index=len(extracted_images),
+                        content_type=extracted_type,
+                        derived_text=derived_text
+                    ))
+                    lines.append(f"\n\n<!--IMG:{image_hash}-->\n\n{derived_text}\n\n<!--/IMG-->\n\n")
+                except Exception:
+                    pass
+        else:
+            content = " ".join(el.get_text(separator=" ", strip=True).split())
+            if not content:
+                continue
+            prefix = _HEADING_TAGS.get(el.name)
+            lines.append(f"{prefix} {content}" if prefix else content)
 
     text = "\n\n".join(lines)
-    return LoadedDocument(source_file=path.name, format="html", text=text)
+    return LoadedDocument(source_file=path.name, format="html", text=text, images=extracted_images)
 
 
 from rag_api.core.settings import get_settings
 from collections import defaultdict
 
-def _load_pdf(path: Path, llm_client=None) -> LoadedDocument:
+def _load_pdf(path: Path, llm_client=None, image_store=None) -> LoadedDocument:
     settings = get_settings()
     if settings.image_indexing_enabled:
-        return _load_pdf_pypdfium2(path, settings, llm_client)
+        return _load_pdf_pypdfium2(path, settings, llm_client, image_store)
     if settings.pdf_extraction_backend == "pdfplumber":
         return _load_pdf_pdfplumber(path, settings)
     elif settings.pdf_extraction_backend == "pymupdf":
@@ -272,24 +322,61 @@ def _docx_table_to_markdown(table) -> str:
     return "\n".join(lines)
 
 
-def _load_docx(path: Path) -> LoadedDocument:
+def _load_docx(path: Path, settings, llm_client, image_store) -> LoadedDocument:
     import docx
+    from rag_api.domain.models import ExtractedImage
+    
     document = docx.Document(str(path))
     lines = []
+    extracted_images = []
+    
+    # Simple extraction of images inside runs
     for para in document.paragraphs:
+        for run in para.runs:
+            # We don't have direct python-docx API for inline shapes' bytes easily without walking drawing XML
+            # Let's use a simpler heuristic for MVP if python-docx provides images, else just skip
+            # python-docx has document.inline_shapes for all shapes, but no easy mapping to paragraphs
+            pass
+            
         text = para.text.strip()
-        if not text:
-            continue
-        style = para.style.name if para.style else ""
-        m = re.match(r"Heading (\d)", style)
-        if m:
-            level = min(int(m.group(1)), 6)
-            lines.append(f"{'#' * level} {text}")
-        else:
-            lines.append(text)
+        if text:
+            style = para.style.name if para.style else ""
+            m = re.match(r"Heading (\d)", style)
+            if m:
+                level = min(int(m.group(1)), 6)
+                lines.append(f"{'#' * level} {text}")
+            else:
+                lines.append(text)
+                
+    # Document-level inline shapes (out of order, but it works for MVP)
+    for shape in document.inline_shapes:
+        try:
+            blip = shape._inline.graphic.graphicData.pic.blipFill.blip
+            rId = blip.embed
+            image_part = document.part.related_parts[rId]
+            img_bytes = image_part.blob
+            
+            derived_text, content_type = _extract_image_text(img_bytes, settings, llm_client)
+            if content_type == "image_untranscribed" and not settings.image_captioning_enabled:
+                continue
+                
+            image_hash = image_store.put(img_bytes, image_part.content_type) if image_store else "no_store"
+            extracted_images.append(ExtractedImage(
+                image_hash=image_hash,
+                page_number=None,
+                bbox=None,
+                reading_order_index=len(extracted_images),
+                content_type=content_type,
+                derived_text=derived_text
+            ))
+            lines.append(f"\n\n<!--IMG:{image_hash}-->\n\n{derived_text}\n\n<!--/IMG-->\n\n")
+        except Exception:
+            pass
+
     for table in document.tables:
         lines.append(_docx_table_to_markdown(table))
-    return LoadedDocument(source_file=path.name, format="docx", text="\n\n".join(lines))
+        
+    return LoadedDocument(source_file=path.name, format="docx", text="\n\n".join(lines), images=extracted_images)
 
 
 def _load_pptx(path: Path) -> LoadedDocument:
@@ -326,44 +413,56 @@ def _load_xlsx(path: Path) -> LoadedDocument:
         sections.append(f"## {sheet.title}\n\n{table_md}")
     return LoadedDocument(source_file=path.name, format="xlsx", text="\n\n".join(sections))
 
-def _load_pdf_pypdfium2(path: Path, settings, llm_client) -> LoadedDocument:
-    import pypdfium2 as pdfium
+
+def _extract_image_text(image_bytes: bytes, settings, llm_client) -> tuple[str, str]:
     import pytesseract
-    from rag_api.domain.models import PageText
     from PIL import Image
     from io import BytesIO
-    from rag_api.adapters.storage.image_store import build_image_store
-    
-    image_store = build_image_store(settings.image_store_backend, base_dir=settings.image_store_path)
+    try:
+        ocr_text = pytesseract.image_to_string(Image.open(BytesIO(image_bytes))).strip()
+        if len(ocr_text.split()) >= settings.min_ocr_words_before_caption_fallback:
+            return ocr_text, "image_ocr"
+    except Exception:
+        ocr_text = ""
+        
+    if settings.image_captioning_enabled and llm_client:
+        try:
+            caption = llm_client.describe_image(image_bytes, "image/png", "Describe this image factually.")
+            return caption, "image_caption"
+        except Exception:
+            pass
+            
+    return ocr_text, "image_untranscribed"
+
+def _load_pdf_pypdfium2(path: Path, settings, llm_client, image_store) -> LoadedDocument:
+    import pypdfium2 as pdfium
+    import pytesseract
+    from PIL import Image
+    from io import BytesIO
+    from rag_api.domain.models import PageText, ExtractedImage
     
     pages: list[PageText] = []
+    extracted_images = []
     pdf = pdfium.PdfDocument(str(path))
     
     for i in range(len(pdf)):
         page = pdf[i]
         page_number = i + 1
-        
-        # Extract native text
         text_page = page.get_textpage()
         native_text = text_page.get_text_bounded().strip()
         
         extraction_method = "native"
         final_text = native_text
         
-        # Feature B: Scanned page check
         if len(native_text) < settings.scanned_page_text_threshold:
-            # Rasterize page and run Tesseract
-            bitmap = page.render(scale=300/72) # ~300 DPI
+            bitmap = page.render(scale=settings.ocr_dpi/72)
             pil_image = bitmap.to_pil()
-            ocr_text = pytesseract.image_to_string(pil_image)
-            
-            if ocr_text.strip():
-                final_text = ocr_text.strip()
+            ocr_text = pytesseract.image_to_string(pil_image).strip()
+            if ocr_text:
+                final_text = ocr_text
                 extraction_method = "ocr"
         
-        # Feature A: Embedded images
-        # We process objects on the page
-        images = []
+        images_on_page = []
         for obj in page.get_objects():
             if isinstance(obj, pdfium.PdfImage):
                 try:
@@ -374,38 +473,31 @@ def _load_pdf_pypdfium2(path: Path, settings, llm_client) -> LoadedDocument:
                     pil_image.save(img_bytes_io, format="PNG")
                     img_bytes = img_bytes_io.getvalue()
                     
-                    # Run Tesseract
-                    ocr_img_text = pytesseract.image_to_string(pil_image).strip()
-                    
-                    caption = ""
-                    content_type = "image_ocr"
-                    
-                    if len(ocr_img_text) > settings.scanned_page_text_threshold:
-                        caption = ocr_img_text
-                    elif settings.image_captioning_enabled and llm_client:
-                        caption = llm_client.describe_image(img_bytes, "image/png", "Describe this image in detail.")
-                        content_type = "image_caption"
+                    derived_text, content_type = _extract_image_text(img_bytes, settings, llm_client)
+                    if content_type == "image_untranscribed" and not settings.image_captioning_enabled:
+                        continue # Skip entirely if we can't extract it and captioning is off
                         
-                    if caption:
-                        # Save image
-                        image_ref = image_store.save_image(img_bytes)
-                        # We don't have Chunk class here, we just append to the page text
-                        # Wait, LoadedDocument just takes text. Chunking happens later!
-                        # We can append it as a markdown figure.
-                        # But wait, how do we pass image_ref and content_type to chunk metadata?
-                        # The prompt says: "tagged in chunk metadata with content_type: image_ocr | image_caption and an image_ref pointing at the stored blob."
-                        # Currently LoadedDocument.pages is just text!
-                        # This means we might need to modify LoadedDocument to support enriched metadata, or we just format it as text.
-                        # For now, append it.
-                        images.append(f"> Figure (Ref: {image_ref}, Type: {content_type}): {caption}")
+                    image_hash = image_store.put(img_bytes, "image/png") if image_store else "no_store"
+                    
+                    extracted_images.append(ExtractedImage(
+                        image_hash=image_hash,
+                        page_number=page_number,
+                        bbox=None, # pypdfium2 bbox math skipped for MVP
+                        reading_order_index=len(images_on_page),
+                        content_type=content_type,
+                        derived_text=derived_text,
+                        ocr_confidence=None
+                    ))
+                    
+                    images_on_page.append(f"\n\n<!--IMG:{image_hash}-->\n\n{derived_text}\n\n<!--/IMG-->\n\n")
                 except Exception as e:
                     pass
-        
-        if images:
-            final_text += "\n\n" + "\n\n".join(images)
+                    
+        if images_on_page:
+            final_text += "".join(images_on_page)
             
         if final_text.strip():
             pages.append(PageText(page_number=page_number, text=final_text.strip(), extraction_method=extraction_method))
             
     full_text = "\n\n".join(p.text for p in pages)
-    return LoadedDocument(source_file=path.name, format="pdf", text=full_text, pages=pages)
+    return LoadedDocument(source_file=path.name, format="pdf", text=full_text, pages=pages, images=extracted_images)
