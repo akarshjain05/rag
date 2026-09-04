@@ -29,11 +29,13 @@ export function fetchDocuments() {
   return request("/v1/documents");
 }
 
-export function ask({ question, topK = 5, chunkingStrategy = null, compareDenseOnly = false, imageUrl = null }) {
+export function ask({ question, conversationId = null, verifyCitations = null, topK = 5, chunkingStrategy = null, compareDenseOnly = false, imageUrl = null }) {
   return request("/v1/ask", {
     method: "POST",
     body: JSON.stringify({
       question,
+      conversation_id: conversationId || undefined,
+      verify_citations: verifyCitations ?? undefined,
       top_k: topK,
       chunking_strategy: chunkingStrategy,
       compare_dense_only: compareDenseOnly,

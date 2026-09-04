@@ -7,6 +7,8 @@ import SourcesList from "../features/retrieval-comparison/SourcesList.jsx";
 import { fetchHealth, fetchDocuments, ask, ingest } from "../lib/api.js";
 
 export default function App() {
+  const turnsEndRef = useRef(null);
+  useEffect(() => { turnsEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [turns]);
   const [health, setHealth] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [totalChunks, setTotalChunks] = useState(0);
@@ -19,7 +21,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
+  const [turns, setTurns] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
+  const [verifyCitations, setVerifyCitations] = useState(true);
   const [highlightedMarker, setHighlightedMarker] = useState(null);
   const highlightTimeout = useRef(null);
 
@@ -58,17 +62,27 @@ export default function App() {
     try {
       const data = await ask({
         question: question.trim(),
+        conversationId,
+        verifyCitations,
         chunkingStrategy: chunkingStrategy || null,
         compareDenseOnly,
         imageUrl: imageUrl.trim() || null,
       });
-      setResult(data);
+      setConversationId(data.conversation_id);
+      setTurns([...turns, { question: question.trim(), result: data }]);
+      setQuestion("");
     } catch (err) {
       setError(err.message);
-      setResult(null);
     } finally {
       setLoading(false);
     }
+  }
+  
+  function handleNewConversation() {
+    setTurns([]);
+    setConversationId(null);
+    setQuestion("");
+    setError(null);
   }
 
   function handleCiteClick(marker) {
@@ -108,41 +122,57 @@ export default function App() {
       />
 
       <main className="main">
-        <QueryPanel
-          question={question}
-          onQuestionChange={setQuestion}
-          imageUrl={imageUrl}
-          onImageUrlChange={setImageUrl}
-          onSubmit={handleAsk}
-          loading={loading}
-          compareDenseOnly={compareDenseOnly}
-          onToggleCompare={setCompareDenseOnly}
-          chunkingStrategy={chunkingStrategy}
-          onStrategyChange={setChunkingStrategy}
-        />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+             <input type="checkbox" checked={verifyCitations} onChange={(e) => setVerifyCitations(e.target.checked)} />
+             Verify Citations
+          </label>
+          <button onClick={handleNewConversation} className="btn">New Conversation</button>
+        </div>
+        
+        <div className="turns-list" style={{ display: "flex", flexDirection: "column", gap: "2rem", marginBottom: "2rem" }}>
+          {turns.length === 0 && !loading && !error && (
+            <div className="empty-state">
+              <strong>Nothing asked yet.</strong>
+              Try a question about one of the {documents.length || "indexed"} documents on the left.
+            </div>
+          )}
+          {turns.map((turn, i) => (
+            <div key={i} className="turn" style={{ border: "1px solid var(--border)", padding: "1rem", borderRadius: "8px" }}>
+              <div style={{ fontWeight: "bold", marginBottom: "1rem", color: "var(--fg-muted)" }}>Q: {turn.question}</div>
+              <AnswerPanel result={turn.result} onCiteClick={handleCiteClick} />
+              {i === turns.length - 1 && (
+                <>
+                  <ConfidenceBreakdown result={turn.result} />
+                  <SourcesList
+                    sources={turn.result.sources}
+                    denseOnlySources={turn.result.dense_only_sources}
+                    highlightedMarker={highlightedMarker}
+                  />
+                </>
+              )}
+            </div>
+          ))}
+          <div ref={turnsEndRef} />
+        </div>
 
         {loading && <p className="loading-line">retrieving &amp; generating</p>}
         {error && <div className="error-banner">{error}</div>}
 
-        {!loading && !error && !result && (
-          <div className="empty-state">
-            <strong>Nothing asked yet.</strong>
-            Try a question about one of the {documents.length || "indexed"} documents on the left — e.g. "how many
-            vacation days do employees accrue per month?"
-          </div>
-        )}
-
-        {result && (
-          <>
-            <AnswerPanel result={result} onCiteClick={handleCiteClick} />
-            <ConfidenceBreakdown result={result} />
-            <SourcesList
-              sources={result.sources}
-              denseOnlySources={result.dense_only_sources}
-              highlightedMarker={highlightedMarker}
-            />
-          </>
-        )}
+        <div style={{ position: "sticky", bottom: 0, backgroundColor: "var(--bg)", paddingBottom: "1rem" }}>
+          <QueryPanel
+            question={question}
+            onQuestionChange={setQuestion}
+            imageUrl={imageUrl}
+            onImageUrlChange={setImageUrl}
+            onSubmit={handleAsk}
+            loading={loading}
+            compareDenseOnly={compareDenseOnly}
+            onToggleCompare={setCompareDenseOnly}
+            chunkingStrategy={chunkingStrategy}
+            onStrategyChange={setChunkingStrategy}
+          />
+        </div>
       </main>
     </div>
   );

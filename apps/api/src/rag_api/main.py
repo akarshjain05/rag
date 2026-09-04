@@ -14,6 +14,7 @@ from rag_api.domain.retrieval.retrieval import HybridRetriever
 from rag_api.domain.generation.generation import AnswerGenerator
 from rag_api.domain.generation.verification import CitationVerifier
 from rag_api.services.ingest_service import IngestionPipeline
+from rag_api.services.conversation import ConversationStore
 
 from rag_api.api.v1 import documents, ask
 from rag_api.schemas.schemas import HealthResponse
@@ -47,6 +48,7 @@ def create_app(
             model=settings.anthropic_model if settings.llm_provider == "anthropic" else settings.openai_llm_model,
             api_key=settings.anthropic_api_key if settings.llm_provider == "anthropic" else settings.openai_api_key,
             base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
+            timeout=settings.llm_request_timeout_seconds,
         )
     llm_mode = llm_mode or ("extractive" if llm_client is None else "llm")
 
@@ -54,9 +56,20 @@ def create_app(
         reranker = build_reranker(settings.reranker_provider, model_name=settings.reranker_model, llm_client=llm_client)
 
     if citation_verifier is _UNSET:
-        citation_verifier = (
-            CitationVerifier(llm_client) if settings.citation_verification_enabled and llm_client is not None else None
-        )
+        if settings.citation_verification_enabled and llm_client is not None:
+            if settings.citation_verifier_model:
+                verifier_llm = build_llm_client(
+                    settings.llm_provider,
+                    model=settings.citation_verifier_model,
+                    api_key=settings.anthropic_api_key if settings.llm_provider == "anthropic" else settings.openai_api_key,
+                    base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
+            timeout=settings.llm_request_timeout_seconds,
+                )
+            else:
+                verifier_llm = llm_client
+            citation_verifier = CitationVerifier(verifier_llm, strictness=settings.citation_verification_strictness)
+        else:
+            citation_verifier = None
 
     vector_store = vector_store or VectorStore(
         settings.chroma_persist_dir,
@@ -123,6 +136,8 @@ def create_app(
     app.state.generator = generator
     app.state.vector_store = vector_store
     app.state.sparse_index = sparse_index
+    app.state.conversation_store = ConversationStore()
+    app.state.llm_client = llm_client
 
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     def health() -> HealthResponse:

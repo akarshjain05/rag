@@ -17,7 +17,7 @@ def test_anthropic_client_calls_sdk_correctly(monkeypatch):
     fake_response = MagicMock(content=[text_block])
     fake_instance = MagicMock()
     fake_instance.messages.create.return_value = fake_response
-    monkeypatch.setattr("anthropic.Anthropic", lambda api_key, base_url=None: fake_instance)
+    monkeypatch.setattr("anthropic.Anthropic", lambda api_key, base_url=None, timeout=None: fake_instance)
 
     client = AnthropicLLMClient(model="claude-sonnet-4-5", api_key="sk-ant-test")
     result = client.generate("system prompt", "user prompt")
@@ -39,7 +39,7 @@ def test_openai_llm_client_calls_sdk_correctly(monkeypatch):
     fake_response = MagicMock(choices=[fake_choice])
     fake_instance = MagicMock()
     fake_instance.chat.completions.create.return_value = fake_response
-    monkeypatch.setattr("openai.OpenAI", lambda api_key, base_url=None: fake_instance)
+    monkeypatch.setattr("openai.OpenAI", lambda api_key, base_url=None, timeout=None: fake_instance)
 
     client = OpenAILLMClient(model="gpt-4o", api_key="sk-test")
     result = client.generate("system prompt", "user prompt")

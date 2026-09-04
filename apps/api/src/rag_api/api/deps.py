@@ -27,3 +27,9 @@ def run_or_502(fn, *args, **kwargs):
         return fn(*args, **kwargs)
     except (OpenAIError, AnthropicError) as exc:
         raise HTTPException(status_code=502, detail=f"Upstream AI provider error: {exc}") from exc
+
+def get_conversation_store(request: Request):
+    return request.app.state.conversation_store
+
+def get_llm_client(request: Request):
+    return request.app.state.llm_client

@@ -39,7 +39,7 @@ def test_split_into_claims_empty_answer_returns_no_claims():
 # --------------------------------------------------------------------------
 def test_verify_marks_supported_and_unsupported_claims():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = '{"claims": {"1": true, "2": false}, "completeness": 0.9}'
+    fake_llm.generate.return_value = '{"claims": {"1": "full", "2": "none"}, "completeness": 0.9}'
     chunks = [make_chunk("a", "Employees accrue 1.5 vacation days per month."), make_chunk("b", "Lunch is provided on Fridays.")]
 
     verifier = CitationVerifier(fake_llm)
@@ -56,12 +56,12 @@ def test_verify_marks_supported_and_unsupported_claims():
 
 def test_verify_sends_actual_excerpt_text_for_each_cited_marker():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = '{"claims": {"1": true}, "completeness": 1.0}'
+    fake_llm.generate.return_value = '{"claims": {"1": "full"}, "completeness": 1.0}'
     chunks = [make_chunk("a", "Employees accrue 1.5 vacation days per month.")]
 
     CitationVerifier(fake_llm).verify("q", "Vacation accrues monthly [1].", chunks)
 
-    system_arg, user_arg = fake_llm.generate.call_args[0]
+    system_arg, user_arg, history_arg = fake_llm.generate.call_args[0]
     assert "Employees accrue 1.5 vacation days per month." in user_arg
     assert "Vacation accrues monthly [1]." in user_arg
     assert "JSON" in system_arg
@@ -79,7 +79,7 @@ def test_verify_single_call_regardless_of_claim_count():
 
 def test_verify_uncited_claim_is_never_marked_supported():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = '{"claims": {"1": true}, "completeness": 0.5}'
+    fake_llm.generate.return_value = '{"claims": {"1": "full"}, "completeness": 0.5}'
     chunks = [make_chunk("a", "some excerpt")]
 
     result = CitationVerifier(fake_llm).verify("q", "A cited claim [1]. An uncited claim with no marker.", chunks)
@@ -113,17 +113,17 @@ def test_verify_malformed_response_degrades_to_none_supported_and_none_completen
 
 def test_verify_out_of_range_citation_marker_gets_placeholder_excerpt_text():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = '{"claims": {"1": false}, "completeness": 0.5}'
+    fake_llm.generate.return_value = '{"claims": {"1": "none"}, "completeness": 0.5}'
 
     CitationVerifier(fake_llm).verify("q", "A claim citing something nonexistent [9].", [make_chunk("a", "only excerpt")])
 
-    _, user_arg = fake_llm.generate.call_args[0]
+    _, user_arg, _ = fake_llm.generate.call_args[0]
     assert "out of range" in user_arg
 
 
 def test_verify_completeness_score_is_clamped_to_valid_range():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = '{"claims": {"1": true}, "completeness": 5.0}'  # out of [0,1] range
+    fake_llm.generate.return_value = '{"claims": {"1": "full"}, "completeness": 5.0}'  # out of [0,1] range
 
     result = CitationVerifier(fake_llm).verify("q", "A claim [1].", [make_chunk("a", "excerpt")])
 
@@ -142,7 +142,7 @@ def test_verify_invalid_json_syntax_falls_back_gracefully():
 
 def test_verify_non_numeric_completeness_is_ignored_not_fatal():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = '{"claims": {"1": true}, "completeness": "very high"}'
+    fake_llm.generate.return_value = '{"claims": {"1": "full"}, "completeness": "very high"}'
 
     result = CitationVerifier(fake_llm).verify("q", "A claim [1].", [make_chunk("a", "excerpt")])
 
@@ -152,7 +152,7 @@ def test_verify_non_numeric_completeness_is_ignored_not_fatal():
 
 def test_verify_non_string_key_in_claims_object_is_skipped():
     fake_llm = MagicMock()
-    # "claims" as a list instead of the expected {"1": true} object shape
+    # "claims" as a list instead of the expected {"1": "full"} object shape
     fake_llm.generate.return_value = '{"claims": [1, 2, 3], "completeness": 0.5}'
 
     result = CitationVerifier(fake_llm).verify("q", "A claim [1].", [make_chunk("a", "excerpt")])
@@ -169,3 +169,24 @@ def test_verify_non_numeric_claim_key_is_skipped_not_fatal():
 
     assert result.claims[0].supported is None  # unparseable key -> skipped, not a crash
     assert result.completeness == 0.5
+
+def test_verify_graded_support_lenient():
+    fake_llm = MagicMock()
+    fake_llm.generate.return_value = '{"claims": {"1": "full", "2": "partial", "3": "none"}, "completeness": 1.0}'
+    chunks = [make_chunk("a", "excerpt")]
+    result = CitationVerifier(fake_llm, strictness="lenient").verify("q", "Claim 1 [1]. Claim 2 [1]. Claim 3 [1].", chunks)
+    assert result.claims[0].supported is True
+    assert result.claims[0].support_level == "full"
+    assert result.claims[1].supported is True
+    assert result.claims[1].support_level == "partial"
+    assert result.claims[2].supported is False
+
+def test_verify_graded_support_strict():
+    fake_llm = MagicMock()
+    fake_llm.generate.return_value = '{"claims": {"1": "full", "2": "partial", "3": "none"}, "completeness": 1.0}'
+    chunks = [make_chunk("a", "excerpt")]
+    result = CitationVerifier(fake_llm, strictness="strict").verify("q", "Claim 1 [1]. Claim 2 [1]. Claim 3 [1].", chunks)
+    assert result.claims[0].supported is True
+    assert result.claims[1].supported is False
+    assert result.claims[1].support_level == "partial"
+    assert result.claims[2].supported is False

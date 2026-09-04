@@ -15,28 +15,30 @@ from abc import ABC, abstractmethod
 
 class LLMClient(ABC):
     @abstractmethod
-    def generate(self, system: str, user: str | list[dict]) -> str: ...
+    def generate(self, system: str, user: str | list[dict], history: list[dict] | None = None) -> str: ...
 
     @abstractmethod
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str: ...
 
 
 class AnthropicLLMClient(LLMClient):
-    def __init__(self, model: str = "claude-sonnet-4-5", api_key: str | None = None, max_tokens: int = 1024):
+    def __init__(self, model: str = "claude-sonnet-4-5", api_key: str | None = None, max_tokens: int = 1024, timeout: float = 30.0):
         from anthropic import Anthropic  # local import: optional dependency
 
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY is required for LLM_PROVIDER=anthropic")
-        self._client = Anthropic(api_key=api_key)
+        self._client = Anthropic(api_key=api_key, timeout=timeout)
         self._model = model
         self._max_tokens = max_tokens
 
-    def generate(self, system: str, user: str | list[dict]) -> str:
+    def generate(self, system: str, user: str | list[dict], history: list[dict] | None = None) -> str:
+        messages = list(history) if history else []
+        messages.append({"role": "user", "content": user})
         resp = self._client.messages.create(
             model=self._model,
             max_tokens=self._max_tokens,
             system=system,
-            messages=[{"role": "user", "content": user}],
+            messages=messages,
         )
         return "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
 
@@ -69,20 +71,24 @@ class AnthropicLLMClient(LLMClient):
 
 
 class OpenAILLMClient(LLMClient):
-    def __init__(self, model: str = "gpt-4o", api_key: str | None = None, base_url: str | None = None, max_tokens: int = 1024):
+    def __init__(self, model: str = "gpt-4o", api_key: str | None = None, base_url: str | None = None, max_tokens: int = 1024, timeout: float = 30.0):
         from openai import OpenAI  # local import: optional dependency
 
         if not api_key:
             raise ValueError("OPENAI_API_KEY is required for LLM_PROVIDER=openai")
-        self._client = OpenAI(api_key=api_key, base_url=base_url)
+        self._client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
         self._model = model
         self._max_tokens = max_tokens
 
-    def generate(self, system: str, user: str | list[dict]) -> str:
+    def generate(self, system: str, user: str | list[dict], history: list[dict] | None = None) -> str:
+        messages = [{"role": "system", "content": system}]
+        if history:
+            messages.extend(history)
+        messages.append({"role": "user", "content": user})
         resp = self._client.chat.completions.create(
             model=self._model,
             max_tokens=self._max_tokens,
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            messages=messages,
         )
         return resp.choices[0].message.content or ""
 

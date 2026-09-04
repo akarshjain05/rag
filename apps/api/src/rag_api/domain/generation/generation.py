@@ -152,7 +152,7 @@ class AnswerGenerator:
         self.citation_verifier = citation_verifier
         self.low_confidence_threshold = low_confidence_threshold
 
-    def generate(self, query: str, chunks: list[RetrievedChunk], image_url: str | None = None) -> GenerationResult:
+    def generate(self, query: str, chunks: list[RetrievedChunk], image_url: str | None = None, history: list[dict] | None = None, verify_citations: bool | None = None) -> GenerationResult:
         if not chunks:
             return GenerationResult(
                 answer="No relevant context was found in the indexed documents for this question.",

@@ -102,6 +102,7 @@ class ClaimVerification:
     claim_text: str
     citation_markers: list[int]
     supported: bool | None = None
+    support_level: str | None = None
 
 
 @dataclass
