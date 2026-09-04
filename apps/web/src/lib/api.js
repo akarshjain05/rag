@@ -81,3 +81,9 @@ export async function ingest(files) {
   }
   return res.json();
 }
+
+export function deleteDocument(sourceDocument) {
+  return request(`/v1/documents/${encodeURIComponent(sourceDocument)}`, {
+    method: "DELETE",
+  });
+}

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-export default function Sidebar({ documents, totalChunks, onUpload, isUploading }) {
+export default function Sidebar({ documents, totalChunks, onUpload, isUploading, onDeleteDocument }) {
   const fileInputRef = useRef(null);
 
   function handleUploadClick() {
@@ -39,9 +39,30 @@ export default function Sidebar({ documents, totalChunks, onUpload, isUploading 
       ) : (
         <ul className="doc-list">
           {documents.map((name) => (
-            <li className="doc-item" key={name}>
-              <span className="doc-item__mark">&bull;</span>
-              {name}
+            <li className="doc-item" key={name} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+              <div style={{ wordBreak: "break-all" }}>
+                <span className="doc-item__mark">&bull;</span>
+                {name}
+              </div>
+              <button
+                onClick={() => onDeleteDocument(name)}
+                title={`Delete ${name}`}
+                style={{ 
+                  background: "transparent", 
+                  border: "none", 
+                  color: "var(--danger)", 
+                  cursor: "pointer", 
+                  fontSize: "14px", 
+                  lineHeight: "1",
+                  padding: "0 4px",
+                  opacity: 0.7,
+                  marginTop: "2px"
+                }}
+                onMouseOver={(e) => e.target.style.opacity = 1}
+                onMouseOut={(e) => e.target.style.opacity = 0.7}
+              >
+                &times;
+              </button>
             </li>
           ))}
         </ul>

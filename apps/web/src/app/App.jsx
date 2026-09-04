@@ -4,7 +4,7 @@ import QueryPanel from "../features/ask/components/QueryPanel.jsx";
 import AnswerPanel from "../features/ask/components/AnswerPanel.jsx";
 import ConfidenceBreakdown from "../features/retrieval-comparison/ConfidenceBreakdown.jsx";
 import SourcesList from "../features/retrieval-comparison/SourcesList.jsx";
-import { fetchHealth, fetchDocuments, ask, ingest } from "../lib/api.js";
+import { fetchHealth, fetchDocuments, ask, ingest, deleteDocument } from "../lib/api.js";
 
 export default function App() {
   const [health, setHealth] = useState(null);
@@ -42,6 +42,16 @@ export default function App() {
   useEffect(() => {
     refreshIndexState();
   }, []);
+
+  async function handleDeleteDocument(sourceDocument) {
+    if (!window.confirm(`Are you sure you want to delete "${sourceDocument}"?`)) return;
+    try {
+      await deleteDocument(sourceDocument);
+      loadDocs(); // refresh list
+    } catch (err) {
+      alert(`Error deleting document: ${err.message}`);
+    }
+  }
 
   async function handleUpload(files) {
     setIsUploading(true);
@@ -133,6 +143,7 @@ export default function App() {
         totalChunks={totalChunks} 
         onUpload={handleUpload}
         isUploading={isUploading}
+        onDeleteDocument={handleDeleteDocument}
       />
 
       <main className="main">
