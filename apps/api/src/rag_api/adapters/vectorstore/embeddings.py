@@ -24,6 +24,10 @@ class EmbeddingClient(ABC):
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Return one embedding vector per input text, same order."""
 
+    def embed_late_chunking(self, full_text: str, span_annotations: list[tuple[int, int]]) -> list[list[float]]:
+        """Return one embedding vector per chunk span using late chunking."""
+        raise NotImplementedError("Late chunking not supported by this provider")
+
     @property
     @abstractmethod
     def dimension(self) -> int: ...
@@ -48,8 +52,14 @@ class OpenAIEmbeddingClient(EmbeddingClient):
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        resp = self._client.embeddings.create(model=self._model, input=texts)
-        return [d.embedding for d in resp.data]
+        # OpenAI has batch size limits (typically 2048). Batching by 500 to be safe.
+        batch_size = 500
+        embeddings = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i+batch_size]
+            resp = self._client.embeddings.create(model=self._model, input=batch)
+            embeddings.extend([d.embedding for d in resp.data])
+        return embeddings
 
     @property
     def dimension(self) -> int:
@@ -65,22 +75,103 @@ class LocalEmbeddingClient(EmbeddingClient):
     """
 
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+
+        try:
+            import sys
+            from types import ModuleType
+            if 'transformers.onnx' not in sys.modules:
+                sys.modules['transformers.onnx'] = ModuleType('transformers.onnx')
+                sys.modules['transformers.onnx'].OnnxConfig = object
+            import transformers.pytorch_utils
+            transformers.pytorch_utils.find_pruneable_heads_and_indices = lambda *args, **kwargs: (set(), [])
+            from transformers import AutoModel, AutoTokenizer
+
+            import torch
+        except ImportError as exc:
+            raise ImportError("Local embedding requires transformers and torch") from exc
+
+        self.model_name = model_name
+        
+        # Load via AutoModel for late chunking access
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        self.model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
+        self.model.eval()
+        
         try:
             from sentence_transformers import SentenceTransformer
-        except ImportError as exc:  # pragma: no cover - exercised via mocked test instead
-            raise ImportError(
-                "EMBEDDING_PROVIDER=local requires sentence-transformers. "
-                "Install with: pip install -r requirements-local.txt"
-            ) from exc
-
-        self._model = SentenceTransformer(model_name)
-        self._dimension = self._model.get_sentence_embedding_dimension()
+            self._st_model = SentenceTransformer(model_name)
+            self._dimension = self._st_model.get_sentence_embedding_dimension()
+        except:
+            self._st_model = None
+            self._dimension = self.model.config.hidden_size
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        vectors = self._model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-        return [v.tolist() for v in vectors]
+        if self._st_model:
+            batch_size = 256
+            embeddings = []
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i:i+batch_size]
+                vectors = self._st_model.encode(batch, normalize_embeddings=True, show_progress_bar=False)
+                embeddings.extend([v.tolist() for v in vectors])
+            return embeddings
+        # Fallback if sentence-transformers fails to load (e.g. for jina)
+        import torch
+        embeddings = []
+        for text in texts:
+            inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=8192)
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+                vec = outputs.last_hidden_state.mean(dim=1).squeeze()
+                vec = torch.nn.functional.normalize(vec, p=2, dim=0)
+                embeddings.append(vec.tolist())
+        return embeddings
+
+    def embed_late_chunking(self, full_text: str, span_annotations: list[tuple[int, int]]) -> list[list[float]]:
+        if not span_annotations:
+            return []
+            
+        import torch
+        # Tokenize the entire document with offsets
+        inputs = self.tokenizer(full_text, return_tensors="pt", return_offsets_mapping=True, truncation=True, max_length=8192)
+        offsets = inputs.pop("offset_mapping")[0].tolist()  # list of (start, end) char tuples
+        
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            # Shape: [1, seq_len, hidden_size] -> [seq_len, hidden_size]
+            token_embeddings = outputs.last_hidden_state.squeeze(0)
+            
+        chunk_embeddings = []
+        for char_start, char_end in span_annotations:
+            # Map character span to token span
+            token_start, token_end = None, None
+            for idx, (tok_char_start, tok_char_end) in enumerate(offsets):
+                # Ignore special tokens like [CLS] mapped to (0,0)
+                if tok_char_start == tok_char_end:
+                    continue
+                if token_start is None and tok_char_end > char_start:
+                    token_start = idx
+                if token_start is not None and tok_char_start < char_end:
+                    token_end = idx
+                    
+            if token_start is None or token_end is None:
+                # Fallback to standard embedding if mapping fails completely
+                inputs_fallback = self.tokenizer(full_text[char_start:char_end], return_tensors="pt", truncation=True)
+                with torch.no_grad():
+                    outputs_fallback = self.model(**inputs_fallback)
+                    pooled = outputs_fallback.last_hidden_state.squeeze(0).mean(dim=0)
+            else:
+                # Inclusive token_end for slicing
+                chunk_tokens = token_embeddings[token_start:token_end+1]
+                # Apply mean pooling across the sequence dimension
+                pooled = torch.mean(chunk_tokens, dim=0)
+                
+            # Normalize the vector
+            normalized = torch.nn.functional.normalize(pooled, p=2, dim=0)
+            chunk_embeddings.append(normalized.tolist())
+            
+        return chunk_embeddings
 
     @property
     def dimension(self) -> int:

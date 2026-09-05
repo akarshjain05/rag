@@ -14,7 +14,6 @@ from rag_api.adapters.storage.dedup import check_duplicate, check_duplicate_batc
 from rag_api.adapters.vectorstore.embeddings import EmbeddingClient
 from rag_api.adapters.storage.loaders import load_document
 from rag_api.domain.models import ChunkingStrategy, IngestReport
-from rag_api.adapters.vectorstore.sparse_index import BaseSparseIndex
 from rag_api.adapters.vectorstore.vector_store import VectorStore
 
 
@@ -23,7 +22,7 @@ class IngestionPipeline:
         self,
         embedding_client: EmbeddingClient,
         vector_store: VectorStore,
-        sparse_index: BaseSparseIndex,
+        
         llm_client = None,
         image_store = None,
         *,
@@ -38,7 +37,7 @@ class IngestionPipeline:
     ):
         self.embedding_client = embedding_client
         self.vector_store = vector_store
-        self.sparse_index = sparse_index
+        
         self.llm_client = llm_client
         self.image_store = image_store
         self.image_store = None
@@ -62,57 +61,92 @@ class IngestionPipeline:
         try:
             doc = load_document(path, llm_client=self.llm_client, image_store=self.image_store)
         except Exception as exc:  # noqa: BLE001 - reported, not raised, so batches survive one bad file
-            return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=str(exc))
+            return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=f"Loading failed: {str(exc)}")
 
-        chunks, skipped_low_quality = chunk_document(
-            doc,
-            strategy,
-            fixed_chunk_size=self.fixed_chunk_size,
-            fixed_chunk_overlap=self.fixed_chunk_overlap,
-            structure_max_section_size=self.structure_max_section_size,
-            semantic_similarity_threshold=self.semantic_similarity_threshold,
-            semantic_max_chunk_chars=self.semantic_max_chunk_chars,
-            semantic_min_chunk_chars=self.semantic_min_chunk_chars,
-            embedding_client=self.embedding_client if strategy in (ChunkingStrategy.SEMANTIC, ChunkingStrategy.STRUCTURE_AWARE) else None,
-        )
+        try:
+            chunks, skipped_low_quality = chunk_document(
+                doc,
+                strategy,
+                fixed_chunk_size=self.fixed_chunk_size,
+                fixed_chunk_overlap=self.fixed_chunk_overlap,
+                structure_max_section_size=self.structure_max_section_size,
+                semantic_similarity_threshold=self.semantic_similarity_threshold,
+                semantic_max_chunk_chars=self.semantic_max_chunk_chars,
+                semantic_min_chunk_chars=self.semantic_min_chunk_chars,
+                embedding_client=self.embedding_client if strategy in (ChunkingStrategy.SEMANTIC, ChunkingStrategy.STRUCTURE_AWARE) else None,
+            )
 
-        report = IngestReport(
-            source_file=doc.source_file,
-            chunking_strategy=strategy.value,
-            chunks_created=len(chunks),
-            chunks_skipped_low_quality=skipped_low_quality
-        )
-        if not chunks:
-            return report
+            import concurrent.futures
 
-        embeddings = self.embedding_client.embed([c.text for c in chunks])
+            # --- CONTEXTUAL RETRIEVAL PREPROCESSING (Anthropic Method) ---
+            if self.llm_client and chunks:
+                print(f"Generating Contextual Retrieval summaries for {len(chunks)} chunks in {doc.source_file} (leveraging Prompt Caching)...")
+                
+                # Format the massive document as the system prompt and explicitly add Anthropic's cache_control flag
+                system_prompt = [
+                    {
+                        "type": "text",
+                        "text": "You are a specialized preprocessing agent. Generate a concise context summary to improve search retrieval."
+                    },
+                    {
+                        "type": "text",
+                        "text": f"<document>\n{doc.text}\n</document>\n\n",
+                        "cache_control": {"type": "ephemeral"}
+                    }
+                ]
+                
+                def situate_chunk(c):
+                    prompt = f"Here is the chunk we want to situate within the whole document:\n<chunk>\n{c.text}\n</chunk>\n\nPlease give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."
+                    try:
+                        context = self.llm_client.generate(system_prompt, prompt).strip()
+                        # Prepend the context to the chunk, so it is embedded, indexed by BM25, and visible to the final Generator LLM
+                        c.text = f"[{context}]\n\n{c.text}"
+                    except Exception as e:
+                        print(f"Warning: Context generation failed for chunk {c.chunk_id} - {e}")
+                    return c
+                    
+                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                    chunks = list(executor.map(situate_chunk, chunks))
+            # -------------------------------------------------------------
 
-        inserted_ids = []
-        inserted_texts = []
-        inserted_metas = []
-        inserted_embeddings = []
-        
-        # Batch dedup check
-        dedups = check_duplicate_batch(embeddings, self.vector_store, threshold=self.dedup_similarity_threshold)
-        
-        for chunk, embedding, dedup in zip(chunks, embeddings, dedups):
-            if dedup.is_duplicate:
-                report.duplicates_skipped += 1
-                report.duplicate_of.append(dedup.duplicate_of)
-                continue
-            inserted_ids.append(chunk.chunk_id)
-            inserted_texts.append(chunk.text)
-            inserted_metas.append(chunk.metadata())
-            inserted_embeddings.append(embedding)
-            report.chunks_inserted += 1
+            report = IngestReport(
+                source_file=doc.source_file,
+                chunking_strategy=strategy.value,
+                chunks_created=len(chunks),
+                chunks_skipped_low_quality=skipped_low_quality
+            )
+            if not chunks:
+                return report
+
+            embeddings = self.embedding_client.embed([c.text for c in chunks])
+
+            inserted_ids = []
+            inserted_texts = []
+            inserted_metas = []
+            inserted_embeddings = []
             
-        if inserted_ids:
-            self.vector_store.add_many(inserted_ids, inserted_embeddings, inserted_texts, inserted_metas)
+            # Batch dedup check
+            dedups = check_duplicate_batch(embeddings, self.vector_store, threshold=self.dedup_similarity_threshold)
+            
+            for chunk, embedding, dedup in zip(chunks, embeddings, dedups):
+                if dedup.is_duplicate:
+                    report.duplicates_skipped += 1
+                    report.duplicate_of.append(dedup.duplicate_of)
+                    continue
+                inserted_ids.append(chunk.chunk_id)
+                inserted_texts.append(chunk.text)
+                inserted_metas.append(chunk.metadata())
+                inserted_embeddings.append(embedding)
+                report.chunks_inserted += 1
+                
+            if inserted_ids:
+                self.vector_store.add_many(inserted_ids, inserted_embeddings, inserted_texts, inserted_metas)
 
-        if inserted_ids:
-            self.sparse_index.add_many(inserted_ids, inserted_texts, inserted_metas)
 
-        return report
+
+            return report
+        except Exception as exc:
+            return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=f"Ingestion failed: {str(exc)}")
 
     def ingest_files(self, paths: list[str | Path], strategy: ChunkingStrategy | None = None) -> list[IngestReport]:
         return [self.ingest_file(p, strategy) for p in paths]

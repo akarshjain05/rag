@@ -16,8 +16,6 @@ def get_generator(request: Request):
 def get_vector_store(request: Request):
     return request.app.state.vector_store
 
-def get_sparse_index(request: Request):
-    return request.app.state.sparse_index
 
 def run_or_502(fn, *args, **kwargs):
     from fastapi import HTTPException

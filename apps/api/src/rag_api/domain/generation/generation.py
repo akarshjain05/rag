@@ -75,7 +75,12 @@ class GenerationResult:
 
 def _build_context_block(chunks: list[RetrievedChunk]) -> str:
     blocks = []
+    # Dynamic Context Pruning: Drop chunks with rerank score < 0.30 to avoid confusing the LLM with noise.
+    # The chunks are still preserved in the overall list so the UI can display them (with low scores).
     for i, c in enumerate(chunks, start=1):
+        if c.rerank_score is not None and c.rerank_score < 0.30:
+            continue
+            
         loc = [c.metadata.get("source_document", "unknown")]
         section = c.metadata.get("section_heading")
         if section:
@@ -96,6 +101,7 @@ def build_sources(chunks: list[RetrievedChunk]) -> list[dict]:
             {
                 "marker": i,
                 "chunk_id": c.chunk_id,
+                "text": c.text,
                 "source_document": c.metadata.get("source_document"),
                 "section_heading": c.metadata.get("section_heading") or None,
                 "page_number": page if page != -1 else None,
@@ -194,7 +200,12 @@ class AnswerGenerator:
                 composite_confidence=composite,
             )
 
-        context_block = _build_context_block(chunks)
+        # DYNAMIC CONTEXT PRUNING: Only pass chunks that survived the threshold to the LLM to prevent 'Lost in the Middle' hallucinations!
+        pruned_chunks = chunks
+        if self.low_confidence_threshold is not None:
+            pruned_chunks = [c for c in chunks if (c.rerank_score is None) or (c.rerank_score >= self.low_confidence_threshold)]
+            
+        context_block = _build_context_block(pruned_chunks)
         user_prompt_text = f"Context excerpts:\n\n{context_block}\n\nQuestion: {query}\n\nAnswer:"
         
         if image_url:

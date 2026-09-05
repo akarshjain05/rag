@@ -102,7 +102,12 @@ def chunk_document(
                     if _is_low_quality_chunk(sub_text):
                         skipped_low_quality += 1
                         continue
-                    enriched_text = f"Document: {doc.source_file}\nSection: {heading or 'None'}\n\n{sub_text.strip()}"
+                    raw_clean = sub_text.strip()
+                    char_start = doc.text.find(raw_clean)
+                    char_end = char_start + len(raw_clean) if char_start != -1 else None
+                    char_start = char_start if char_start != -1 else None
+                    
+                    enriched_text = f"Document: {doc.source_file}\nSection: {heading or 'None'}\n\n{raw_clean}"
                     chunks.append(Chunk(
                         text=enriched_text,
                         source_document=doc.source_file,
@@ -112,7 +117,9 @@ def chunk_document(
                         page_number=page_number,
                         extraction_method=extraction_method,
                         content_type="text",
-                        image_ref=None
+                        image_ref=None,
+                        char_start=char_start,
+                        char_end=char_end
                     ))
                     idx += 1
             

@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from rag_api.core.settings import Settings, get_settings
 from rag_api.adapters.vectorstore.embeddings import EmbeddingClient, build_embedding_client
 from rag_api.adapters.vectorstore.vector_store import VectorStore
-from rag_api.adapters.vectorstore.sparse_index import BaseSparseIndex, build_sparse_index
 from rag_api.adapters.storage.image_store import build_image_store
 from rag_api.adapters.llm.llm_client import LLMClient, build_llm_client
 from rag_api.domain.models import ChunkingStrategy
@@ -29,7 +28,6 @@ def create_app(
     llm_client: LLMClient | None = None,
     llm_mode: str | None = None,
     vector_store: VectorStore | None = None,
-    sparse_index: BaseSparseIndex | None = None,
     reranker: Reranker | None = _UNSET,
     citation_verifier: CitationVerifier | None = _UNSET,
 ) -> FastAPI:
@@ -79,19 +77,13 @@ def create_app(
         host=settings.chroma_host,
         port=settings.chroma_port,
     )
-    sparse_index = sparse_index if sparse_index is not None else build_sparse_index(
-        settings.sparse_index_provider,
-        settings.sparse_index_persist_dir
-    )
-    if sparse_index.count() == 0:
-        sparse_index.rebuild_from(vector_store.get_all())
+
 
     image_store_instance = build_image_store(settings.image_store_backend, base_dir=settings.image_store_path)
 
     pipeline = IngestionPipeline(
         embedding_client,
         vector_store,
-        sparse_index,
         llm_client=llm_client,
         image_store=image_store_instance,
         default_strategy=ChunkingStrategy(settings.default_chunking_strategy),
@@ -106,7 +98,6 @@ def create_app(
     retriever = HybridRetriever(
         embedding_client,
         vector_store,
-        sparse_index,
         dense_top_k=settings.dense_top_k,
         sparse_top_k=settings.sparse_top_k,
         rrf_k=settings.rrf_k,
@@ -139,7 +130,6 @@ def create_app(
     app.state.retriever = retriever
     app.state.generator = generator
     app.state.vector_store = vector_store
-    app.state.sparse_index = sparse_index
     app.state.conversation_store = ConversationStore()
     app.state.llm_client = llm_client
     app.state.image_store = image_store_instance

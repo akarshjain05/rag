@@ -12,14 +12,27 @@ from rag_api.domain.models import ClaimVerification, RetrievedChunk
 
 
 def compute_retrieval_confidence(chunks: list[RetrievedChunk]) -> float:
-    """Mean dense cosine similarity across the returned chunks. A chunk
-    found only via sparse search (no dense_similarity) contributes 0.0 --
-    dense search considering it irrelevant is itself a meaningful low
-    signal, not a gap to paper over with a neutral default."""
+    """Calculates calibrated retrieval confidence using exponential decay.
+    Prevents low-scoring tail chunks from dragging down a strong top hit."""
+    import numpy as np
+    
     if not chunks:
         return 0.0
-    values = [c.dense_similarity if c.dense_similarity is not None else 0.0 for c in chunks]
-    return max(0.0, min(1.0, sum(values) / len(values)))
+    
+    # If chunks were reranked, use the rerank score which is mapped to [0,1]
+    if any(c.rerank_score is not None for c in chunks):
+        values = [c.rerank_score if c.rerank_score is not None else 0.0 for c in chunks]
+    else:
+        values = [c.dense_similarity if c.dense_similarity is not None else 0.0 for c in chunks]
+        
+    scores = sorted(values, reverse=True)
+    
+    if not scores:
+        return 0.0
+        
+    weights = [0.5 ** i for i in range(len(scores))]
+    calibrated_score = float(np.average(scores, weights=weights))
+    return float(max(0.0, min(1.0, round(calibrated_score, 4))))
 
 
 def compute_citation_coverage(claims: list[ClaimVerification]) -> tuple[float, str]:
@@ -49,12 +62,16 @@ def compute_composite_confidence(
     citation_coverage: float | None,
     completeness: float | None,
 ) -> float | None:
-    """Equal-weighted mean of whichever sub-scores are available. None only
-    when none of the three could be computed at all."""
-    values = [v for v in (retrieval_confidence, citation_coverage, completeness) if v is not None]
-    if not values:
-        return None
-    return sum(values) / len(values)
+    """Composite scoring based on enterprise architecture:
+    Retrieval confidence carries the highest weight in the composite score.
+    (retrieval_conf * 0.50) + (coverage * 0.30) + (completeness * 0.20)
+    """
+    retrieval = retrieval_confidence if retrieval_confidence is not None else 0.0
+    coverage = citation_coverage if citation_coverage is not None else 1.0
+    comp = completeness if completeness is not None else 1.0
+    
+    composite = (retrieval * 0.50) + (coverage * 0.30) + (comp * 0.20)
+    return float(round(composite, 4))
 
 
 def unsupported_citation_markers(claims: list[ClaimVerification]) -> list[int]:

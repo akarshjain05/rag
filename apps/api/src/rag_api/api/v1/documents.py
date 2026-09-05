@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Query, UploadFile, HTTPException
 from rag_api.schemas.schemas import IngestResponse, IngestReportSchema, DocumentsResponse, DeleteResponse
 from rag_api.domain.models import ChunkingStrategy
-from rag_api.api.deps import get_pipeline, get_vector_store, get_sparse_index, run_or_502
+from rag_api.api.deps import get_pipeline, get_vector_store, run_or_502
 
 router = APIRouter(prefix="", tags=["documents"])
 
@@ -49,8 +49,6 @@ def list_documents(vector_store = Depends(get_vector_store)) -> DocumentsRespons
 def delete_document(
     source_document: str,
     vector_store = Depends(get_vector_store),
-    sparse_index = Depends(get_sparse_index)
 ) -> DeleteResponse:
     deleted = vector_store.delete_source_document(source_document)
-    sparse_index.delete_source_document(source_document)
     return DeleteResponse(source_document=source_document, chunks_deleted=deleted)

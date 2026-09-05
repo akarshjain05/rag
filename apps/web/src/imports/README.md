@@ -404,7 +404,12 @@ part of building it honestly:
   will cut a large markdown table mid-row-block, meaning later chunks lose
   the header row context. This is fine for small/medium sheets, but large sheets
   would require a dedicated row-aware chunker for perfect results.
-- **Unified Indexing**: The pipeline now uses Qdrant for both dense and sparse (BM25) storage, eliminating the need for parallel SQLite/Chroma synchronization.
+- **BM25 has no incremental index**: `rank_bm25` rebuilds from the full
+  corpus on every write. `SparseIndex.rebuild_from()` treats ChromaDB as the
+  single source of truth and reconstructs BM25 from it, so the two indexes
+  are in sync by construction — but a corpus of hundreds of thousands of
+  chunks would need a real incremental text index (Tantivy, Elasticsearch)
+  instead.
 - **Sentence splitting** for semantic chunking is regex-based (punctuation +
   capital letter), not a real sentence tokenizer — it will mis-split on
   abbreviations (`e.g.`, `Dr.`) in adversarial text. Fine for typical prose;
@@ -420,7 +425,7 @@ part of building it honestly:
   fusion order) rather than failing, but a very large `RERANK_CANDIDATE_POOL`
   on a weak model is more likely to trigger that fallback. `cross_encoder`
   doesn't have this failure mode.
-- **Retrieval confidence is Calibrated Exponential Decay**. Using top-K weighting, the system ensures that long-tail noise doesn't drag down the confidence of a perfectly retrieved top-1 chunk.
+- **Retrieval confidence is mean dense cosine similarity, not a calibrated
   probability.** A sparse-only hit (no dense signal at all) contributes 0.0
   to that mean, which is a deliberate choice — dense search considering
   something irrelevant is itself meaningful — but it means retrieval
@@ -443,7 +448,7 @@ part of building it honestly:
   one), `format_comparison_report` reports whichever was listed first as
   the "winner" — standard `max()` behavior, not a hidden tiebreak rule,
   but worth knowing before reading a report from a very small eval run.
-- **The database layer runs on Qdrant**, providing native Reciprocal Rank Fusion via its Rust engine instead of doing math in Python memory.
+- **The `chromadb` docker-compose service uses the official `chromadb/chroma`
   image as documented, but wasn't pulled and run in *this* build
   environment** (network-restricted to package registries, not Docker Hub).
   What *is* directly verified: `VectorStore(mode="http")` against a real,
@@ -471,10 +476,11 @@ app/
   chunking.py         3 chunking strategies
   text_utils.py       shared sentence splitter (chunking + claim parsing)
   embeddings.py       OpenAI / local / fake embedding clients
-  vector_store.py     Qdrant client and Hybrid Search (Prefetch + FusionQuery)
+  vector_store.py     ChromaDB wrapper
+  sparse_index.py     BM25 wrapper
   dedup.py            near-duplicate detection
   pipeline.py          ingestion orchestration
-  retrieval.py        async orchestration mapping to Qdrant native hybrid search
+  retrieval.py        hybrid search (weighted RRF)
   reranker.py         cross-encoder / LLM-as-judge reranking
   llm_client.py       Anthropic / OpenAI client wrappers
   generation.py       grounded answer generation + low-confidence path

@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
 from rag_api.api.deps import get_retriever, get_generator, run_or_502, get_conversation_store, get_llm_client
-from rag_api.services.query_condensation import condense_query
+from rag_api.services.query_condensation import condense_query, expand_query, generate_hyde
 from rag_api.services.conversation import Turn
 from rag_api.domain.generation.generation import build_sources
 
 router = APIRouter(prefix="/ask", tags=["query"])
 
 @router.post("", response_model=QueryResponse, summary="Ask a question over the indexed documents", description="Hybrid dense+sparse retrieval, fused (and optionally reranked), then a grounded, cited answer. Response includes retrieval/citation/completeness confidence sub-scores and a composite. Set `compare_dense_only` to also retrieve with dense search alone, for side-by-side comparison against the hybrid result actually used to generate the answer.")
-def ask(
+async def ask(
     payload: QueryRequest,
     retriever = Depends(get_retriever),
     generator = Depends(get_generator),
@@ -32,7 +32,52 @@ def ask(
         llm_history.append({"role": "user", "content": t.user})
         llm_history.append({"role": "assistant", "content": t.assistant})
 
-    chunks = run_or_502(retriever.retrieve, search_query, top_k=payload.top_k, chunking_strategy=strategy_value)
+    # 0. HyDE (Hypothetical Document Embeddings)
+    # Generate a hypothetical answer to the query to maximize vector overlap
+    hyde_doc = ""
+    if llm_client:
+        hyde_doc = run_or_502(generate_hyde, search_query, llm_client)
+    
+    hyde_search_query = f"{search_query}\n\n{hyde_doc}" if hyde_doc else search_query
+
+    chunks = run_or_502(
+        retriever.retrieve, 
+        hyde_search_query, 
+        top_k=payload.top_k, 
+        chunking_strategy=strategy_value,
+        original_query=search_query
+    )
+    
+    # 1. Corrective RAG (CRAG) Routing
+    if retriever.reranker and chunks and llm_client:
+        max_retries = 1
+        retries = 0
+        while retries < max_retries:
+            max_score = max([c.rerank_score or 0.0 for c in chunks])
+            if 0.40 <= max_score < 0.80:
+                print(f"CRAG TRIGGERED (Retry {retries+1}/{max_retries}): Ambiguous confidence {max_score:.2f}. Expanding query...")
+                expanded_query = run_or_502(expand_query, search_query, llm_client)
+                crag_chunks = run_or_502(
+                    retriever.retrieve, 
+                    expanded_query, 
+                    top_k=payload.top_k, 
+                    chunking_strategy=strategy_value,
+                    original_query=search_query
+                )
+                new_max_score = max([c.rerank_score or 0.0 for c in crag_chunks]) if crag_chunks else 0.0
+                
+                # If the expanded query found better chunks, use them!
+                if new_max_score > max_score:
+                    chunks = crag_chunks
+                    search_query = expanded_query # use the expanded query for the LLM generation too
+                else:
+                    break # Expansion didn't help, break to avoid useless loop
+            else:
+                break # Score is either very high (good) or very low (refuse), no need to expand
+            retries += 1
+
+    # Note: Dynamic Context Pruning happens inside the generator now!
+
     result = run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=None, verify_citations=payload.verify_citations)
     
     cid = payload.conversation_id or store.create_conversation()

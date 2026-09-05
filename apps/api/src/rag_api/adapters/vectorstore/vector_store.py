@@ -1,24 +1,7 @@
-"""Thin wrapper around a ChromaDB collection.
-
-Embeddings are always supplied explicitly by the caller (via an
-`EmbeddingClient`) rather than using Chroma's built-in embedding functions —
-that keeps provider choice (OpenAI vs local) in one place (`app/embeddings.py`)
-instead of split across two configuration surfaces.
-
-Two modes, same interface (Chroma's `Collection` API is identical for both
-client types, so nothing below branches on mode):
-- "embedded" (default): `PersistentClient` writing to a local directory --
-  simplest path for local dev, no extra process to run.
-- "http": `HttpClient` against a separate Chroma server -- used in
-  docker-compose, where Chroma runs as its own service so storage isn't
-  tied to the API container's lifecycle.
-"""
 from __future__ import annotations
-
 from pathlib import Path
-
-import chromadb
-
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
 
 class VectorStore:
     def __init__(
@@ -27,96 +10,195 @@ class VectorStore:
         collection_name: str = "internal_docs",
         *,
         mode: str = "embedded",
-        host: str = "chromadb",
-        port: int = 8000,
+        host: str = "qdrant",
+        port: int = 6333,
     ):
+        self.collection_name = collection_name
         if mode == "http":
-            self._client = chromadb.HttpClient(host=host, port=port)
+            self._client = QdrantClient(host=host, port=port)
         elif mode == "embedded":
             if persist_dir is None:
                 raise ValueError("persist_dir is required when mode='embedded'")
             Path(persist_dir).mkdir(parents=True, exist_ok=True)
-            self._client = chromadb.PersistentClient(path=str(persist_dir))
+            self._client = QdrantClient(path=str(persist_dir))
         else:
-            raise ValueError(f"Unknown VectorStore mode: {mode!r} (expected 'embedded' or 'http')")
+            raise ValueError(f"Unknown VectorStore mode: {mode!r}")
 
-        self._collection = self._client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine"},
-        )
+        # Ensure collection exists with both dense and sparse configurations
+        if not self._client.collection_exists(collection_name=self.collection_name):
+            self._client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config={
+                    "dense_jina": models.VectorParams(
+                        size=768,  # Jina v2 base en size
+                        distance=models.Distance.COSINE
+                    )
+                },
+                sparse_vectors_config={
+                    "sparse_bm25": models.SparseVectorParams(
+                        modifier=models.Modifier.IDF
+                    )
+                }
+            )
+            # Setup FastEmbed native BM25 computation
+            self._client.set_model("Qdrant/bm25")
 
     def count(self) -> int:
-        return self._collection.count()
+        return self._client.get_collection(self.collection_name).points_count
 
     def add(self, chunk_id: str, embedding: list[float], text: str, metadata: dict) -> None:
-        self._collection.add(ids=[chunk_id], embeddings=[embedding], documents=[text], metadatas=[metadata])
+        self.add_many([chunk_id], [embedding], [text], [metadata])
 
     def add_many(self, chunk_ids: list[str], embeddings: list[list[float]], texts: list[str], metadatas: list[dict]) -> None:
         if not chunk_ids:
             return
-        self._collection.add(ids=chunk_ids, embeddings=embeddings, documents=texts, metadatas=metadatas)
+            
+        import uuid
+        
+        # FastEmbed requires generating sparse vectors locally before upload if using regular upload,
+        # OR we can just use the fastembed integrated methods.
+        # However, for simplicity, we will just use QdrantClient.add which automatically uses FastEmbed 
+        # for sparse vectors if configured correctly!
+        
+        # Qdrant requires UUID or integer IDs
+        def to_uuid(cid: str) -> str:
+            return str(uuid.uuid5(uuid.NAMESPACE_DNS, cid))
+            
+        points = []
+        for cid, emb, txt, meta in zip(chunk_ids, embeddings, texts, metadatas):
+            meta["text"] = txt
+            meta["chunk_id"] = cid
+            points.append(
+                models.PointStruct(
+                    id=to_uuid(cid),
+                    payload=meta,
+                    vector={
+                        "dense_jina": emb
+                    }
+                )
+            )
+            
+        # Add the points with their dense vectors
+        self._client.upsert(
+            collection_name=self.collection_name,
+            points=points
+        )
+        
+        # Now use FastEmbed to add the sparse BM25 vectors for the texts
+        sparse_docs = []
+        sparse_uuids = []
+        for cid, txt in zip(chunk_ids, texts):
+            sparse_docs.append(txt)
+            sparse_uuids.append(to_uuid(cid))
+            
+        # Fastembed auto-calculates and uploads the sparse vectors to the "sparse_bm25" named vector
+        self._client.add(
+            collection_name=self.collection_name,
+            documents=sparse_docs,
+            ids=sparse_uuids
+        )
 
     def nearest(self, embedding: list[float], top_k: int = 1) -> list[dict]:
-        """Nearest neighbours to `embedding`. Returns a list (possibly empty
-        if the collection has no vectors yet) of
-        {chunk_id, text, metadata, similarity}, ordered nearest-first.
-        `similarity` = 1 - cosine distance (the collection is configured
-        with hnsw:space=cosine)."""
-        if self.count() == 0:
-            return []
-        n = min(top_k, self.count())
-        res = self._collection.query(query_embeddings=[embedding], n_results=n)
+        res = self._client.search(
+            collection_name=self.collection_name,
+            query_vector=models.NamedVector(
+                name="dense_jina",
+                vector=embedding
+            ),
+            limit=top_k
+        )
         out = []
-        ids = res["ids"][0]
-        docs = res["documents"][0]
-        metas = res["metadatas"][0]
-        dists = res["distances"][0]
-        for cid, doc, meta, dist in zip(ids, docs, metas, dists):
-            out.append({"chunk_id": cid, "text": doc, "metadata": meta, "similarity": 1.0 - dist})
+        for r in res:
+            out.append({
+                "chunk_id": r.payload["chunk_id"], 
+                "text": r.payload["text"], 
+                "metadata": r.payload, 
+                "similarity": r.score
+            })
         return out
 
-    def nearest_batch(self, embeddings: list[list[float]], top_k: int = 1) -> list[list[dict]]:
-        if self.count() == 0:
-            return [[] for _ in embeddings]
-        n = min(top_k, self.count())
-        res = self._collection.query(query_embeddings=embeddings, n_results=n)
-        batch_out = []
-        for ids, docs, metas, dists in zip(res["ids"], res["documents"], res["metadatas"], res["distances"]):
-            out = []
-            for cid, doc, meta, dist in zip(ids, docs, metas, dists):
-                out.append({"chunk_id": cid, "text": doc, "metadata": meta, "similarity": 1.0 - dist})
-            batch_out.append(out)
-        return batch_out
-        
     def query(self, embedding: list[float], top_k: int = 10, where: dict | None = None) -> list[dict]:
-        """Dense search for retrieval. Same shape as `nearest`."""
-        if self.count() == 0:
-            return []
-        n = min(top_k, self.count())
-        res = self._collection.query(query_embeddings=[embedding], n_results=n, where=where)
+        # Basic filtering map
+        filter_obj = None
+        if where:
+            conditions = []
+            for k, v in where.items():
+                conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+            filter_obj = models.Filter(must=conditions)
+            
+        res = self._client.search(
+            collection_name=self.collection_name,
+            query_vector=models.NamedVector(
+                name="dense_jina",
+                vector=embedding
+            ),
+            query_filter=filter_obj,
+            limit=top_k
+        )
         out = []
-        for cid, doc, meta, dist in zip(res["ids"][0], res["documents"][0], res["metadatas"][0], res["distances"][0]):
-            out.append({"chunk_id": cid, "text": doc, "metadata": meta, "similarity": 1.0 - dist})
+        for r in res:
+            out.append({
+                "chunk_id": r.payload["chunk_id"], 
+                "text": r.payload["text"], 
+                "metadata": r.payload, 
+                "similarity": r.score
+            })
+        return out
+        
+    def hybrid_search(self, query_text: str, dense_vector: list[float], top_k: int = 25, where: dict | None = None) -> list[dict]:
+        filter_obj = None
+        if where:
+            conditions = []
+            for k, v in where.items():
+                conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+            filter_obj = models.Filter(must=conditions)
+            
+        response = self._client.query_points(
+            collection_name=self.collection_name,
+            prefetch=[
+                models.Prefetch(
+                    query=models.Document(text=query_text, model="Qdrant/bm25"),
+                    using="sparse_bm25",
+                    limit=60,
+                    filter=filter_obj,
+                ),
+                models.Prefetch(
+                    query=dense_vector,
+                    using="dense_jina",
+                    limit=60,
+                    filter=filter_obj,
+                )
+            ],
+            query=models.FusionQuery(fusion=models.Fusion.RRF),
+            limit=top_k
+        )
+        
+        out = []
+        for r in response.points:
+            out.append({
+                "chunk_id": r.payload["chunk_id"], 
+                "text": r.payload["text"], 
+                "metadata": r.payload, 
+                "similarity": r.score
+            })
         return out
 
     def get_all(self) -> list[dict]:
-        if self.count() == 0:
-            return []
-        res = self._collection.get()
+        res, _ = self._client.scroll(collection_name=self.collection_name, limit=10000)
         out = []
-        for cid, doc, meta in zip(res["ids"], res["documents"], res["metadatas"]):
-            out.append({"chunk_id": cid, "text": doc, "metadata": meta})
+        for r in res:
+            out.append({"chunk_id": r.payload["chunk_id"], "text": r.payload["text"], "metadata": r.payload})
         return out
 
     def list_source_documents(self) -> list[str]:
-        seen: dict[str, None] = {}
+        seen = {}
         for row in self.get_all():
             seen.setdefault(row["metadata"].get("source_document", "unknown"), None)
         return list(seen.keys())
 
     def delete_source_document(self, source_document: str) -> int:
-        matches = self._collection.get(where={"source_document": source_document})
-        ids = matches["ids"]
-        if ids:
-            self._collection.delete(ids=ids)
-        return len(ids)
+        filter_obj = models.Filter(
+            must=[models.FieldCondition(key="source_document", match=models.MatchValue(value=source_document))]
+        )
+        self._client.delete(collection_name=self.collection_name, points_selector=filter_obj)
+        return 1

@@ -37,6 +37,7 @@ class QueryRequest(BaseModel):
 class SourceSchema(BaseModel):
     marker: int
     chunk_id: str
+    text: str | None = None
     source_document: str | None = None
     section_heading: str | None = None
     page_number: int | None = None

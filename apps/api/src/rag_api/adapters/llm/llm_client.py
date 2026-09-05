@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 
 class LLMClient(ABC):
     @abstractmethod
-    def generate(self, system: str, user: str | list[dict], history: list[dict] | None = None) -> str: ...
+    def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str: ...
 
     @abstractmethod
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str: ...
@@ -31,7 +31,7 @@ class AnthropicLLMClient(LLMClient):
         self._model = model
         self._max_tokens = max_tokens
 
-    def generate(self, system: str, user: str | list[dict], history: list[dict] | None = None) -> str:
+    def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str:
         messages = list(history) if history else []
         messages.append({"role": "user", "content": user})
         resp = self._client.messages.create(
@@ -80,8 +80,12 @@ class OpenAILLMClient(LLMClient):
         self._model = model
         self._max_tokens = max_tokens
 
-    def generate(self, system: str, user: str | list[dict], history: list[dict] | None = None) -> str:
-        messages = [{"role": "system", "content": system}]
+    def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str:
+        if isinstance(system, list):
+            system_str = "".join([block.get("text", "") for block in system])
+            messages = [{"role": "system", "content": system_str}]
+        else:
+            messages = [{"role": "system", "content": system}]
         if history:
             messages.extend(history)
         messages.append({"role": "user", "content": user})

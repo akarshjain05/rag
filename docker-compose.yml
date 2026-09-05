@@ -1,11 +1,10 @@
 services:
-  chromadb:
-    image: chromadb/chroma:latest
+  qdrant:
+    image: qdrant/qdrant:latest
     volumes:
-      - chroma_data:/chroma/chroma
+      - qdrant_data:/qdrant/storage
     healthcheck:
-      # The latest chromadb image removed python3/curl/wget, so we use bash TCP to check if the port is open
-      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/8000"]
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/6333"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -19,9 +18,9 @@ services:
       # already taken by another project running locally.
       - "${API_PORT:-8000}:8000"
     environment:
-      CHROMA_MODE: http
-      CHROMA_HOST: chromadb
-      CHROMA_PORT: 8000
+      QDRANT_MODE: http
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
@@ -33,11 +32,12 @@ services:
       OPENAI_LLM_MODEL: ${OPENAI_LLM_MODEL:-gpt-4o}
       COLLECTION_NAME: ${COLLECTION_NAME:-internal_docs}
       DEFAULT_CHUNKING_STRATEGY: ${DEFAULT_CHUNKING_STRATEGY:-structure_aware}
-      RERANKER_PROVIDER: ${RERANKER_PROVIDER:-none}
+      RERANKER_PROVIDER: ${RERANKER_PROVIDER:-cross_encoder}
+      RERANKER_MODEL: ${RERANKER_MODEL:-BAAI/bge-reranker-v2-m3}
       CITATION_VERIFICATION_ENABLED: ${CITATION_VERIFICATION_ENABLED:-true}
       LOW_CONFIDENCE_THRESHOLD: ${LOW_CONFIDENCE_THRESHOLD:-0.3}
     depends_on:
-      chromadb:
+      qdrant:
         condition: service_healthy
     restart: unless-stopped
 
@@ -67,4 +67,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  chroma_data:
+  qdrant_data:

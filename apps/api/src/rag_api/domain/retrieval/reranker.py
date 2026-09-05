@@ -40,7 +40,7 @@ class Reranker(ABC):
 
 
 class CrossEncoderReranker(Reranker):
-    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+    def __init__(self, model_name: str = "BAAI/bge-reranker-v2-m3"):
         try:
             from sentence_transformers import CrossEncoder
         except ImportError as exc:  # pragma: no cover - exercised via mocked test instead
@@ -55,8 +55,14 @@ class CrossEncoderReranker(Reranker):
             return []
         pairs = [(query, c.text) for c in candidates]
         raw_scores = self._model.predict(pairs)
+        import math
         for chunk, score in zip(candidates, raw_scores):
-            chunk.rerank_score = float(score)
+            # Apply sigmoid to map logit to [0, 1]
+            try:
+                sig = 1.0 / (1.0 + math.exp(-float(score)))
+            except OverflowError:
+                sig = 0.0 if float(score) < 0 else 1.0
+            chunk.rerank_score = sig
         ranked = sorted(candidates, key=lambda c: c.rerank_score, reverse=True)
         return ranked[:top_k]
 
@@ -83,7 +89,8 @@ class LLMJudgeReranker(Reranker):
 
         scores = self._parse_scores(raw, len(candidates))
         for chunk, score in zip(candidates, scores):
-            chunk.rerank_score = score
+            # map [0, 10] to [0, 1]
+            chunk.rerank_score = score / 10.0
         ranked = sorted(candidates, key=lambda c: c.rerank_score, reverse=True)
         return ranked[:top_k]
 
@@ -122,7 +129,7 @@ def build_reranker(
     if provider == "none":
         return None
     if provider == "cross_encoder":
-        return CrossEncoderReranker(model_name=model_name or "cross-encoder/ms-marco-MiniLM-L-6-v2")
+        return CrossEncoderReranker(model_name=model_name or "BAAI/bge-reranker-v2-m3")
     if provider == "llm_judge":
         if llm_client is None:
             raise ValueError(

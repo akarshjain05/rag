@@ -65,6 +65,8 @@ class Chunk:
     image_ref: str | None = None
     content_type: str | None = None
     extraction_method: str | None = None
+    char_start: int | None = None
+    char_end: int | None = None
     char_count: int = field(init=False)
     chunk_id: str = field(init=False)
 
