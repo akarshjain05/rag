@@ -40,8 +40,7 @@ class VectorStore:
                     )
                 }
             )
-            # Setup FastEmbed native BM25 computation
-            self._client.set_model("Qdrant/bm25")
+
 
     def count(self) -> int:
         return self._client.get_collection(self.collection_name).points_count
@@ -64,38 +63,37 @@ class VectorStore:
         def to_uuid(cid: str) -> str:
             return str(uuid.uuid5(uuid.NAMESPACE_DNS, cid))
             
+        try:
+            from fastembed import SparseTextEmbedding
+            sparse_model = SparseTextEmbedding("Qdrant/bm25")
+            sparse_embeddings = list(sparse_model.embed(texts))
+        except Exception:
+            sparse_embeddings = [None] * len(texts)
+            
         points = []
-        for cid, emb, txt, meta in zip(chunk_ids, embeddings, texts, metadatas):
+        for cid, emb, txt, meta, sp_emb in zip(chunk_ids, embeddings, texts, metadatas, sparse_embeddings):
             meta["text"] = txt
             meta["chunk_id"] = cid
+            
+            vector_dict = {"dense_jina": emb}
+            if sp_emb is not None:
+                vector_dict["sparse_bm25"] = models.SparseVector(
+                    indices=sp_emb.indices.tolist(),
+                    values=sp_emb.values.tolist()
+                )
+                
             points.append(
                 models.PointStruct(
                     id=to_uuid(cid),
                     payload=meta,
-                    vector={
-                        "dense_jina": emb
-                    }
+                    vector=vector_dict
                 )
             )
             
-        # Add the points with their dense vectors
+        # Add the points with their dense AND sparse vectors in one go!
         self._client.upsert(
             collection_name=self.collection_name,
             points=points
-        )
-        
-        # Now use FastEmbed to add the sparse BM25 vectors for the texts
-        sparse_docs = []
-        sparse_uuids = []
-        for cid, txt in zip(chunk_ids, texts):
-            sparse_docs.append(txt)
-            sparse_uuids.append(to_uuid(cid))
-            
-        # Fastembed auto-calculates and uploads the sparse vectors to the "sparse_bm25" named vector
-        self._client.add(
-            collection_name=self.collection_name,
-            documents=sparse_docs,
-            ids=sparse_uuids
         )
 
     def nearest(self, embedding: list[float], top_k: int = 1) -> list[dict]:
@@ -153,11 +151,18 @@ class VectorStore:
                 conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
             filter_obj = models.Filter(must=conditions)
             
+        from fastembed import SparseTextEmbedding
+        sparse_model = SparseTextEmbedding("Qdrant/bm25")
+        sp_emb = list(sparse_model.embed([query_text]))[0]
+            
         response = self._client.query_points(
             collection_name=self.collection_name,
             prefetch=[
                 models.Prefetch(
-                    query=models.Document(text=query_text, model="Qdrant/bm25"),
+                    query=models.SparseVector(
+                        indices=sp_emb.indices.tolist(),
+                        values=sp_emb.values.tolist()
+                    ),
                     using="sparse_bm25",
                     limit=60,
                     filter=filter_obj,
