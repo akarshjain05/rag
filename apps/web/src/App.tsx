@@ -144,8 +144,16 @@ function AppContent() {
   
   const handleUpload = async (e) => {
     if (e.target.files?.length) {
-      await ingest(e.target.files);
-      fetchDocuments().then(res => setDocuments(res.source_documents || [])).catch(console.error);
+      try {
+        await ingest(e.target.files);
+        const res = await fetchDocuments();
+        setDocuments(res.source_documents || []);
+      } catch (err) {
+        console.error("Upload failed:", err);
+        alert("Upload failed: " + err.message);
+      } finally {
+        e.target.value = null; // Fix the onChange bug so the user can upload the same file again!
+      }
     }
   };
 
