@@ -60,46 +60,62 @@ export function ask({ signal, question, conversationId = null, verifyCitations =
   });
 }
 
-export function ingest(files, onProgress) {
-  return new Promise((resolve, reject) => {
-    const formData = new FormData();
-    for (const file of files) {
-      formData.append("files", file);
-    }
-    
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/v1/ingest");
-    
-    if (onProgress) {
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100);
-          onProgress(percent);
-        }
-      };
-    }
-    
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(JSON.parse(xhr.responseText));
-        } catch (e) {
-          resolve(xhr.responseText);
-        }
-      } else {
-        let detail = xhr.statusText;
-        try {
-          const body = JSON.parse(xhr.responseText);
-          detail = body.detail || JSON.stringify(body);
-        } catch {}
-        reject(new Error(`${xhr.status}: ${detail}`));
-      }
-    };
-    
-    xhr.onerror = () => reject(new Error("Network Error"));
-    
-    xhr.send(formData);
+export async function ingest(files, onProgress) {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append("files", file);
+  }
+  
+  if (onProgress) onProgress(0, "Uploading to server...");
+  
+  const res = await fetch("/v1/ingest", {
+    method: "POST",
+    body: formData,
   });
+  
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const body = await res.json();
+      detail = body.detail || JSON.stringify(body);
+    } catch {}
+    throw new Error(`${res.status}: ${detail}`);
+  }
+  
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let result = null;
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split('\n');
+    let buffer = "";
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const jsonStr = line.substring(6);
+        let data = null;
+        try {
+          data = JSON.parse(jsonStr);
+        } catch(e) {}
+        if (data) {
+          if (data.progress !== undefined && onProgress) {
+            onProgress(data.progress, data.message);
+          }
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          if (data.reports) {
+            result = data;
+          }
+        }
+      }
+    }
+  }
+  
+  return result;
 }
 
 export function deleteDocument(sourceDocument) {

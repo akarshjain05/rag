@@ -35,6 +35,7 @@ function AppContent() {
   const [query, setQuery] = useState('');
   const [isDebateMode, setIsDebateMode] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<string>("UPLOADING...");
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
 
   const [documents, setDocuments] = useState([]);
@@ -147,7 +148,11 @@ function AppContent() {
     if (e.target.files?.length) {
       try {
         setUploadProgress(0);
-        await ingest(e.target.files, setUploadProgress);
+        setUploadMessage("UPLOADING...");
+        await ingest(e.target.files, (pct, msg) => {
+          setUploadProgress(pct);
+          if (msg) setUploadMessage(msg.toUpperCase());
+        });
         const res = await fetchDocuments();
         setDocuments(res.source_documents || []);
       } catch (err) {
@@ -233,8 +238,8 @@ function AppContent() {
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-[#00F0FF]">{uploadProgress}%</div>
                 </div>
-                <span className="text-[10px] font-mono text-[#00F0FF]/70">
-                  {uploadProgress === 100 ? 'PROCESSING...' : 'UPLOADING...'}
+                <span className="text-[10px] font-mono text-[#00F0FF]/70 truncate max-w-[120px]">
+                  {uploadMessage}
                 </span>
               </div>
             ) : (

@@ -54,16 +54,19 @@ class IngestionPipeline:
         self,
         path: str | Path,
         strategy: ChunkingStrategy | None = None,
+        progress_callback = None,
     ) -> IngestReport:
         strategy = strategy or self.default_strategy
         source_name = Path(path).name
 
         try:
+            if progress_callback: progress_callback(10, f"Loading {source_name}...")
             doc = load_document(path, llm_client=self.llm_client, image_store=self.image_store)
         except Exception as exc:  # noqa: BLE001 - reported, not raised, so batches survive one bad file
             return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=f"Loading failed: {str(exc)}")
 
         try:
+            if progress_callback: progress_callback(20, "Chunking document...")
             chunks, skipped_low_quality = chunk_document(
                 doc,
                 strategy,
@@ -80,6 +83,7 @@ class IngestionPipeline:
 
             # --- CONTEXTUAL RETRIEVAL PREPROCESSING (Anthropic Method) ---
             if self.llm_client and chunks:
+                if progress_callback: progress_callback(30, "Generating Contextual Summaries...")
                 print(f"Generating Contextual Retrieval summaries for {len(chunks)} chunks in {doc.source_file} (leveraging Prompt Caching)...")
                 
                 # Format the massive document as the system prompt and explicitly add Anthropic's cache_control flag
@@ -118,8 +122,10 @@ class IngestionPipeline:
             if not chunks:
                 return report
 
+            if progress_callback: progress_callback(50, f"Generating {len(chunks)} Jina Embeddings...")
             embeddings = self.embedding_client.embed([c.text for c in chunks])
 
+            if progress_callback: progress_callback(80, "Checking for duplicates & indexing into Qdrant...")
             inserted_ids = []
             inserted_texts = []
             inserted_metas = []
@@ -148,5 +154,16 @@ class IngestionPipeline:
         except Exception as exc:
             return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=f"Ingestion failed: {str(exc)}")
 
-    def ingest_files(self, paths: list[str | Path], strategy: ChunkingStrategy | None = None) -> list[IngestReport]:
-        return [self.ingest_file(p, strategy) for p in paths]
+    def ingest_files(self, paths: list[str | Path], strategy: ChunkingStrategy | None = None, progress_callback = None) -> list[IngestReport]:
+        reports = []
+        total = len(paths)
+        for i, p in enumerate(paths):
+            def local_cb(pct, msg):
+                if progress_callback:
+                    # scale progress to the current file
+                    base = (i / total) * 100
+                    scaled = base + (pct / total)
+                    progress_callback(int(scaled), msg)
+            reports.append(self.ingest_file(p, strategy, progress_callback=local_cb))
+        if progress_callback: progress_callback(100, "Complete!")
+        return reports
