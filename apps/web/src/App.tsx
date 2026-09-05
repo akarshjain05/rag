@@ -34,6 +34,7 @@ export default function App() {
 function AppContent() {
   const [query, setQuery] = useState('');
   const [isDebateMode, setIsDebateMode] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
 
   const [documents, setDocuments] = useState([]);
@@ -145,13 +146,15 @@ function AppContent() {
   const handleUpload = async (e) => {
     if (e.target.files?.length) {
       try {
-        await ingest(e.target.files);
+        setUploadProgress(0);
+        await ingest(e.target.files, setUploadProgress);
         const res = await fetchDocuments();
         setDocuments(res.source_documents || []);
       } catch (err) {
         console.error("Upload failed:", err);
         alert("Upload failed: " + err.message);
       } finally {
+        setUploadProgress(null);
         e.target.value = null; // Fix the onChange bug so the user can upload the same file again!
       }
     }
@@ -221,10 +224,25 @@ function AppContent() {
             </div>
           ))}
           <div className="mt-4">
-             <label className="cursor-pointer text-xs font-mono text-[#00F0FF] border border-[#00F0FF]/30 px-3 py-1 rounded hover:bg-[#00F0FF]/10 transition-colors">
+            {uploadProgress !== null ? (
+              <div className="flex items-center gap-3">
+                <div className="relative w-8 h-8 shrink-0">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-white/10" strokeWidth="3"></circle>
+                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-[#00F0FF] transition-all duration-300" strokeWidth="3" strokeDasharray="100" strokeDashoffset={100 - uploadProgress}></circle>
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-[#00F0FF]">{uploadProgress}%</div>
+                </div>
+                <span className="text-[10px] font-mono text-[#00F0FF]/70">
+                  {uploadProgress === 100 ? 'PROCESSING...' : 'UPLOADING...'}
+                </span>
+              </div>
+            ) : (
+             <label className="cursor-pointer text-xs font-mono text-[#00F0FF] border border-[#00F0FF]/30 px-3 py-1 rounded hover:bg-[#00F0FF]/10 transition-colors inline-block">
                + UPLOAD FILE
                <input type="file" multiple className="hidden" onChange={handleUpload} />
              </label>
+            )}
           </div>
 
         </div>

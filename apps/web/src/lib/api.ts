@@ -60,26 +60,46 @@ export function ask({ signal, question, conversationId = null, verifyCitations =
   });
 }
 
-export async function ingest(files) {
-  const formData = new FormData();
-  for (const file of files) {
-    formData.append("files", file);
-  }
-  
-  const res = await fetch("/v1/ingest", {
-    method: "POST",
-    body: formData,
+export function ingest(files, onProgress) {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append("files", file);
+    }
+    
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/v1/ingest");
+    
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          onProgress(percent);
+        }
+      };
+    }
+    
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (e) {
+          resolve(xhr.responseText);
+        }
+      } else {
+        let detail = xhr.statusText;
+        try {
+          const body = JSON.parse(xhr.responseText);
+          detail = body.detail || JSON.stringify(body);
+        } catch {}
+        reject(new Error(`${xhr.status}: ${detail}`));
+      }
+    };
+    
+    xhr.onerror = () => reject(new Error("Network Error"));
+    
+    xhr.send(formData);
   });
-  
-  if (!res.ok) {
-    let detail = res.statusText;
-    try {
-      const body = await res.json();
-      detail = body.detail || JSON.stringify(body);
-    } catch {}
-    throw new Error(`${res.status}: ${detail}`);
-  }
-  return res.json();
 }
 
 export function deleteDocument(sourceDocument) {
