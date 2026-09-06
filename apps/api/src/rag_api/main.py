@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from rag_api.api.auth import verify_api_key
 
 from rag_api.core.settings import Settings, get_settings
+from rag_api.core.observability import init_observability
 from rag_api.adapters.vectorstore.embeddings import EmbeddingClient, build_embedding_client
 from rag_api.adapters.vectorstore.vector_store import VectorStore
 from rag_api.adapters.storage.image_store import build_image_store
@@ -147,6 +148,7 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    init_observability(app, settings)
 
     
     @app.middleware("http")

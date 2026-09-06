@@ -121,6 +121,11 @@ class Settings(BaseSettings):
     streaming_read_block_chars: int = 200000
     streaming_tail_overlap_chars: int = 2000
 
+    # Observability
+    sentry_dsn: str | None = None
+    otlp_endpoint: str = "http://localhost:4318/v1/traces"
+
+
 
 
 @lru_cache

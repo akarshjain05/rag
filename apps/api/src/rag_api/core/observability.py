@@ -13,7 +13,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 
 def init_observability(app, settings):
     # Sentry
-    if getattr(settings, "sentry_dsn", None):
+    if settings.sentry_dsn:
         sentry_sdk.init(
             dsn=settings.sentry_dsn,
             traces_sample_rate=1.0,
@@ -21,7 +21,7 @@ def init_observability(app, settings):
 
     # OpenTelemetry Tracing
     provider = TracerProvider()
-    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=getattr(settings, "otlp_endpoint", "http://localhost:4318/v1/traces")))
+    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.otlp_endpoint))
     provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
 
