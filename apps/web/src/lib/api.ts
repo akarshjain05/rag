@@ -73,7 +73,7 @@ export async function ingest(files, onProgress, signal) {
   const isLarge = Array.from(files).some((f: any) => f.size > 1024 * 1024);
   
   if (isLarge) {
-    if (onProgress) onProgress(0, "Initiating async job for large files...");
+    if (onProgress) onProgress('0 chunks', "Initiating async job for large files...");
     const results = [];
     
     // Process one by one for large files
@@ -105,7 +105,7 @@ export async function ingest(files, onProgress, signal) {
         const statusData = await pollRes.json();
         
         if (statusData.status === "PROGRESS" && onProgress) {
-          onProgress(statusData.info?.chunks_processed || 0, `Indexing ${file.name}...`);
+          onProgress((statusData.info?.chunks_processed || 0) + ' chunks', `Indexing ${file.name}...`);
         } else if (statusData.status === "SUCCESS") {
           results.push(statusData.info);
           break;
@@ -124,7 +124,7 @@ export async function ingest(files, onProgress, signal) {
   }
 
   
-  if (onProgress) onProgress(0, "Uploading to server...");
+  if (onProgress) onProgress('0%', "Uploading to server...");
   
   const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey");
   const res = await fetch("/v1/ingest", {
@@ -169,7 +169,7 @@ export async function ingest(files, onProgress, signal) {
         } catch(e) {}
         if (data) {
           if (data.progress !== undefined && onProgress) {
-            onProgress(data.progress, data.message);
+            onProgress(data.progress + '%', data.message);
           }
           if (data.error) {
             throw new Error(data.error);

@@ -150,7 +150,7 @@ function KnowledgeBase() {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState<{pct: number, msg: string} | null>(null);
+  const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
 
   useEffect(() => {
     fetchDocuments().then(res => {
@@ -204,7 +204,7 @@ function KnowledgeBase() {
       {uploading && progress && (
         <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg flex justify-between items-center text-sm text-blue-500">
           <span>{progress.msg}</span>
-          <span className="font-mono">{progress.pct > 100 ? `${progress.pct} chunks` : `${progress.pct}%`}</span>
+          <span className="font-mono">{progress.pct}</span>
         </div>
       )}
 
@@ -295,7 +295,14 @@ function ChatView({ conversationId, setConversationId }) {
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
   const [confidenceInfo, setConfidenceInfo] = useState<any>(null);
 
+  const isInitialMount = React.useRef(true);
+  const skipFetch = React.useRef(false);
+
   useEffect(() => {
+    if (skipFetch.current) {
+       skipFetch.current = false;
+       return;
+    }
     if (conversationId) {
       import('./lib/api').then(({ fetchConversation }) => {
         fetchConversation(conversationId).then(res => {
@@ -325,7 +332,10 @@ function ChatView({ conversationId, setConversationId }) {
     
     try {
       const res = await ask({ question: q, conversationId, verifyCitations: true });
-      if (!conversationId) setConversationId(res.conversation_id);
+      if (!conversationId) {
+          skipFetch.current = true;
+          setConversationId(res.conversation_id);
+      }
       
       setMessages(prev => [...prev, { role: 'assistant', content: res.answer, markers: res.used_citation_markers }]);
       setSources(res.sources);
