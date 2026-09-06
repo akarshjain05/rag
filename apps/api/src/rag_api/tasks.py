@@ -36,14 +36,36 @@ def ingest_large_file_task(self, object_key: str, source_filename: str):
         dense_dimension=embedding_client.dimension
     )
 
-    report = embed_and_index_stream(
-        stream_text_chunks(local_path, splitter, read_block_chars=s.streaming_read_block_chars, tail_overlap_chars=s.streaming_tail_overlap_chars),
-        source_document=source_filename,
-        embedding_client=embedding_client,
-        vector_store=vector_store,
-        dedup_threshold=s.dedup_similarity_threshold,
-        batch_size=s.streaming_embed_batch_size,
-        progress_cb=lambda n: self.update_state(state="PROGRESS", meta={"chunks_processed": n}),
-    )
+    from rag_api.services.ingest_service import IngestionPipeline
+    from rag_api.adapters.llm.llm_client import build_llm_client
+
+    # Fallback to IngestionPipeline for non-text files to use proper loaders
+    is_text = local_path.suffix.lower() in (".txt", ".md", ".markdown", ".csv", ".json")
+    
+    if not is_text:
+        llm_client = build_llm_client(
+            provider=s.llm_provider, openai_model=s.openai_model, openai_api_key=s.openai_api_key, 
+            openai_base_url=s.openai_base_url, anthropic_model=s.anthropic_model, anthropic_api_key=s.anthropic_api_key
+        )
+        pipeline = IngestionPipeline(
+            embedding_client=embedding_client, vector_store=vector_store,
+            llm_client=llm_client, image_store=store,
+            fixed_chunk_size=s.fixed_chunk_size, fixed_chunk_overlap=s.fixed_chunk_overlap,
+            semantic_similarity_threshold=s.semantic_similarity_threshold,
+            semantic_max_chunk_chars=s.semantic_max_chunk_chars,
+            semantic_min_chunk_chars=s.semantic_min_chunk_chars,
+            dedup_similarity_threshold=s.dedup_similarity_threshold,
+        )
+        report = pipeline.ingest_file(local_path, progress_callback=lambda pct, msg: self.update_state(state="PROGRESS", meta={"chunks_processed": pct, "message": msg}))
+    else:
+        report = embed_and_index_stream(
+            stream_text_chunks(local_path, splitter, read_block_chars=s.streaming_read_block_chars, tail_overlap_chars=s.streaming_tail_overlap_chars),
+            source_document=source_filename,
+            embedding_client=embedding_client,
+            vector_store=vector_store,
+            dedup_threshold=s.dedup_similarity_threshold,
+            batch_size=s.streaming_embed_batch_size,
+            progress_cb=lambda n: self.update_state(state="PROGRESS", meta={"chunks_processed": n}),
+        )
     local_path.unlink(missing_ok=True)
     return vars(report)
