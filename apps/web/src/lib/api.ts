@@ -93,6 +93,7 @@ export async function ingest(files, onProgress, signal) {
         const pollRes = await fetch(`/v1/ingest/jobs/${job_id}`, {
           headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {}
         });
+        if (!pollRes.ok) continue; // Skip this tick if the API is temporarily unavailable
         const statusData = await pollRes.json();
         
         if (statusData.status === "PROGRESS" && onProgress) {
