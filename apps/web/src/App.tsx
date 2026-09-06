@@ -227,12 +227,42 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
   );
 }
 
+
+function Modal({ isOpen, onClose, title, message, onConfirm, confirmText, isAlert }: any) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+      <div className="bg-[#FAFAFA] dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl max-w-md w-full p-6 shadow-2xl">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{title}</h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">{message}</p>
+        <div className="flex justify-end gap-3">
+          {!isAlert && (
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={() => { if (onConfirm) onConfirm(); onClose(); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${isAlert ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
+          >
+            {confirmText || 'Confirm'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function KnowledgeBase() {
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
+  const [modal, setModal] = useState<any>(null);
 
   const handleUpload = async (e) => {
     if (!e.target.files?.length) return;
@@ -246,7 +276,7 @@ function KnowledgeBase() {
       const res = await fetchDocuments();
       setDocs(res.documents || res.source_documents || []);
     } catch (err) {
-      alert("Upload failed: " + err.message);
+      setModal({ type: 'alert', title: 'Upload Failed', message: err.message, confirmText: 'OK' });
     } finally {
       setUploading(false);
       setProgress(null);
@@ -274,26 +304,38 @@ function KnowledgeBase() {
     setSelectedDocs(next);
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedDocs.size === 0) return;
-    if (!confirm(`Delete ${selectedDocs.size} documents?`)) return;
-    const ids = Array.from(selectedDocs);
-    setSelectedDocs(new Set());
-    
-    try {
-      const { bulkDeleteDocuments } = await import('./lib/api');
-      await bulkDeleteDocuments(ids);
-      setDocs(prev => prev.filter(d => !ids.includes(d)));
-    } catch (err) {
-      console.error(err);
-    }
+    setModal({
+      type: 'confirm',
+      title: 'Bulk Delete',
+      message: `Delete ${selectedDocs.size} documents?`,
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        const ids = Array.from(selectedDocs);
+        setSelectedDocs(new Set());
+        try {
+          const { bulkDeleteDocuments } = await import('./lib/api');
+          await bulkDeleteDocuments(ids);
+          setDocs(prev => prev.filter(d => !ids.includes(d)));
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
   };
-  const handleDelete = async (doc) => {
-    if (confirm(`Delete ${doc}?`)) {
-      await deleteDocument(doc);
-      const res = await fetchDocuments();
-      setDocs(res.source_documents || []);
-    }
+  const handleDelete = (doc) => {
+    setModal({
+      type: 'confirm',
+      title: 'Delete Document',
+      message: `Delete ${doc}?`,
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await deleteDocument(doc);
+        const res = await fetchDocuments();
+        setDocs(res.source_documents || []);
+      }
+    });
   };
 
   return (
@@ -377,6 +419,7 @@ function KnowledgeBase() {
           </table>
         )}
       </div>
+      <Modal isOpen={!!modal} onClose={() => setModal(null)} {...modal} isAlert={modal?.type === "alert"} />
     </div>
   );
 }
@@ -424,6 +467,7 @@ function HistoryView({ onSelect }) {
 
 function SettingsView() {
   const [keys, setKeys] = useState<any[]>([]);
+  const [modal, setModal] = useState<any>(null);
   
   useEffect(() => {
     import('./lib/api').then(({ listApiKeys }) => {
@@ -443,15 +487,22 @@ function SettingsView() {
     }
   };
 
-  const handleRevoke = async (keyId: string) => {
-    if (!confirm('Revoke this key immediately?')) return;
-    try {
-      const { revokeApiKey } = await import('./lib/api');
-      await revokeApiKey(keyId);
-      setKeys(prev => prev.filter(k => k.api_key !== keyId));
-    } catch (err) {
-      console.error(err);
-    }
+  const handleRevoke = (keyId: string) => {
+    setModal({
+      type: 'confirm',
+      title: 'Revoke API Key',
+      message: 'Revoke this key immediately?',
+      confirmText: 'Revoke',
+      onConfirm: async () => {
+        try {
+          const { revokeApiKey } = await import('./lib/api');
+          await revokeApiKey(keyId);
+          setKeys(prev => prev.filter(k => k.api_key !== keyId));
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
   };
 
   return (
@@ -488,6 +539,7 @@ function SettingsView() {
           <strong>Note:</strong> Keys defined in the <code>API_KEYS</code> environment variable act as immutable root keys and are not shown here.
         </div>
       </div>
+      <Modal isOpen={!!modal} onClose={() => setModal(null)} {...modal} isAlert={modal?.type === "alert"} />
     </div>
   );
 }
