@@ -11,8 +11,11 @@ def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> st
     system = (
         "Given the following conversation history and the user's latest follow-up question, "
         "rewrite the follow-up question to be a standalone query that can be understood "
-        "without the conversation history. Do not answer the question, just rewrite it. "
-        "If it is already standalone, return it exactly as is."
+        "without the conversation history. "
+        "CRITICAL INSTRUCTION: If the user's latest question is a completely new topic and unrelated "
+        "to the previous conversation, DO NOT try to connect them. Assume the user is starting a new "
+        "search topic and return the latest question EXACTLY as is. "
+        "Do not answer the question, just rewrite it. If it is already standalone, return it exactly as is."
     )
     
     # Format history for the LLM
