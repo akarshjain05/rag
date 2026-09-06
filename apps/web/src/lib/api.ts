@@ -75,7 +75,7 @@ export async function ingest(files, onProgress) {
       formData.append("file", file);
       
       const res = await fetch("/v1/ingest/large", {
-        headers: { "X-API-Key": "sk-default-test-key" },
+        headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {},
         method: "POST",
         body: formData,
       });
@@ -87,7 +87,7 @@ export async function ingest(files, onProgress) {
       while (true) {
         await new Promise(r => setTimeout(r, 2000));
         const pollRes = await fetch(`/v1/ingest/jobs/${job_id}`, {
-          headers: { "X-API-Key": "sk-default-test-key" }
+          headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {}
         });
         const statusData = await pollRes.json();
         
@@ -114,9 +114,9 @@ export async function ingest(files, onProgress) {
   if (onProgress) onProgress(0, "Uploading to server...");
   
   const res = await fetch("/v1/ingest", {
-    headers: {
-      "X-API-Key": "sk-default-test-key"
-    },
+    headers: import.meta.env.VITE_API_KEY ? {
+      "X-API-Key": import.meta.env.VITE_API_KEY
+    } : {},
     method: "POST",
     body: formData,
   });

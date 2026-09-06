@@ -76,12 +76,12 @@ class GenerationResult:
     unsupported_citation_markers: list[int] = field(default_factory=list)
 
 
-def _build_context_block(chunks: list[RetrievedChunk]) -> str:
+def _build_context_block(chunks: list[RetrievedChunk], pruning_threshold: float = 0.30) -> str:
     blocks = []
     # Dynamic Context Pruning: Drop chunks with rerank score < 0.30 to avoid confusing the LLM with noise.
     # The chunks are still preserved in the overall list so the UI can display them (with low scores).
     for i, c in enumerate(chunks, start=1):
-        if c.rerank_score is not None and c.rerank_score < 0.30:
+        if c.rerank_score is not None and c.rerank_score < pruning_threshold:
             continue
             
         loc = [c.metadata.get("source_document", "unknown")]
@@ -209,7 +209,7 @@ class AnswerGenerator:
         if self.low_confidence_threshold is not None:
             pruned_chunks = [c for c in chunks if (c.rerank_score is None) or (c.rerank_score >= self.low_confidence_threshold)]
             
-        context_block = _build_context_block(pruned_chunks)
+        context_block = _build_context_block(pruned_chunks, self.low_confidence_threshold)
         user_prompt_text = f"Context excerpts:\n\n{context_block}\n\nQuestion: {query}\n\nAnswer:"
         
         if image_url:

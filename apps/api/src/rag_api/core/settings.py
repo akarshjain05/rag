@@ -106,6 +106,10 @@ class Settings(BaseSettings):
     hyde_enabled: bool = True
     query_condensation_enabled: bool = True
     crag_expansion_enabled: bool = True
+    crag_threshold_lower: float = 0.40
+    crag_threshold_upper: float = 0.80
+    crag_max_retries: int = 1
+    context_pruning_threshold: float = 0.30
 
 
 

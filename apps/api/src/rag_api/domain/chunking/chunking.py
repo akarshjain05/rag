@@ -82,7 +82,6 @@ def chunk_document(
         nonlocal idx, skipped_low_quality
         # Pre-split on image sentinels
         # Format: <!--IMG:{image_hash}-->\n\n{derived_text}\n\n<!--/IMG-->
-        pattern = r"<!--IMG:(.*?)-->.*?<!--/IMG-->"
         
         # We use re.split with a capture group so we get [prose, hash, prose, hash, prose]
         # But our regex above consumes the whole tag, we can capture the hash and the text

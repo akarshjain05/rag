@@ -58,12 +58,12 @@ async def ask(
     
     # 1. Corrective RAG (CRAG) Routing
     if retriever.reranker and chunks and llm_client:
-        max_retries = 1
+        max_retries = settings.crag_max_retries
         retries = 0
         crag_enabled = payload.crag_expansion_enabled if payload.crag_expansion_enabled is not None else settings.crag_expansion_enabled
         while retries < max_retries and crag_enabled:
             max_score = max([c.rerank_score or 0.0 for c in chunks])
-            if 0.40 <= max_score < 0.80:
+            if settings.crag_threshold_lower <= max_score < settings.crag_threshold_upper:
                 log.info("crag.expansion_triggered", original_score=max_score, query=search_query, retry=retries+1, max_retries=max_retries)
                 expanded_query = run_or_502(expand_query, search_query, llm_client)
                 crag_chunks = await run_or_502_async(
