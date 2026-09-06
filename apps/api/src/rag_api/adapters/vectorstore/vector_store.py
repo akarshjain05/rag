@@ -126,7 +126,10 @@ class VectorStore:
         if where:
             conditions = []
             for k, v in where.items():
-                conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+                if isinstance(v, list):
+                    conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
+                else:
+                    conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
             filter_obj = models.Filter(must=conditions)
             
         res = self._client.query_points(
@@ -151,7 +154,10 @@ class VectorStore:
         if where:
             conditions = []
             for k, v in where.items():
-                conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+                if isinstance(v, list):
+                    conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
+                else:
+                    conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
             filter_obj = models.Filter(must=conditions)
             
         if not getattr(self, "_sparse_model", None):
@@ -218,7 +224,10 @@ class VectorStore:
         if where:
             conditions = []
             for k, v in where.items():
-                conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+                if isinstance(v, list):
+                    conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
+                else:
+                    conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
             filter_obj = models.Filter(must=conditions)
             
         if not getattr(self, "_sparse_model", None):

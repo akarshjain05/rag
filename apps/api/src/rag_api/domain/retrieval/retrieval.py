@@ -41,6 +41,7 @@ class HybridRetriever:
         *,
         dense_only: bool = False,
         original_query: str | None = None,
+        document_filter: list[str] | None = None,
     ) -> list[RetrievedChunk]:
         import logging; logging.warning('EMBEDDING...'); query_embedding = await asyncio.to_thread(self.embedding_client.embed, [query]); import logging; logging.warning('EMBEDDING DONE')
         query_embedding = query_embedding[0]

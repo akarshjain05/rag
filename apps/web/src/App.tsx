@@ -238,10 +238,17 @@ function AppContent() {
           <h2 className="text-xs uppercase text-white/50 font-mono tracking-wider">Corpus Heatmap</h2>
           
           
-          {documents.map((doc, idx) => (
-            <div key={idx} className="flex flex-col gap-2 group cursor-pointer">
+          {documents.map((doc, idx) => {
+            const isSelected = selectedDocs.includes(doc);
+            return (
+            <div key={idx} onClick={() => toggleDocSelection(doc)} className={`flex flex-col gap-2 group cursor-pointer p-2 rounded border transition-all ${isSelected ? 'border-[#00F0FF]/50 bg-[#00F0FF]/10' : 'border-transparent hover:border-white/10'}`}>
               <div className="flex justify-between items-end font-mono text-[10px]">
-                <span className="text-white/70 group-hover:text-white transition-colors truncate w-3/4">{doc}</span>
+                <div className="flex items-center gap-2 w-3/4">
+                    <div className={`w-3 h-3 rounded-sm border flex items-center justify-center transition-colors ${isSelected ? 'border-[#00F0FF] bg-[#00F0FF]' : 'border-white/30'}`}>
+                       {isSelected && <Check className="w-2 h-2 text-black" />}
+                    </div>
+                    <span className={`transition-colors truncate ${isSelected ? 'text-white' : 'text-white/70 group-hover:text-white'}`}>{doc}</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <button onClick={async (e) => {
                     e.stopPropagation();
@@ -273,7 +280,7 @@ function AppContent() {
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-t from-[#00F0FF]/10 to-transparent transition-opacity pointer-events-none"></div>
               </div>
             </div>
-          ))}
+          )})}
           <div className="mt-4">
             {uploadProgress !== null ? (
               <div className="flex items-center gap-3">

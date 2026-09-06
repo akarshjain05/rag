@@ -52,7 +52,8 @@ async def ask(
             hyde_search_query, 
             top_k=payload.top_k, 
             chunking_strategy=strategy_value,
-            original_query=search_query
+            original_query=search_query,
+            document_filter=payload.document_filter
         )
     ); import logging; logging.warning('RETRIEVE ASYNC DONE')
     
@@ -71,7 +72,8 @@ async def ask(
                         expanded_query, 
                         top_k=payload.top_k, 
                         chunking_strategy=strategy_value,
-                        original_query=search_query
+                        original_query=search_query,
+                        document_filter=payload.document_filter
                     )
                 )
                 new_max_score = max([c.rerank_score or 0.0 for c in crag_chunks]) if crag_chunks else 0.0
@@ -96,7 +98,7 @@ async def ask(
     dense_only_sources = None
     if payload.compare_dense_only:
         dense_chunks = await run_or_502_async(
-            retriever.retrieve_async(search_query, top_k=payload.top_k, chunking_strategy=strategy_value, dense_only=True)
+            retriever.retrieve_async(search_query, top_k=payload.top_k, chunking_strategy=strategy_value, dense_only=True, document_filter=payload.document_filter)
         )
         dense_only_sources = [SourceSchema(**s) for s in build_sources(dense_chunks)]
 

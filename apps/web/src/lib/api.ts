@@ -44,7 +44,7 @@ export function fetchDocuments() {
   return request("/v1/documents");
 }
 
-export function ask({ signal, question, conversationId = null, verifyCitations = null, topK = 5, chunkingStrategy = null, compareDenseOnly = false, imageUrl = null }) {
+export function ask({ signal, question, conversationId = null, verifyCitations = null, topK = 5, chunkingStrategy = null, compareDenseOnly = false, imageUrl = null, documentFilter = null }) {
   return request("/v1/ask", {
     method: "POST",
     signal,
@@ -56,6 +56,7 @@ export function ask({ signal, question, conversationId = null, verifyCitations =
       chunking_strategy: chunkingStrategy,
       compare_dense_only: compareDenseOnly,
       image_url: imageUrl || undefined,
+      document_filter: documentFilter?.length ? documentFilter : undefined,
     }),
   });
 }

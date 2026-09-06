@@ -35,6 +35,7 @@ class QueryRequest(BaseModel):
         default=False, description="Also return dense-only retrieval results alongside the normal hybrid answer, for side-by-side comparison."
     )
     image_url: str | None = Field(default=None, description="Optional image URL to analyze alongside the text context")
+    document_filter: list[str] | None = Field(default=None, description="Only search within these specific documents")
 
 
 class SourceSchema(BaseModel):
