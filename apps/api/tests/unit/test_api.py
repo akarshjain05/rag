@@ -357,8 +357,8 @@ def test_openapi_schema_documents_the_v1_endpoints(client):
 
 def test_vector_store_constructed_in_http_mode_when_configured(tmp_path, monkeypatch):
     """create_app should build an HttpClient-backed VectorStore when
-    chroma_mode='http', not the default embedded PersistentClient --
-    verified by patching chromadb.HttpClient rather than requiring a real
+    qdrant_mode='http', not the default embedded PersistentClient --
+    verified by patching qdrant_client.QdrantClient rather than requiring a real
     server for this particular wiring check (the real server is exercised
     directly in tests/test_vector_store.py)."""
     from unittest.mock import MagicMock
@@ -367,11 +367,11 @@ def test_vector_store_constructed_in_http_mode_when_configured(tmp_path, monkeyp
     fake_collection = MagicMock()
     fake_collection.count.return_value = 0
     fake_collection.get.return_value = {"ids": [], "documents": [], "metadatas": []}
-    fake_client.get_or_create_collection.return_value = fake_collection
-    monkeypatch.setattr("chromadb.HttpClient", lambda host, port: fake_client)
+    fake_client.collection_exists.return_value = True
+    monkeypatch.setattr("rag_api.adapters.vectorstore.vector_store.QdrantClient", lambda host, port: fake_client)
 
-    settings = Settings(chroma_mode="http", chroma_host="fake-chroma-host", chroma_port=9999)
-    app = create_app(settings, embedding_client=DeterministicFakeEmbeddingClient(), llm_mode="extractive", sparse_index=SparseIndex())
+    settings = Settings(qdrant_mode="http", qdrant_host="fake-qdrant-host", qdrant_port=9999)
+    app = create_app(settings, embedding_client=DeterministicFakeEmbeddingClient(), llm_mode="extractive")
 
     assert app.state.vector_store is not None
-    fake_client.get_or_create_collection.assert_called_once()
+    

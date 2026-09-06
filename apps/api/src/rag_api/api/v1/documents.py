@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from rag_api.schemas.schemas import IngestResponse, IngestReportSchema, DocumentsResponse, DeleteResponse
 from rag_api.domain.models import ChunkingStrategy
-from rag_api.api.deps import get_pipeline, get_vector_store, run_or_502
+from rag_api.api.deps import get_pipeline, get_vector_store, run_or_502, get_object_store
 
 router = APIRouter(prefix="", tags=["documents"])
 
@@ -68,6 +68,25 @@ async def ingest_documents(
                 break
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+
+
+
+@router.post("/ingest/large", summary="Enqueue a large file for async streaming ingestion")
+async def ingest_large_file(file: UploadFile = File(...), object_store = Depends(get_object_store)):
+    import uuid
+    from rag_api.tasks import ingest_large_file_task
+    key = f"uploads/{uuid.uuid4()}/{file.filename}"
+    object_store.upload_fileobj(file.file, key)
+    task = ingest_large_file_task.delay(key, file.filename)
+    return {"job_id": task.id, "status": "queued"}
+
+@router.get("/ingest/jobs/{job_id}")
+def get_job_status(job_id: str):
+    from celery.result import AsyncResult
+    from rag_api.tasks import celery_app
+    result = AsyncResult(job_id, app=celery_app)
+    return {"job_id": job_id, "status": result.status, "info": result.info}
 
 @router.get("/documents", response_model=DocumentsResponse, summary="List indexed documents")
 def list_documents(vector_store = Depends(get_vector_store)) -> DocumentsResponse:

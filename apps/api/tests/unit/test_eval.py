@@ -21,7 +21,7 @@ def test_build_sample_corpus_writes_all_docs(tmp_path):
 
 def test_evaluate_shape_and_bounds(fake_embedder, vector_store, sparse_index, tmp_path):
     doc_paths = _build_sample_corpus(tmp_path)
-    pipeline = IngestionPipeline(fake_embedder, vector_store, sparse_index, default_strategy=ChunkingStrategy.STRUCTURE_AWARE)
+    pipeline = IngestionPipeline(fake_embedder, vector_store, None, default_strategy=ChunkingStrategy.STRUCTURE_AWARE)
     pipeline.ingest_files(doc_paths)
 
     summary = evaluate(SAMPLE_QUERIES, fake_embedder, vector_store, sparse_index, top_k=3)
@@ -39,7 +39,7 @@ def test_evaluate_achieves_perfect_recall_on_the_small_well_separated_sample_cor
     Every mode should find the right doc every time here; the harness earns
     its keep on harder, larger, real corpora where the three modes diverge."""
     doc_paths = _build_sample_corpus(tmp_path)
-    pipeline = IngestionPipeline(fake_embedder, vector_store, sparse_index, default_strategy=ChunkingStrategy.STRUCTURE_AWARE)
+    pipeline = IngestionPipeline(fake_embedder, vector_store, None, default_strategy=ChunkingStrategy.STRUCTURE_AWARE)
     pipeline.ingest_files(doc_paths)
 
     summary = evaluate(SAMPLE_QUERIES, fake_embedder, vector_store, sparse_index, top_k=3)

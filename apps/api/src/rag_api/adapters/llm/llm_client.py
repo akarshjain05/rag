@@ -9,11 +9,16 @@ import back from it (`verification.CitationVerifier` is used by
 of the others, so everything can depend on it instead of on each other.
 """
 from __future__ import annotations
+from rag_api.core.logging import log
 
 from abc import ABC, abstractmethod
 
 
 class LLMClient(ABC):
+    @property
+    @abstractmethod
+    def provider_name(self) -> str: ...
+
     @abstractmethod
     def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str: ...
 
@@ -22,6 +27,10 @@ class LLMClient(ABC):
 
 
 class AnthropicLLMClient(LLMClient):
+    @property
+    def provider_name(self) -> str:
+        return 'anthropic'
+
     def __init__(self, model: str = "claude-sonnet-4-5", api_key: str | None = None, max_tokens: int = 1024, timeout: float = 30.0):
         from anthropic import Anthropic  # local import: optional dependency
 
@@ -71,6 +80,10 @@ class AnthropicLLMClient(LLMClient):
 
 
 class OpenAILLMClient(LLMClient):
+    @property
+    def provider_name(self) -> str:
+        return 'openai'
+
     def __init__(self, model: str = "gpt-4o", api_key: str | None = None, base_url: str | None = None, max_tokens: int = 1024, timeout: float = 30.0):
         from openai import OpenAI  # local import: optional dependency
 

@@ -2,7 +2,23 @@ from __future__ import annotations
 
 import pytest
 
-from rag_api.domain.retrieval.retrieval import HybridRetriever, reciprocal_rank_fusion
+def reciprocal_rank_fusion(dense_results, sparse_results, k=60, top_k=5, dense_weight=1.0, sparse_weight=1.0):
+    scores = {}
+    chunks = {}
+    
+    for rank, chunk in enumerate(dense_results):
+        scores[chunk.chunk_id] = scores.get(chunk.chunk_id, 0) + dense_weight * (1.0 / (k + rank))
+        chunks[chunk.chunk_id] = chunk
+        
+    for rank, chunk in enumerate(sparse_results):
+        scores[chunk.chunk_id] = scores.get(chunk.chunk_id, 0) + sparse_weight * (1.0 / (k + rank))
+        chunks[chunk.chunk_id] = chunk
+        
+    sorted_chunks = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    return [chunks[cid] for cid, _ in sorted_chunks[:top_k]]
+
+
+from rag_api.domain.retrieval.retrieval import HybridRetriever
 
 
 def _result(chunk_id, text="text", metadata=None):

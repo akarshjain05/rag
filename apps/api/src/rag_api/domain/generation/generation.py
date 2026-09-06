@@ -1,3 +1,4 @@
+
 """Answer generation over retrieved chunks: grounded prompt, citations, and
 answer confidence.
 
@@ -27,6 +28,8 @@ any paid API key. `EMBEDDING_PROVIDER=local` + `LLM_PROVIDER=none` runs the
 entire system for free.
 """
 from __future__ import annotations
+import time
+from rag_api.core.observability import tracer, llm_calls_total, llm_call_seconds, retrieval_confidence as ret_conf_metric
 
 import re
 from dataclasses import dataclass, field
@@ -171,6 +174,7 @@ class AnswerGenerator:
             )
 
         retrieval_confidence = compute_retrieval_confidence(chunks)
+        ret_conf_metric.observe(retrieval_confidence)
         sources = build_sources(chunks)
 
         if self.low_confidence_threshold is not None and retrieval_confidence < self.low_confidence_threshold:
@@ -217,7 +221,11 @@ class AnswerGenerator:
             user_prompt = user_prompt_text
 
         print(f"\n=== GENERATOR PROMPT ===\n{user_prompt}\n=== HISTORY ===\n{history}\n")
-        raw_answer = self.llm_client.generate(SYSTEM_PROMPT, user_prompt, history=history)  # type: ignore[union-attr]
+        start = time.perf_counter()
+        with tracer.start_as_current_span("generation.llm_call"):
+            raw_answer = self.llm_client.generate(SYSTEM_PROMPT, user_prompt, history=history)  # type: ignore[union-attr]
+        llm_calls_total.labels(stage="generation", provider=self.llm_client.provider_name).inc()
+        llm_call_seconds.labels(stage="generation").observe(time.perf_counter() - start)
         valid, invalid = _extract_and_validate_citations(raw_answer, len(chunks))
 
         unsupported: list[int] = []

@@ -6,4 +6,5 @@
 sentence-transformers>=3.2.0
 einops
 
-transformers<5.0.0
+
+

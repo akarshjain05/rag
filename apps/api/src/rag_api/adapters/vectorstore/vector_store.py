@@ -12,6 +12,7 @@ class VectorStore:
         mode: str = "embedded",
         host: str = "qdrant",
         port: int = 6333,
+        dense_dimension: int = 768,
     ):
         self.collection_name = collection_name
         if mode == "http":
@@ -23,6 +24,14 @@ class VectorStore:
             self._client = QdrantClient(path=str(persist_dir))
         else:
             raise ValueError(f"Unknown VectorStore mode: {mode!r}")
+            
+        # Initialize fastembed ONNX runtime immediately on the main thread
+        # to prevent OpenMP thread-pool conflicts with PyTorch later.
+        try:
+            from fastembed import SparseTextEmbedding
+            self._sparse_model = SparseTextEmbedding("Qdrant/bm25")
+        except ImportError:
+            pass
 
         # Ensure collection exists with both dense and sparse configurations
         if not self._client.collection_exists(collection_name=self.collection_name):
@@ -30,7 +39,7 @@ class VectorStore:
                 collection_name=self.collection_name,
                 vectors_config={
                     "dense_jina": models.VectorParams(
-                        size=768,  # Jina v2 base en size
+                        size=dense_dimension,
                         distance=models.Distance.COSINE
                     )
                 },
@@ -54,20 +63,12 @@ class VectorStore:
             
         import uuid
         
-        # FastEmbed requires generating sparse vectors locally before upload if using regular upload,
-        # OR we can just use the fastembed integrated methods.
-        # However, for simplicity, we will just use QdrantClient.add which automatically uses FastEmbed 
-        # for sparse vectors if configured correctly!
-        
-        # Qdrant requires UUID or integer IDs
         def to_uuid(cid: str) -> str:
             return str(uuid.uuid5(uuid.NAMESPACE_DNS, cid))
             
         try:
-            from fastembed import SparseTextEmbedding
-            sparse_model = SparseTextEmbedding("Qdrant/bm25")
-            sparse_embeddings = list(sparse_model.embed(texts))
-        except Exception:
+            sparse_embeddings = list(self._sparse_model.embed(texts))
+        except (ImportError, AttributeError):
             sparse_embeddings = [None] * len(texts)
             
         points = []
@@ -97,14 +98,12 @@ class VectorStore:
         )
 
     def nearest(self, embedding: list[float], top_k: int = 1) -> list[dict]:
-        res = self._client.search(
+        res = self._client.query_points(
             collection_name=self.collection_name,
-            query_vector=models.NamedVector(
-                name="dense_jina",
-                vector=embedding
-            ),
+            query=embedding,
+            using="dense_jina",
             limit=top_k
-        )
+        ).points
         out = []
         for r in res:
             out.append({
@@ -124,15 +123,13 @@ class VectorStore:
                 conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
             filter_obj = models.Filter(must=conditions)
             
-        res = self._client.search(
+        res = self._client.query_points(
             collection_name=self.collection_name,
-            query_vector=models.NamedVector(
-                name="dense_jina",
-                vector=embedding
-            ),
+            query=embedding,
+            using="dense_jina",
             query_filter=filter_obj,
             limit=top_k
-        )
+        ).points
         out = []
         for r in res:
             out.append({
@@ -143,7 +140,7 @@ class VectorStore:
             })
         return out
         
-    def hybrid_search(self, query_text: str, dense_vector: list[float], top_k: int = 25, where: dict | None = None) -> list[dict]:
+    def hybrid_search(self, query_text: str, dense_vector: list[float], top_k: int = 25, where: dict | None = None, prefetch_limit: int = 60) -> list[dict]:
         filter_obj = None
         if where:
             conditions = []
@@ -152,8 +149,9 @@ class VectorStore:
             filter_obj = models.Filter(must=conditions)
             
         from fastembed import SparseTextEmbedding
-        sparse_model = SparseTextEmbedding("Qdrant/bm25")
-        sp_emb = list(sparse_model.embed([query_text]))[0]
+        if not hasattr(self, "_sparse_model"):
+            self._sparse_model = SparseTextEmbedding("Qdrant/bm25")
+        sp_emb = list(self._sparse_model.embed([query_text]))[0]
             
         response = self._client.query_points(
             collection_name=self.collection_name,
@@ -164,13 +162,13 @@ class VectorStore:
                         values=sp_emb.values.tolist()
                     ),
                     using="sparse_bm25",
-                    limit=60,
+                    limit=prefetch_limit,
                     filter=filter_obj,
                 ),
                 models.Prefetch(
                     query=dense_vector,
                     using="dense_jina",
-                    limit=60,
+                    limit=prefetch_limit,
                     filter=filter_obj,
                 )
             ],
@@ -205,5 +203,6 @@ class VectorStore:
         filter_obj = models.Filter(
             must=[models.FieldCondition(key="source_document", match=models.MatchValue(value=source_document))]
         )
+        count = self._client.count(collection_name=self.collection_name, count_filter=filter_obj).count
         self._client.delete(collection_name=self.collection_name, points_selector=filter_obj)
-        return 1
+        return count

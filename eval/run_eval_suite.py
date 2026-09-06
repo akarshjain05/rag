@@ -90,7 +90,7 @@ def main() -> None:
         sparse_index = SparseIndex()
         pipeline = IngestionPipeline(embedding_client, vector_store, sparse_index)
         retriever = HybridRetriever(
-            embedding_client, vector_store, sparse_index, dense_top_k=args.top_k * 2, sparse_top_k=args.top_k * 2
+            embedding_client, vector_store, dense_top_k=args.top_k * 2, sparse_top_k=args.top_k * 2
         )
         generator = AnswerGenerator(
             llm_client,

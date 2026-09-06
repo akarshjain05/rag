@@ -34,10 +34,10 @@ class Settings(BaseSettings):
 
     # --- Storage ----------------------------------------------------------
     data_dir: Path = Path("./data")
-    chroma_mode: str = "embedded"  # "embedded" (PersistentClient, local dir) | "http" (separate Chroma server)
-    chroma_persist_dir: Path = Path("./data/chroma")  # used when chroma_mode == "embedded"
-    chroma_host: str = "chromadb"  # used when chroma_mode == "http"; default matches the docker-compose service name
-    chroma_port: int = 8000
+    qdrant_mode: str = "embedded"
+    qdrant_persist_dir: Path = Path("./data/qdrant")
+    qdrant_host: str = "qdrant"
+    qdrant_port: int = 6333
     collection_name: str = "internal_docs"
 
     # --- Chunking -----------------------------------------------------------
@@ -91,12 +91,36 @@ class Settings(BaseSettings):
     fetch_remote_html_images: bool = False
     sparse_index_provider: str = "in_memory"
     sparse_index_persist_dir: str = "/app/data/sparse_index"
-    structure_aware_semantic_fallback_enabled: bool = True
+    structure_aware_semantic_fallback_enabled: bool = False
     text_heading_detection_enabled: bool = False
 
     # --- API -----------------------------------------------------------------
     api_port: int = 8000
-    cors_origins: list[str] = ["*"]
+    cors_origins: list[str] = []
+
+    # M2
+    api_keys: list[str] = []
+    max_upload_bytes: int = 25 * 1024 * 1024
+
+    # M5
+    hyde_enabled: bool = True
+    query_condensation_enabled: bool = True
+    crag_expansion_enabled: bool = True
+
+
+
+    # Celery & Object Store
+    redis_url: str | None = "redis://redis:6379/2"
+    celery_broker_url: str = "redis://redis:6379/0"
+    celery_result_backend: str = "redis://redis:6379/1"
+    object_store_endpoint: str | None = None
+    object_store_access_key: str | None = "minioadmin"
+    object_store_secret_key: str | None = "minioadmin"
+    object_store_bucket: str = "rag-uploads"
+    streaming_embed_batch_size: int = 64
+    streaming_read_block_chars: int = 200000
+    streaming_tail_overlap_chars: int = 2000
+
 
 
 @lru_cache

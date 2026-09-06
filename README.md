@@ -20,19 +20,21 @@ retrieved context — not just asserted.
  │  chunking.py  │   every chunk tagged with which strategy produced it
  └───────┬───────┘
          ▼
- ┌───────────────┐   embed (OpenAI or local) → check near-dup (cosine > 0.95) → skip or insert
- │  pipeline.py  │──────────────┬───────────────────────────┐
- └───────────────┘              ▼                           ▼
-                        ┌───────────────┐           ┌───────────────┐
-                        │ vector_store  │           │ sparse_index  │
-                        │  (ChromaDB)   │           │    (BM25)     │
-                        │  top-10 dense │           │  top-10 BM25  │
-                        └───────┬───────┘           └───────┬───────┘
-                                └─────────────┬─────────────┘
-                                              ▼
-                                     ┌────────────────┐
-                                     │  retrieval.py  │  weighted Reciprocal Rank Fusion
-                                     └────────┬───────┘  → pool of ~20
+ ┌───────────────┐   embed (OpenAI or local) → check near-dup (cosine > 0.95)
+ │  pipeline.py  │
+ └───────┬───────┘
+         ▼
+ ┌────────────────────────────────────────┐
+ │               Qdrant                   │
+ │ Single Collection natively fusing:     │
+ │  - Dense Embeddings                    │
+ │  - FastEmbed BM25 Sparse Embeddings    │
+ └───────┬────────────────────────────────┘
+         │   Native Reciprocal Rank Fusion
+         ▼
+ ┌────────────────┐
+ │  retrieval.py  │  → pool of ~20
+ └───────┬────────┘
                                               ▼
                                      ┌────────────────┐
                                      │  reranker.py   │  optional: cross-encoder or
@@ -55,7 +57,7 @@ retrieved context — not just asserted.
 pipeline works as a library or script; `app/api.py` + `app/schemas.py` are
 the HTTP layer on top of it; `frontend/` is a React console on top of that.
 
-**Deployment shape** (`docker compose up`): four services — `chromadb`
+**Deployment shape** (`docker compose up`): six services — `qdrant`, `redis`, `minio`, `worker`
 (its own container, so storage isn't tied to the API's lifecycle),
 `api`, a one-shot `seed` job that ingests the sample corpus once `api` is
 healthy, and `frontend` (nginx serving the built React app, proxying `/v1`
@@ -64,7 +66,7 @@ in — see "Configuration" below.
 
 ## Quickstart
 
-### Docker Compose (fastest path — API, ChromaDB, and the dashboard, pre-seeded)
+### Docker Compose (fastest path — API, Qdrant, Workers, and the dashboard, pre-seeded)
 
 ```bash
 cp .env.example .env        # fill in OPENAI_API_KEY / ANTHROPIC_API_KEY
@@ -121,7 +123,7 @@ actually touch:
 |---|---|---|
 | `EMBEDDING_PROVIDER` | `openai` | `openai` or `local` |
 | `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `none` |
-| `CHROMA_MODE` | `embedded` | `embedded` (in-process, local dir) or `http` (separate Chroma server — what docker-compose uses) |
+| `QDRANT_MODE` | `embedded` | `embedded` (in-process, local dir) or `http` (separate Qdrant server — what docker-compose uses) |
 | `DEFAULT_CHUNKING_STRATEGY` | `structure_aware` | `fixed_size`, `structure_aware`, or `semantic` |
 | `DEDUP_SIMILARITY_THRESHOLD` | `0.95` | cosine similarity above which a chunk is skipped as a near-duplicate |
 | `RERANKER_PROVIDER` | `none` | `none`, `cross_encoder`, or `llm_judge` — optional second-pass reranking |
@@ -224,7 +226,7 @@ compare retrieval quality across strategies on the same corpus. That's what
 
 ## Hybrid retrieval
 
-Dense (cosine similarity in ChromaDB) and sparse (BM25 keyword match) are
+Dense (cosine similarity in Qdrant) and sparse (BM25 keyword match) are
 fused with **Reciprocal Rank Fusion** rather than a weighted blend of raw
 scores — the two scales aren't comparable (bounded cosine similarity vs.
 unbounded BM25), so blending by rank position avoids needing per-corpus
@@ -311,10 +313,10 @@ pytest --cov=app --cov-report=term-missing   # coverage, 98%
 External providers (OpenAI, Anthropic, sentence-transformers) are mocked at
 the SDK boundary — tests verify this codebase's logic, not third-party
 services, and run with no network access and no API keys. Everything that
-doesn't touch a paid API (loaders, all three chunkers, dedup, BM25/Chroma
+doesn't touch a paid API (loaders, all three chunkers, dedup, BM25/Qdrant
 sync, weighted RRF fusion, both rerankers, structural + semantic citation
 validation, confidence scoring, the eval framework's judges and
-aggregation, the full FastAPI surface) is exercised against real ChromaDB +
+aggregation, the full FastAPI surface) is exercised against real Qdrant +
 real BM25 + a deterministic fake embedder, not just asserted against mocks.
 
 ## Retrieval eval harness
@@ -447,8 +449,8 @@ part of building it honestly:
   image as documented, but wasn't pulled and run in *this* build
   environment** (network-restricted to package registries, not Docker Hub).
   What *is* directly verified: `VectorStore(mode="http")` against a real,
-  locally-launched Chroma server (`tests/test_vector_store.py`), which
-  exercises the exact same `chromadb.HttpClient` code path the compose
+  locally-launched Qdrant server (`tests/test_vector_store.py`), which
+  exercises the exact same `qdrant_client.QdrantClient` code path the compose
   service would use — so the client-side wiring is solid even though the
   container image itself wasn't pulled here. Worth a sanity check
   (`docker compose up`, `curl localhost:8000/health`) after first pulling

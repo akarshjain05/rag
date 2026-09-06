@@ -74,7 +74,7 @@ def test_delete_source_document_removes_only_matching_chunks(vector_store):
 def test_persistence_across_instances(tmp_path):
     from rag_api.adapters.vectorstore.vector_store import VectorStore
 
-    persist_dir = tmp_path / "chroma"
+    persist_dir = tmp_path / "qdrant"
     store1 = VectorStore(persist_dir=persist_dir, collection_name="persisted")
     store1.add("a", [1.0, 0.0], "hello", {"source_document": "x"})
 
@@ -97,10 +97,10 @@ def test_unknown_mode_raises():
         VectorStore(mode="not-a-real-mode")
 
 
-@pytest.mark.skipif(shutil.which("chroma") is None, reason="chroma server binary not on PATH")
-def test_http_mode_against_a_real_local_chroma_server(tmp_path):
-    """Not mocked: launches a real `chroma run` server as a subprocess and
-    talks to it over HTTP, the same way docker-compose's chromadb service
+@pytest.mark.skipif(shutil.which("qdrant") is None, reason="qdrant server binary not on PATH")
+def test_http_mode_against_a_real_local_qdrant_server(tmp_path):
+    """Not mocked: launches a real `qdrant run` server as a subprocess and
+    talks to it over HTTP, the same way docker-compose's qdrantdb service
     is reached in the "http" deployment mode. Confirms VectorStore's HTTP
     path is genuinely wired correctly, not just that construction doesn't
     raise."""
@@ -108,10 +108,10 @@ def test_http_mode_against_a_real_local_chroma_server(tmp_path):
     from rag_api.adapters.vectorstore.vector_store import VectorStore
 
     port = 8901
-    data_dir = tmp_path / "chroma_server_data"
+    data_dir = tmp_path / "qdrant_server_data"
     data_dir.mkdir()
     proc = subprocess.Popen(
-        ["chroma", "run", "--path", str(data_dir), "--host", "127.0.0.1", "--port", str(port)],
+        ["qdrant", "run", "--path", str(data_dir), "--host", "127.0.0.1", "--port", str(port)],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     try:
@@ -124,7 +124,7 @@ def test_http_mode_against_a_real_local_chroma_server(tmp_path):
                     break
             except Exception:
                 time.sleep(0.5)
-        assert ready, "chroma server did not become healthy in time"
+        assert ready, "qdrant server did not become healthy in time"
 
         store = VectorStore(collection_name="http_test", mode="http", host="127.0.0.1", port=port)
         assert store.count() == 0

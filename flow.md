@@ -53,12 +53,12 @@ graph TD
 
 1. **Extraction & Normalization**: The pipeline ingests PDFs, HTML, or Markdown, stripping formatting and normalizing headers into standard markdown equivalents.
 2. **Chunking**: Documents are split based on the selected strategy (Semantic, Structure-Aware, or Fixed-size).
-3. **Late Chunking (Dense Vectors)**: The *pure, unbroken document* is fed directly into an 8192-token context embedding model (`jina-embeddings-v2-base-en`). The document's token embeddings implicitly map structural context to each other via bidirectional self-attention. Chunk boundaries are mapped over the tokens, and a `torch.mean` pooling is applied to generate contextually rich "Late Chunking" dense vectors.
+3. **Embedding (Dense Vectors)**: The extracted chunks are embedded sequentially using either an OpenAI or local SentenceTransformers client. Large >1MB files are routed to a Celery worker backed by Redis and MinIO for streaming processing to avoid memory bloat.
 4. **Anthropic Contextual Retrieval & Prompt Caching**:
    - The *entire* source document is loaded into the LLM's `system` array with `"cache_control": {"type": "ephemeral"}`.
    - The LLM iterates over every chunk using a `ThreadPoolExecutor` (guaranteeing exact-prefix matching and a 99%+ cache hit rate) to synthesize a context summary that situates the isolated chunk within the broader document.
    - The synthetic summary is prepended to the chunk text to maximize keyword exposure for the Sparse Index and Generator LLM.
-5. **Unified Qdrant Indexing**: Both the Dense Vector (from Late Chunking) and the Sparse Vector (computed natively via Qdrant's FastEmbed `Qdrant/bm25` using the Anthropic summaries) are upserted into a single Qdrant `PointStruct`.
+5. **Unified Qdrant Indexing**: Both the Dense Vector and the Sparse Vector (computed natively via Qdrant's FastEmbed `Qdrant/bm25` using the Anthropic summaries if enabled) are upserted into a single Qdrant `PointStruct`.
 
 ## 2. Query Lifecycle
 

@@ -1,3 +1,4 @@
+
 """LLM-as-judge citation verification and answer-completeness scoring.
 
 A single batched call does both jobs at once: for every sentence-level claim
@@ -14,6 +15,8 @@ hallucinated reference, but says nothing about whether excerpt [1] actually
 supports the specific sentence it's attached to. That's what this checks.
 """
 from __future__ import annotations
+import time
+from rag_api.core.observability import tracer, llm_calls_total, llm_call_seconds
 
 import json
 import re
@@ -57,12 +60,16 @@ class CitationVerifier:
 
         if not cited_claims:
             # nothing citation-backed to check, but still worth a completeness read
-            raw = self.llm_client.generate(
-                'Rate how completely the answer addresses every part of the question, 0.0-1.0. '
-                'Respond with ONLY a JSON object: {"completeness": 0.8}. No other text.',
-                f"Question: {query}\n\nAnswer: {answer}",
-                history
-            )
+            start = time.perf_counter()
+            with tracer.start_as_current_span("verification_completeness.llm_call"):
+                raw = self.llm_client.generate(
+                    'Rate how completely the answer addresses every part of the question, 0.0-1.0. '
+                    'Respond with ONLY a JSON object: {"completeness": 0.8}. No other text.',
+                    f"Question: {query}\n\nAnswer: {answer}",
+                    history
+                )
+            llm_calls_total.labels(stage="verification_completeness", provider=self.llm_client.provider_name).inc()
+            llm_call_seconds.labels(stage="verification_completeness").observe(time.perf_counter() - start)
             _, completeness = self._parse_response(raw, 0)
             return VerificationResult(claims=claims, completeness=completeness)
 
@@ -84,7 +91,11 @@ class CitationVerifier:
         )
         user = f"Question: {query}\n\nClaims and excerpts:\n\n{claims_block}"
 
-        raw = self.llm_client.generate(system, user, history)
+        start = time.perf_counter()
+        with tracer.start_as_current_span("verification_claims.llm_call"):
+            raw = self.llm_client.generate(system, user, history)
+        llm_calls_total.labels(stage="verification_claims", provider=self.llm_client.provider_name).inc()
+        llm_call_seconds.labels(stage="verification_claims").observe(time.perf_counter() - start)
         supported_map, completeness = self._parse_response(raw, len(cited_claims))
 
         for i, claim in enumerate(cited_claims, start=1):

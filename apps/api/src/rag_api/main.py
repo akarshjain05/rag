@@ -1,6 +1,13 @@
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+limiter = Limiter(key_func=get_remote_address)
+from slowapi.errors import RateLimitExceeded
+from fastapi import Request
 import uvicorn
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Security, HTTPException, status
+from fastapi.security import APIKeyHeader
 from dotenv import load_dotenv
 
 from rag_api.core.settings import Settings, get_settings
@@ -21,7 +28,20 @@ from rag_api.schemas.schemas import HealthResponse
 
 _UNSET = object()
 
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
+
+def verify_api_key(api_key: str = Security(api_key_header)):
+    settings = get_settings()
+    if settings.api_key and api_key != settings.api_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid API Key"
+        )
+    return api_key
+
 def create_app(
+
     settings: Settings | None = None,
     *,
     embedding_client: EmbeddingClient | None = None,
@@ -32,6 +52,9 @@ def create_app(
     citation_verifier: CitationVerifier | None = _UNSET,
 ) -> FastAPI:
     settings = settings or get_settings()
+    from rag_api.core.logging import configure_logging
+    configure_logging(json_logs=True)
+
 
     embedding_client = embedding_client or build_embedding_client(
         settings.embedding_provider,
@@ -71,15 +94,25 @@ def create_app(
             citation_verifier = None
 
     vector_store = vector_store or VectorStore(
-        settings.chroma_persist_dir,
+        settings.qdrant_persist_dir,
         settings.collection_name,
-        mode=settings.chroma_mode,
-        host=settings.chroma_host,
-        port=settings.chroma_port,
+        mode=settings.qdrant_mode,
+        host=settings.qdrant_host,
+        port=settings.qdrant_port,
+        dense_dimension=embedding_client.dimension,
     )
 
 
-    image_store_instance = build_image_store(settings.image_store_backend, base_dir=settings.image_store_path)
+
+    image_store_instance = build_image_store(
+        settings.image_store_backend, 
+        base_dir=settings.image_store_path,
+        bucket=settings.object_store_bucket,
+        endpoint_url=settings.object_store_endpoint,
+        access_key=settings.object_store_access_key,
+        secret_key=settings.object_store_secret_key
+    )
+
 
     pipeline = IngestionPipeline(
         embedding_client,
@@ -125,12 +158,24 @@ def create_app(
         allow_headers=["*"],
     )
 
+    
+    @app.middleware("http")
+    async def limit_upload_size(request: Request, call_next):
+        if request.url.path in ["/v1/ingest", "/v1/ingest/large"]:
+            if "content-length" in request.headers:
+                content_length = int(request.headers["content-length"])
+                if content_length > settings.max_upload_bytes:
+                    from fastapi.responses import JSONResponse
+                    return JSONResponse(status_code=413, content={"detail": "Payload Too Large"})
+        return await call_next(request)
+
     app.state.settings = settings
     app.state.pipeline = pipeline
     app.state.retriever = retriever
     app.state.generator = generator
     app.state.vector_store = vector_store
-    app.state.conversation_store = ConversationStore()
+    from rag_api.services.redis_conversation import RedisConversationStore
+    app.state.conversation_store = RedisConversationStore(settings.redis_url) if settings.redis_url else ConversationStore()
     app.state.llm_client = llm_client
     app.state.image_store = image_store_instance
 
@@ -148,8 +193,9 @@ def create_app(
         )
 
     v1 = APIRouter(prefix="/v1")
-    v1.include_router(documents.router)
-    v1.include_router(ask.router)
+    from rag_api.api.auth import verify_api_key
+    v1.include_router(documents.router, dependencies=[Depends(verify_api_key)])
+    v1.include_router(ask.router, dependencies=[Depends(verify_api_key)])
     app.include_router(v1)
 
     return app

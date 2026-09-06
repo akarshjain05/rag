@@ -15,7 +15,7 @@ def make_pipeline(fake_embedder, vector_store, sparse_index, **overrides):
         dedup_similarity_threshold=0.95,
     )
     kwargs.update(overrides)
-    return IngestionPipeline(fake_embedder, vector_store, sparse_index, **kwargs)
+    return IngestionPipeline(fake_embedder, vector_store, None, **kwargs)
 
 
 def test_ingest_single_file_populates_both_indexes(fake_embedder, vector_store, sparse_index, md_path):

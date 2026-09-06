@@ -12,7 +12,6 @@ from pathlib import Path
 import pytest
 
 from rag_api.adapters.vectorstore.embeddings import DeterministicFakeEmbeddingClient
-from rag_api.adapters.vectorstore.sparse_index import SparseIndex
 from rag_api.adapters.vectorstore.vector_store import VectorStore
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -58,7 +57,7 @@ def fake_embedder() -> DeterministicFakeEmbeddingClient:
 
 @pytest.fixture
 def vector_store(tmp_path: Path) -> VectorStore:
-    return VectorStore(persist_dir=tmp_path / "chroma", collection_name="test_collection")
+    return VectorStore(persist_dir=tmp_path / "qdrant", collection_name="test_collection")
 
 
 @pytest.fixture

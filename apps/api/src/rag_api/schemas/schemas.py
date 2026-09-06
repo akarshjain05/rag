@@ -26,6 +26,9 @@ class QueryRequest(BaseModel):
     question: str = Field(..., min_length=1)
     conversation_id: str | None = None
     verify_citations: bool | None = None
+    hyde_enabled: bool | None = None
+    query_condensation_enabled: bool | None = None
+    crag_expansion_enabled: bool | None = None
     top_k: int = Field(default=5, ge=1, le=20)
     chunking_strategy: ChunkingStrategy | None = None
     compare_dense_only: bool = Field(

@@ -1,6 +1,10 @@
+from fastapi import Request
+from rag_api.main import limiter
+from rag_api.core.logging import log
 from fastapi import APIRouter, Depends
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
-from rag_api.api.deps import get_retriever, get_generator, run_or_502, get_conversation_store, get_llm_client
+from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings
+from rag_api.core.settings import Settings
 from rag_api.services.query_condensation import condense_query, expand_query, generate_hyde
 from rag_api.services.conversation import Turn
 from rag_api.domain.generation.generation import build_sources
@@ -13,7 +17,8 @@ async def ask(
     retriever = Depends(get_retriever),
     generator = Depends(get_generator),
     store = Depends(get_conversation_store),
-    llm_client = Depends(get_llm_client)
+    llm_client = Depends(get_llm_client),
+    settings: Settings = Depends(get_settings)
 ) -> QueryResponse:
     strategy_value = payload.chunking_strategy.value if payload.chunking_strategy else None
     
@@ -22,7 +27,8 @@ async def ask(
         history = store.get_history(payload.conversation_id)
         
     search_query = payload.question
-    if history and llm_client:
+    condense_enabled = payload.query_condensation_enabled if payload.query_condensation_enabled is not None else settings.query_condensation_enabled
+    if history and llm_client and condense_enabled:
         search_query = run_or_502(condense_query, payload.question, history, llm_client)
         
     llm_history = [{"role": "user", "content": t.user} for t in history] + [{"role": "assistant", "content": t.assistant} for t in history]
@@ -35,34 +41,38 @@ async def ask(
     # 0. HyDE (Hypothetical Document Embeddings)
     # Generate a hypothetical answer to the query to maximize vector overlap
     hyde_doc = ""
-    if llm_client:
+    hyde_enabled = payload.hyde_enabled if payload.hyde_enabled is not None else settings.hyde_enabled
+    if llm_client and hyde_enabled:
         hyde_doc = run_or_502(generate_hyde, search_query, llm_client)
     
     hyde_search_query = f"{search_query}\n\n{hyde_doc}" if hyde_doc else search_query
 
-    chunks = run_or_502(
-        retriever.retrieve, 
-        hyde_search_query, 
-        top_k=payload.top_k, 
-        chunking_strategy=strategy_value,
-        original_query=search_query
+    chunks = await run_or_502_async(
+        retriever.retrieve_async(
+            hyde_search_query, 
+            top_k=payload.top_k, 
+            chunking_strategy=strategy_value,
+            original_query=search_query
+        )
     )
     
     # 1. Corrective RAG (CRAG) Routing
     if retriever.reranker and chunks and llm_client:
         max_retries = 1
         retries = 0
-        while retries < max_retries:
+        crag_enabled = payload.crag_expansion_enabled if payload.crag_expansion_enabled is not None else settings.crag_expansion_enabled
+        while retries < max_retries and crag_enabled:
             max_score = max([c.rerank_score or 0.0 for c in chunks])
             if 0.40 <= max_score < 0.80:
-                print(f"CRAG TRIGGERED (Retry {retries+1}/{max_retries}): Ambiguous confidence {max_score:.2f}. Expanding query...")
+                log.info("crag.expansion_triggered", original_score=max_score, query=search_query, retry=retries+1, max_retries=max_retries)
                 expanded_query = run_or_502(expand_query, search_query, llm_client)
-                crag_chunks = run_or_502(
-                    retriever.retrieve, 
-                    expanded_query, 
-                    top_k=payload.top_k, 
-                    chunking_strategy=strategy_value,
-                    original_query=search_query
+                crag_chunks = await run_or_502_async(
+                    retriever.retrieve_async(
+                        expanded_query, 
+                        top_k=payload.top_k, 
+                        chunking_strategy=strategy_value,
+                        original_query=search_query
+                    )
                 )
                 new_max_score = max([c.rerank_score or 0.0 for c in crag_chunks]) if crag_chunks else 0.0
                 
@@ -85,8 +95,8 @@ async def ask(
     
     dense_only_sources = None
     if payload.compare_dense_only:
-        dense_chunks = run_or_502(
-            retriever.retrieve, search_query, top_k=payload.top_k, chunking_strategy=strategy_value, dense_only=True
+        dense_chunks = await run_or_502_async(
+            retriever.retrieve_async(search_query, top_k=payload.top_k, chunking_strategy=strategy_value, dense_only=True)
         )
         dense_only_sources = [SourceSchema(**s) for s in build_sources(dense_chunks)]
 

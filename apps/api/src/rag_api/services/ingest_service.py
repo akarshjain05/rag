@@ -6,6 +6,7 @@ store's *current* contents — so a duplicate is caught whether it matches a
 chunk from a previous run or one inserted earlier in this very call.
 """
 from __future__ import annotations
+from rag_api.core.logging import log
 
 from pathlib import Path
 
@@ -40,7 +41,6 @@ class IngestionPipeline:
         
         self.llm_client = llm_client
         self.image_store = image_store
-        self.image_store = None
         self.default_strategy = default_strategy
         self.fixed_chunk_size = fixed_chunk_size
         self.fixed_chunk_overlap = fixed_chunk_overlap
