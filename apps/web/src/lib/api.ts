@@ -220,3 +220,22 @@ export function submitFeedback(conversationId, turnIndex, isPositive) {
 export function fetchInsights() {
   return request('/v1/insights');
 }
+
+export function generateApiKey() {
+  return request('/v1/auth/keys', { method: 'POST' });
+}
+
+export function listApiKeys() {
+  return request('/v1/auth/keys');
+}
+
+export function revokeApiKey(keyId: string) {
+  return request(`/v1/auth/keys/${encodeURIComponent(keyId)}`, { method: 'DELETE' });
+}
+
+export function bulkDeleteDocuments(documentIds: string[]) {
+  return request('/v1/documents/bulk_delete', { 
+    method: 'POST',
+    body: JSON.stringify({ document_ids: documentIds })
+  });
+}

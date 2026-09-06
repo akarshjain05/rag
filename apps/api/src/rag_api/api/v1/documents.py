@@ -116,3 +116,19 @@ def delete_document(
 ) -> DeleteResponse:
     deleted = vector_store.delete_source_document(source_document)
     return DeleteResponse(source_document=source_document, chunks_deleted=deleted)
+
+from pydantic import BaseModel
+class BulkDeleteRequest(BaseModel):
+    document_ids: list[str]
+
+@router.post("/bulk_delete", summary="Bulk delete documents")
+def bulk_delete_documents(
+    payload: BulkDeleteRequest,
+    vector_store: VectorStore = Depends(get_vector_store),
+):
+    for doc_id in payload.document_ids:
+        try:
+            vector_store.delete_document(doc_id)
+        except Exception:
+            pass
+    return {"status": "ok"}

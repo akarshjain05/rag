@@ -50,7 +50,8 @@ export default function App() {
           {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} setMobileMenuOpen={setMobileMenuOpen} />}
           {currentView === 'knowledge' && <KnowledgeBase />}
           {currentView === 'history' && <HistoryView onSelect={(id) => { setActiveConversationId(id); setCurrentView('chat'); }} />}
-          {(currentView === 'insights' || currentView === 'settings') && <InsightsView />}
+          {currentView === 'insights' && <InsightsView />}
+          {currentView === 'settings' && <SettingsView />}
         </main>
       </div>
     </div>
@@ -189,40 +190,43 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
 }
 
 function KnowledgeBase() {
-  const [docs, setDocs] = useState([]);
+  const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetchDocuments().then(res => {
-      setDocs(res.source_documents || []);
-      setLoading(false);
-    }).catch(err => {
-      console.error(err);
-      setLoading(false);
+    import('./lib/api').then(({ fetchDocuments }) => {
+      fetchDocuments().then(res => {
+        setDocs(res.documents);
+        setLoading(false);
+      }).catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
     });
   }, []);
 
-  const handleUpload = async (e) => {
-    if (!e.target.files?.length) return;
-    setUploading(true);
-    setProgress({ pct: 0, msg: "Starting upload..." });
-    try {
-      await ingest(e.target.files, (pct, msg) => {
-        setProgress({ pct, msg });
-      }, null);
-      const res = await fetchDocuments();
-      setDocs(res.source_documents || []);
-    } catch (err) {
-      alert("Upload failed: " + err.message);
-    } finally {
-      setUploading(false);
-      setProgress(null);
-      e.target.value = null;
-    }
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedDocs);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedDocs(next);
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedDocs.size === 0) return;
+    if (!confirm(`Delete ${selectedDocs.size} documents?`)) return;
+    const ids = Array.from(selectedDocs);
+    setSelectedDocs(new Set());
+    
+    try {
+      const { bulkDeleteDocuments } = await import('./lib/api');
+      await bulkDeleteDocuments(ids);
+      setDocs(prev => prev.filter(d => !ids.includes(d.source_document)));
+    } catch (err) {
+      console.error(err);
+    }
+  };
   const handleDelete = async (doc) => {
     if (confirm(`Delete ${doc}?`)) {
       await deleteDocument(doc);
@@ -330,6 +334,76 @@ function HistoryView({ onSelect }) {
 }
 
 
+function SettingsView() {
+  const [keys, setKeys] = useState<any[]>([]);
+  
+  useEffect(() => {
+    import('./lib/api').then(({ listApiKeys }) => {
+      listApiKeys().then(res => setKeys(res)).catch(err => console.error(err));
+    });
+  }, []);
+
+  const handleGenerate = async () => {
+    try {
+      const { generateApiKey } = await import('./lib/api');
+      const res = await generateApiKey();
+      if (res.api_key) {
+        setKeys(prev => [res, ...prev]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRevoke = async (keyId: string) => {
+    if (!confirm('Revoke this key immediately?')) return;
+    try {
+      const { revokeApiKey } = await import('./lib/api');
+      await revokeApiKey(keyId);
+      setKeys(prev => prev.filter(k => k.api_key !== keyId));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="flex-1 p-8 overflow-auto">
+      <h2 className="text-2xl font-semibold mb-8">Settings & API Keys</h2>
+      
+      <div className="max-w-2xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-lg font-medium">API Keys</h3>
+            <p className="text-sm text-gray-500">Manage API keys used for external access</p>
+          </div>
+          <button onClick={handleGenerate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+            Generate New Key
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {keys.length === 0 && <div className="text-sm text-gray-500 text-center py-4">No dynamic keys generated yet.</div>}
+          {keys.map(k => (
+            <div key={k.api_key} className="flex justify-between items-center p-4 border border-gray-200 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-white/5">
+              <div>
+                <div className="font-mono text-sm">{k.api_key}</div>
+                <div className="text-xs text-gray-500 mt-1">Created: {new Date(k.created_at * 1000).toLocaleString()}</div>
+              </div>
+              <button onClick={() => handleRevoke(k.api_key)} className="text-red-500 hover:text-red-600 text-sm font-medium">
+                Revoke
+              </button>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-sm rounded-xl border border-blue-100 dark:border-blue-900/50">
+          <strong>Note:</strong> Keys defined in the <code>API_KEYS</code> environment variable act as immutable root keys and are not shown here.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InsightsView() {
   const [metrics, setMetrics] = useState<any>(null);
 
@@ -405,6 +479,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
   const [confidenceInfo, setConfidenceInfo] = useState<any>(null);
 
+  const [compareDenseOnly, setCompareDenseOnly] = useState(false);
   const isInitialMount = React.useRef(true);
   const skipFetch = React.useRef(false);
 
@@ -441,7 +516,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
     setLoading(true);
     
     try {
-      const res = await ask({ question: q, conversationId, verifyCitations: true });
+      const res = await ask({ question: q, conversationId, verifyCitations: true, compareDenseOnly });
       if (!conversationId) {
           skipFetch.current = true;
           setConversationId(res.conversation_id);
@@ -473,6 +548,33 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
     }
   };
 
+  
+  const handleExport = () => {
+    if (messages.length === 0) return;
+    let md = `# Conversation
+
+`;
+    messages.forEach(m => {
+      md += `**${m.role === 'user' ? 'User' : 'Assistant'}**:
+${m.content}
+
+`;
+      if (m.markers && m.markers.length > 0) {
+        md += `*Sources*: ${m.markers.join(', ')}
+
+`;
+      }
+    });
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `conversation-${conversationId || 'export'}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const isHighConfidence = confidenceInfo?.composite >= 0.7;
   const isLowConfidence = confidenceInfo?.composite < 0.4;
 
@@ -489,11 +591,18 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
               Conversation: {conversationId || "New"}
             </div>
           </div>
-          {conversationId && (
-            <button onClick={() => setConversationId(null)} className="text-xs text-blue-500 hover:underline" aria-label="Start new chat">
-              Start new chat
-            </button>
-          )}
+                    <div className="flex items-center gap-2">
+            {conversationId && (
+              <button onClick={handleExport} className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white px-3 py-1 border border-gray-200 dark:border-white/10 rounded-lg">
+                Export .md
+              </button>
+            )}
+            {conversationId && (
+              <button onClick={() => setConversationId(null)} className="text-xs text-blue-500 hover:underline" aria-label="Start new chat">
+                Start new chat
+              </button>
+            )}
+          </div>
         </div>
         
         <div className="flex-1 overflow-auto flex flex-col gap-6 pb-20 pr-4" aria-live="polite">
@@ -548,6 +657,12 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
         </div>
 
         <div className="absolute bottom-6 left-6 right-6 pt-4 bg-gray-50/80 dark:bg-[#141414]/80 backdrop-blur-md">
+                    <div className="flex gap-2 items-center mb-2 px-1">
+            <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+              <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600" />
+              Dense-only mode
+            </label>
+          </div>
           <div className="flex gap-2 items-center bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl p-2 shadow-sm focus-within:border-blue-500 transition-colors">
             <input 
               type="text" 
@@ -582,7 +697,12 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
                   <FileText className="w-4 h-4 text-gray-400" />
                   <span className="text-xs font-medium truncate flex-1">[{s.marker}] {s.source_document}</span>
                 </div>
-                <div className="text-[10px] text-gray-400 mb-2 truncate">{s.section_heading}</div>
+                              <div className="text-[10px] text-gray-400 mb-2 truncate">{s.section_heading}</div>
+                <div className="text-[9px] flex gap-2 font-mono text-gray-500 mb-2">
+                  <span title="Dense Score" className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1 rounded">D: {s.dense_score?.toFixed(2) || '-'}</span>
+                  {!compareDenseOnly && <span title="Sparse Score" className="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-1 rounded">S: {s.sparse_score?.toFixed(2) || '-'}</span>}
+                  <span title="Rerank Score" className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1 rounded">R: {s.rerank_score?.toFixed(2) || '-'}</span>
+                </div>
                 <p className="text-xs text-gray-600 dark:text-gray-300 font-serif leading-relaxed line-clamp-4">
                   {s.text}
                 </p>
