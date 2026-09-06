@@ -216,7 +216,7 @@ class VectorStore:
             must=[models.FieldCondition(key="source_document", match=models.MatchValue(value=source_document))]
         )
         count = self._client.count(collection_name=self.collection_name, count_filter=filter_obj).count
-        self._client.delete(collection_name=self.collection_name, points_selector=filter_obj)
+        self._client.delete(collection_name=self.collection_name, points_selector=filter_obj, wait=True)
         return count
 
     def sparse_query(self, query_text: str, top_k: int = 10, where: dict | None = None) -> list[dict]:

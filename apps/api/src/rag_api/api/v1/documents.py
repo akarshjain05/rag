@@ -129,7 +129,7 @@ def bulk_delete_documents(
 ):
     for doc_id in payload.document_ids:
         try:
-            vector_store.delete_document(doc_id)
+            vector_store.delete_source_document(doc_id)
         except Exception:
             pass
     return {"status": "ok"}
