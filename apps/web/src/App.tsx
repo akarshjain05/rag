@@ -42,7 +42,7 @@ function AppContent() {
   const [documents, setDocuments] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
-  const [conversationId] = useState(() => Math.random().toString(36).substring(2, 15));
+  const [conversationId, setConversationId] = useState(() => Math.random().toString(36).substring(2, 15));
   const [strictMode, setStrictMode] = useState(false);
   const [answerDetails, setAnswerDetails] = useState<any>(null);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -201,6 +201,7 @@ function AppContent() {
     setAnswer("");
     setSources([]);
     setLastQuery("");
+    setConversationId(Math.random().toString(36).substring(2, 15));
   };
   
   const copyAnswer = () => {
