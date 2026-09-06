@@ -6,9 +6,8 @@ from fastapi import Request
 import uvicorn
 from fastapi import FastAPI, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Security, HTTPException, status
-from fastapi.security import APIKeyHeader
 from dotenv import load_dotenv
+from rag_api.api.auth import verify_api_key
 
 from rag_api.core.settings import Settings, get_settings
 from rag_api.adapters.vectorstore.embeddings import EmbeddingClient, build_embedding_client
@@ -29,16 +28,7 @@ from rag_api.schemas.schemas import HealthResponse
 _UNSET = object()
 
 
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=True)
 
-def verify_api_key(api_key: str = Security(api_key_header)):
-    settings = get_settings()
-    if settings.api_key and api_key != settings.api_key:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid API Key"
-        )
-    return api_key
 
 def create_app(
 
@@ -193,7 +183,6 @@ def create_app(
         )
 
     v1 = APIRouter(prefix="/v1")
-    from rag_api.api.auth import verify_api_key
     v1.include_router(documents.router, dependencies=[Depends(verify_api_key)])
     v1.include_router(ask.router, dependencies=[Depends(verify_api_key)])
     app.include_router(v1)
