@@ -47,6 +47,6 @@ def get_object_store(request: Request):
     return ObjectStore(
         settings.object_store_endpoint or "http://minio:9000",
         settings.object_store_access_key or "minioadmin",
-        settings.object_store_secret_key or "minioadmin",
+        settings.object_store_secret_key or "minioadminpassword",
         settings.object_store_bucket
     )

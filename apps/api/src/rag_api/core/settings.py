@@ -115,7 +115,7 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://redis:6379/1"
     object_store_endpoint: str | None = None
     object_store_access_key: str | None = "minioadmin"
-    object_store_secret_key: str | None = "minioadmin"
+    object_store_secret_key: str | None = "minioadminpassword"
     object_store_bucket: str = "rag-uploads"
     streaming_embed_batch_size: int = 64
     streaming_read_block_chars: int = 200000

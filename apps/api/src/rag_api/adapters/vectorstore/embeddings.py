@@ -77,15 +77,7 @@ class LocalEmbeddingClient(EmbeddingClient):
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
 
         try:
-            import sys
-            from types import ModuleType
-            if 'transformers.onnx' not in sys.modules:
-                sys.modules['transformers.onnx'] = ModuleType('transformers.onnx')
-                sys.modules['transformers.onnx'].OnnxConfig = object
-            import transformers.pytorch_utils
-            transformers.pytorch_utils.find_pruneable_heads_and_indices = lambda *args, **kwargs: (set(), [])
             from transformers import AutoModel, AutoTokenizer
-
             import torch
         except ImportError as exc:
             raise ImportError("Local embedding requires transformers and torch") from exc
@@ -93,8 +85,8 @@ class LocalEmbeddingClient(EmbeddingClient):
         self.model_name = model_name
         
         # Load via AutoModel for late chunking access
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-        self.model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name)
         self.model.eval()
         
         try:

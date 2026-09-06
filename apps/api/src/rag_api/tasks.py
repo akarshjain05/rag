@@ -16,7 +16,7 @@ def ingest_large_file_task(self, object_key: str, source_filename: str):
     store = ObjectStore(
         s.object_store_endpoint or "http://minio:9000", 
         s.object_store_access_key or "minioadmin", 
-        s.object_store_secret_key or "minioadmin", 
+        s.object_store_secret_key or "minioadminpassword", 
         s.object_store_bucket
     )
     local_path = store.download_to_tmp(object_key)

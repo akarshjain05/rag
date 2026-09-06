@@ -92,12 +92,12 @@ export async function ingest(files, onProgress) {
         const statusData = await pollRes.json();
         
         if (statusData.status === "PROGRESS" && onProgress) {
-          onProgress(statusData.meta?.chunks_processed || 0, `Indexing ${file.name}...`);
+          onProgress(statusData.info?.chunks_processed || 0, `Indexing ${file.name}...`);
         } else if (statusData.status === "SUCCESS") {
-          results.push(statusData.result);
+          results.push(statusData.info);
           break;
         } else if (statusData.status === "FAILURE") {
-          throw new Error(`Job failed: ${statusData.meta}`);
+          throw new Error(`Job failed: ${statusData.info}`);
         }
       }
     }
