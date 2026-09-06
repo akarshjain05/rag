@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { verifyAuth, fetchConversations, fetchDocuments, deleteDocument, ingest, ask } from './lib/api';
-import { MessageCircle, Folder, Clock, BarChart, Settings, FileText, ArrowRight, X, Trash2, Check, ThumbsUp, ThumbsDown, LogOut } from 'lucide-react';
+import { MessageCircle, Folder, Clock, BarChart, Settings, FileText, ArrowRight, X, Trash2, Check, ThumbsUp, ThumbsDown, LogOut, Moon, Sun, Menu } from 'lucide-react';
 
 export default function App() {
   const [apiKey, setApiKey] = useState<string | null>(import.meta.env.VITE_API_KEY || localStorage.getItem('apiKey'));
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'knowledge' | 'history' | 'insights' | 'settings'>('chat');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  
+  const [theme, setTheme] = useState<'light' | 'dark'>(localStorage.getItem('theme') as 'light' | 'dark' || 'dark');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
   useEffect(() => {
     if (apiKey) {
       verifyAuth().then(() => {
@@ -36,7 +47,7 @@ export default function App() {
         />
         
         <main className="flex-1 flex overflow-hidden">
-          {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} />}
+          {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} setMobileMenuOpen={setMobileMenuOpen} />}
           {currentView === 'knowledge' && <KnowledgeBase />}
           {currentView === 'history' && <HistoryView onSelect={(id) => { setActiveConversationId(id); setCurrentView('chat'); }} />}
           {(currentView === 'insights' || currentView === 'settings') && <InsightsView />}
@@ -94,7 +105,7 @@ function AuthScreen({ onAuth }) {
   );
 }
 
-function Sidebar({ currentView, setCurrentView, onLogout }) {
+function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobileMenuOpen, setMobileMenuOpen }) {
   const navItems = [
     { id: 'chat', icon: MessageCircle, label: 'Ask' },
     { id: 'knowledge', icon: Folder, label: 'Knowledge base' },
@@ -103,42 +114,77 @@ function Sidebar({ currentView, setCurrentView, onLogout }) {
   ];
 
   return (
-    <div className="w-[220px] bg-gray-100 dark:bg-[#0A0A0A] border-r border-gray-200 dark:border-white/10 flex flex-col p-4">
-      <div className="flex items-center gap-3 mb-8 px-2">
-        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">OM</div>
-        <span className="font-semibold tracking-wide">Nexus</span>
-      </div>
+    <>
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+      )}
       
-      <div className="flex flex-col gap-1">
-        {navItems.map(item => (
-          <button
-            key={item.id}
-            onClick={() => setCurrentView(item.id)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${currentView === item.id ? 'bg-white dark:bg-white/10 text-black dark:text-white font-medium shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/5'}`}
-          >
-            <item.icon className="w-4 h-4" />
-            {item.label}
+      <div className={`fixed md:relative z-50 w-64 h-full bg-[#FAFAFA] dark:bg-[#0A0A0A] border-r border-gray-200 dark:border-white/10 flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-6 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold tracking-tighter">
+              NX
+            </div>
+            <span className="font-semibold tracking-wide">Nexus</span>
+          </div>
+          <button className="md:hidden text-gray-500" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+            <X className="w-5 h-5" />
           </button>
-        ))}
-      </div>
+        </div>
 
-      <div className="mt-auto flex flex-col gap-1">
-        <button
-          onClick={() => setCurrentView('settings')}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${currentView === 'settings' ? 'bg-white dark:bg-white/10 text-black dark:text-white font-medium shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/5'}`}
-        >
-          <Settings className="w-4 h-4" />
-          Settings
-        </button>
-        <button
-          onClick={onLogout}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors text-red-500 hover:bg-red-500/10"
-        >
-          <LogOut className="w-4 h-4" />
-          Log out
-        </button>
+        <nav className="flex-1 px-4 py-4 flex flex-col gap-2">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => { setCurrentView(item.id as any); setMobileMenuOpen(false); }}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                currentView === item.id 
+                  ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white font-medium' 
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
+              }`}
+              aria-label={item.label}
+            >
+              <item.icon className="w-4 h-4" />
+              <span className="text-sm">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 flex flex-col gap-2">
+          <button 
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all text-sm"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
+          
+          <button 
+            onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm ${
+              currentView === 'settings' 
+                ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white font-medium' 
+                : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
+            }`}
+            aria-label="Settings"
+          >
+            <Settings className="w-4 h-4" />
+            <span>Settings</span>
+          </button>
+          
+          <button 
+            onClick={onLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all mt-2 text-sm"
+            aria-label="Log out"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Log out</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -351,7 +397,7 @@ function InsightsView() {
   );
 }
 
-function ChatView({ conversationId, setConversationId }) {
+function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
   const [sources, setSources] = useState([]);
@@ -431,21 +477,26 @@ function ChatView({ conversationId, setConversationId }) {
   const isLowConfidence = confidenceInfo?.composite < 0.4;
 
   return (
-    <div className="flex-1 flex overflow-hidden">
+    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
       {/* Main Chat Thread */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden relative">
-        <div className="flex justify-between items-center mb-4">
-          <div className="text-xs text-gray-500 font-mono">
-            Conversation: {conversationId || "New"}
+                <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Open menu">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="text-xs text-gray-500 font-mono">
+              Conversation: {conversationId || "New"}
+            </div>
           </div>
           {conversationId && (
-            <button onClick={() => setConversationId(null)} className="text-xs text-blue-500 hover:underline">
+            <button onClick={() => setConversationId(null)} className="text-xs text-blue-500 hover:underline" aria-label="Start new chat">
               Start new chat
             </button>
           )}
         </div>
         
-        <div className="flex-1 overflow-auto flex flex-col gap-6 pb-20 pr-4">
+        <div className="flex-1 overflow-auto flex flex-col gap-6 pb-20 pr-4" aria-live="polite">
           {messages.map((m, i) => (
             <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
               <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-gray-100 dark:bg-white/10' : ''}`}>
@@ -507,7 +558,8 @@ function ChatView({ conversationId, setConversationId }) {
               className="flex-1 bg-transparent border-none outline-none px-3 text-sm"
             />
             <button 
-              onClick={handleAsk} 
+              onClick={handleAsk}
+              aria-label="Send message"  
               disabled={loading || !query.trim()}
               className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
@@ -518,7 +570,7 @@ function ChatView({ conversationId, setConversationId }) {
       </div>
 
       {/* Right Source Panel */}
-      <div className="w-[300px] border-l border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#141414] p-6 flex flex-col overflow-hidden">
+      <div className="w-full md:w-[300px] border-t md:border-t-0 md:border-l border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#141414] p-6 flex flex-col md:overflow-hidden min-h-[300px] md:min-h-0">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Sources</h3>
         <div className="flex-1 overflow-auto flex flex-col gap-4">
           {sources.length === 0 ? (

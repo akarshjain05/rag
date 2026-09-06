@@ -1,46 +1,11 @@
 @import 'tailwindcss';
-
-
-
-
-
-
-
-
-
-
-
+@custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-background: #0A0A0A;
-  --color-panel: rgba(255, 255, 255, 0.03);
-  --color-panel-border: rgba(255, 255, 255, 0.1);
-  --color-foreground: #FFFFFF;
-  --color-muted: #888888;
-  
-  --color-accent-cyan: #00F0FF;
-  --color-accent-purple: #B026FF;
-  --color-accent-amber: #FFB000;
-  --color-accent-red: #FF2A2A;
-
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-html,
-body,
-#root {
+html, body, #root {
   height: 100%;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
-  overflow: hidden;
-}
-
-/* Glassmorphism utility */
-.glass-panel {
-  background: var(--color-panel);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-panel-border);
 }
