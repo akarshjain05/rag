@@ -47,14 +47,14 @@ async def ask(
     
     hyde_search_query = f"{search_query}\n\n{hyde_doc}" if hyde_doc else search_query
 
-    chunks = await run_or_502_async(
+    import logging; logging.warning('STARTING RETRIEVE ASYNC...'); chunks = await run_or_502_async(
         retriever.retrieve_async(
             hyde_search_query, 
             top_k=payload.top_k, 
             chunking_strategy=strategy_value,
             original_query=search_query
         )
-    )
+    ); import logging; logging.warning('RETRIEVE ASYNC DONE')
     
     # 1. Corrective RAG (CRAG) Routing
     if retriever.reranker and chunks and llm_client:

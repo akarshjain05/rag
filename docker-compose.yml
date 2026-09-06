@@ -24,6 +24,7 @@ services:
     - fastembed_cache:/tmp/fastembed
     environment:
       OMP_NUM_THREADS: 1
+      TOKENIZERS_PARALLELISM: "false"
       KMP_DUPLICATE_LIB_OK: true
       QDRANT_MODE: http
       QDRANT_HOST: qdrant
@@ -110,6 +111,7 @@ services:
     - fastembed_cache:/tmp/fastembed
     environment:
       OMP_NUM_THREADS: 1
+      TOKENIZERS_PARALLELISM: "false"
       KMP_DUPLICATE_LIB_OK: true
       QDRANT_MODE: http
       QDRANT_HOST: qdrant

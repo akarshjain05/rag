@@ -1,0 +1,4 @@
+NAME                      IMAGE                                                                     COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+rag-pipeline-api-1        rag-pipeline-api                                                          "uvicorn rag_api.mai…"   api        46 minutes ago   Up 46 minutes (healthy)   0.0.0.0:8080->8000/tcp, [::]:8080->8000/tcp
+rag-pipeline-frontend-1   sha256:13e2370cb935be76532afb53e52f3068c70aa08cb3e6ac384f4237ffaa50b5e5   "/docker-entrypoint.…"   frontend   3 hours ago      Up 3 hours                0.0.0.0:5180->80/tcp, [::]:5180->80/tcp
+rag-pipeline-qdrant-1     qdrant/qdrant:latest                                                      "./entrypoint.sh"        qdrant     9 hours ago      Up 9 hours (healthy)      6333-6334/tcp

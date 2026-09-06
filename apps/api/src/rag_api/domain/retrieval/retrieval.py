@@ -1,4 +1,7 @@
+
 from __future__ import annotations
+import asyncio
+
 
 from rag_api.adapters.vectorstore.embeddings import EmbeddingClient
 from rag_api.domain.models import RetrievedChunk
@@ -29,6 +32,7 @@ class HybridRetriever:
         self.reranker = reranker
         self.rerank_candidate_pool = rerank_candidate_pool
 
+    import asyncio
     async def retrieve_async(
         self,
         query: str,
@@ -38,8 +42,7 @@ class HybridRetriever:
         dense_only: bool = False,
         original_query: str | None = None,
     ) -> list[RetrievedChunk]:
-        import asyncio
-        query_embedding = await asyncio.to_thread(self.embedding_client.embed, [query])
+        import logging; logging.warning('EMBEDDING...'); query_embedding = await asyncio.to_thread(self.embedding_client.embed, [query]); import logging; logging.warning('EMBEDDING DONE')
         query_embedding = query_embedding[0]
         
         where = {"chunking_strategy": chunking_strategy} if chunking_strategy else None
@@ -61,13 +64,12 @@ class HybridRetriever:
         fusion_pool_size = max(self.rerank_candidate_pool, top_k) if self.reranker else top_k
         
         # Native Qdrant Hybrid Search!
-        fused_dicts = await asyncio.to_thread(
-            self.vector_store.hybrid_search, 
+        import logging; logging.warning('HYBRID SEARCH...'); fused_dicts = self.vector_store.hybrid_search(
             query, 
             query_embedding, 
             top_k=fusion_pool_size, 
             where=where
-        )
+        ); import logging; logging.warning('HYBRID SEARCH DONE')
         
         fused = [
             RetrievedChunk(

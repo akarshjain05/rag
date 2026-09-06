@@ -15,6 +15,11 @@ class VectorStore:
         dense_dimension: int = 768,
     ):
         self.collection_name = collection_name
+        from fastembed import SparseTextEmbedding
+        try:
+            self._sparse_model = SparseTextEmbedding('Qdrant/bm25')
+        except Exception as e:
+            print(f'Failed to load fastembed: {e}')
         if mode == "http":
             self._client = QdrantClient(host=host, port=port)
         elif mode == "embedded":
@@ -148,9 +153,6 @@ class VectorStore:
                 conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
             filter_obj = models.Filter(must=conditions)
             
-        from fastembed import SparseTextEmbedding
-        if not hasattr(self, "_sparse_model"):
-            self._sparse_model = SparseTextEmbedding("Qdrant/bm25")
         sp_emb = list(self._sparse_model.embed([query_text]))[0]
             
         response = self._client.query_points(
