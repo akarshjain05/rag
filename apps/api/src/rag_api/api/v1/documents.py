@@ -96,6 +96,12 @@ def get_job_status(job_id: str):
     result = AsyncResult(job_id, app=celery_app)
     return {"job_id": job_id, "status": result.status, "info": result.info}
 
+@router.delete("/ingest/jobs/{job_id}", summary="Cancel a running ingest job")
+def cancel_job(job_id: str):
+    from rag_api.tasks import celery_app
+    celery_app.control.revoke(job_id, terminate=True)
+    return {"status": "cancelled", "job_id": job_id}
+
 @router.get("/documents", response_model=DocumentsResponse, summary="List indexed documents")
 def list_documents(vector_store = Depends(get_vector_store)) -> DocumentsResponse:
     return DocumentsResponse(

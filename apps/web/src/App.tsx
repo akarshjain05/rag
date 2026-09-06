@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ask, fetchDocuments, ingest } from './lib/api';
-import { Search, Mic, Activity, Layers, Hexagon, Scale, ShieldCheck, AlertTriangle, X } from 'lucide-react';
+import { Search, Mic, Activity, Layers, Hexagon, Scale, ShieldCheck, AlertTriangle, X, Trash2, Copy, MessageSquarePlus, Check } from 'lucide-react';
+import { deleteDocument } from './lib/api';
 
 
 class ErrorBoundary extends React.Component {
@@ -44,6 +45,8 @@ function AppContent() {
   const [conversationId] = useState(() => Math.random().toString(36).substring(2, 15));
   const [strictMode, setStrictMode] = useState(false);
   const [answerDetails, setAnswerDetails] = useState<any>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [copied, setCopied] = useState(false);
 
 
   const [answer, setAnswer] = useState('');
@@ -146,24 +149,66 @@ function AppContent() {
   
   const handleUpload = async (e) => {
     if (e.target.files?.length) {
+      const controller = new AbortController();
+      setAbortController(controller);
       try {
         setUploadProgress(0);
         setUploadMessage("UPLOADING...");
         await ingest(e.target.files, (pct, msg) => {
           setUploadProgress(pct);
           if (msg) setUploadMessage(msg.toUpperCase());
-        });
+        }, controller.signal);
         const res = await fetchDocuments();
         setDocuments(res.source_documents || []);
       } catch (err) {
-        console.error("Upload failed:", err);
-        alert("Upload failed: " + err.message);
+        if (err.name === "AbortError" || err.message === "Aborted") {
+            console.log("Upload cancelled by user");
+        } else {
+            console.error("Upload failed:", err);
+            alert("Upload failed: " + (err.message || String(err)));
+        }
       } finally {
         setUploadProgress(null);
-        e.target.value = null; // Fix the onChange bug so the user can upload the same file again!
+        setAbortController(null);
+        e.target.value = null;
       }
     }
   };
+  
+  const handleCancelUpload = () => {
+    if (abortController) {
+      abortController.abort();
+      setUploadProgress(null);
+      setUploadMessage("CANCELLING...");
+    }
+  };
+  
+  const handleDeleteDoc = async (docName) => {
+    if (confirm(`Are you sure you want to delete ${docName}?`)) {
+      try {
+        await deleteDocument(docName);
+        const res = await fetchDocuments();
+        setDocuments(res.source_documents || []);
+      } catch(err) {
+        alert("Failed to delete document: " + err.message);
+      }
+    }
+  };
+  
+  const clearChat = () => {
+    setQuery("");
+    setAnswerDetails(null);
+    setAnswer("");
+    setSources([]);
+    setLastQuery("");
+  };
+  
+  const copyAnswer = () => {
+    navigator.clipboard.writeText(answer);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
 
 
   // Mock data for the holographic modal
@@ -238,9 +283,12 @@ function AppContent() {
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-[#00F0FF]">{uploadProgress > 100 ? uploadProgress : `${uploadProgress}%`}</div>
                 </div>
-                <span className="text-[10px] font-mono text-[#00F0FF]/70 truncate max-w-[120px]">
+                <span className="text-[10px] font-mono text-[#00F0FF]/70 truncate max-w-[100px]">
                   {uploadMessage}
                 </span>
+                <button onClick={handleCancelUpload} className="p-1 rounded hover:bg-[#FF2A2A]/20 text-[#FF2A2A]/70 hover:text-[#FF2A2A] transition-colors ml-auto" title="Cancel upload">
+                   <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             ) : (
              <label className="cursor-pointer text-xs font-mono text-[#00F0FF] border border-[#00F0FF]/30 px-3 py-1 rounded hover:bg-[#00F0FF]/10 transition-colors inline-block">
@@ -298,9 +346,14 @@ function AppContent() {
                   {isSearching ? (
                     <div className="text-sm text-white/50 animate-pulse">Synthesizing...</div>
                   ) : (
-                    <div className="text-sm text-white/90 leading-relaxed">
+                    <div className="text-sm text-white/90 leading-relaxed group-hover:pr-6">
                       {answer}
                     </div>
+                  )}
+                  {!isSearching && answer && (
+                     <button onClick={copyAnswer} className="absolute top-4 right-4 p-1.5 rounded-md bg-white/5 hover:bg-[#00F0FF]/20 text-white/50 hover:text-[#00F0FF] transition-colors opacity-0 group-hover:opacity-100">
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                     </button>
                   )}
                 </div>
               )}

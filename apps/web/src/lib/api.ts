@@ -61,7 +61,7 @@ export function ask({ signal, question, conversationId = null, verifyCitations =
 }
 
 
-export async function ingest(files, onProgress) {
+export async function ingest(files, onProgress, signal) {
   // Size check for large files (>1MB)
   const isLarge = Array.from(files).some((f: any) => f.size > 1024 * 1024);
   
@@ -85,6 +85,10 @@ export async function ingest(files, onProgress) {
       
       // Poll
       while (true) {
+        if (signal?.aborted) {
+            await fetch(`/v1/ingest/jobs/${job_id}`, { method: 'DELETE', headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {} }).catch(() => {});
+            throw new DOMException("Aborted", "AbortError");
+        }
         await new Promise(r => setTimeout(r, 2000));
         const pollRes = await fetch(`/v1/ingest/jobs/${job_id}`, {
           headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {}
@@ -119,6 +123,7 @@ export async function ingest(files, onProgress) {
     } : {},
     method: "POST",
     body: formData,
+    signal,
   });
   
   if (!res.ok) {
@@ -136,6 +141,10 @@ export async function ingest(files, onProgress) {
   let buffer = "";
   
   while (true) {
+    if (signal?.aborted) {
+        reader.cancel();
+        throw new DOMException("Aborted", "AbortError");
+    }
     const { done, value } = await reader.read();
     if (done) break;
     
