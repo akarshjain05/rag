@@ -23,7 +23,7 @@ from rag_api.domain.generation.verification import CitationVerifier
 from rag_api.services.ingest_service import IngestionPipeline
 from rag_api.services.conversation import ConversationStore
 
-from rag_api.api.v1 import documents, ask
+from rag_api.api.v1 import documents, ask, auth, conversations, insights
 from rag_api.schemas.schemas import HealthResponse
 
 _UNSET = object()
@@ -189,6 +189,7 @@ def create_app(
     v1.include_router(conversations.router, dependencies=[Depends(verify_api_key)])
     v1.include_router(documents.router, dependencies=[Depends(verify_api_key)])
     v1.include_router(ask.router, dependencies=[Depends(verify_api_key)])
+    v1.include_router(insights.router, dependencies=[Depends(verify_api_key)])
     app.include_router(v1)
 
     return app

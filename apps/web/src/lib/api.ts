@@ -209,3 +209,14 @@ export function fetchConversation(id) {
     headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : (localStorage.getItem("apiKey") ? { "X-API-Key": localStorage.getItem("apiKey") } : {})
   });
 }
+
+export function submitFeedback(conversationId, turnIndex, isPositive) {
+  return request(`/v1/conversations/${encodeURIComponent(conversationId)}/feedback`, {
+    method: 'POST',
+    body: JSON.stringify({ turn_index: turnIndex, is_positive: isPositive }),
+  });
+}
+
+export function fetchInsights() {
+  return request('/v1/insights');
+}

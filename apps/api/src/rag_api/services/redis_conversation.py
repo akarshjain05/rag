@@ -42,3 +42,19 @@ class RedisConversationStore:
                     "updated_at": float(meta.get("updated_at", 0))
                 })
         return sorted(result, key=lambda x: x["updated_at"], reverse=True)
+
+    def update_turn_feedback(self, conversation_id: str, turn_index: int, is_positive: bool) -> None:
+        history = self.get_history(conversation_id)
+        if 0 <= turn_index < len(history):
+            history[turn_index].is_positive = is_positive
+            import json
+            from dataclasses import asdict
+            self._client.setex(f"conv:{conversation_id}", self._ttl, json.dumps([asdict(t) for t in history]))
+            if is_positive:
+                self._client.incr("metrics:thumbs_up")
+            else:
+                self._client.incr("metrics:thumbs_down")
+
+    def log_query_metrics(self, confidence: float) -> None:
+        self._client.incr("metrics:total_queries")
+        self._client.incrbyfloat("metrics:confidence_sum", confidence)

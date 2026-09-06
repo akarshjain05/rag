@@ -39,11 +39,7 @@ export default function App() {
           {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} />}
           {currentView === 'knowledge' && <KnowledgeBase />}
           {currentView === 'history' && <HistoryView onSelect={(id) => { setActiveConversationId(id); setCurrentView('chat'); }} />}
-          {(currentView === 'insights' || currentView === 'settings') && (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
-              Coming in v1.5
-            </div>
-          )}
+          {(currentView === 'insights' || currentView === 'settings') && <InsightsView />}
         </main>
       </div>
     </div>
@@ -287,6 +283,74 @@ function HistoryView({ onSelect }) {
   );
 }
 
+
+function InsightsView() {
+  const [metrics, setMetrics] = useState<any>(null);
+
+  useEffect(() => {
+    import('./lib/api').then(({ fetchInsights }) => {
+      fetchInsights().then(res => setMetrics(res)).catch(err => console.error(err));
+    });
+  }, []);
+
+  if (!metrics) return <div className="flex-1 flex items-center justify-center text-gray-500">Loading...</div>;
+
+  const totalFeedback = metrics.thumbs_up + metrics.thumbs_down;
+  const positiveRate = totalFeedback > 0 ? (metrics.thumbs_up / totalFeedback) * 100 : 0;
+
+  return (
+    <div className="flex-1 p-8 overflow-auto">
+      <h2 className="text-2xl font-semibold mb-8">System Insights</h2>
+      
+      <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
+          <div className="text-sm text-gray-500 mb-2">Total Queries Served</div>
+          <div className="text-4xl font-light">{metrics.total_queries}</div>
+        </div>
+        
+        <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
+          <div className="text-sm text-gray-500 mb-2">Avg Retrieval Confidence</div>
+          <div className="text-4xl font-light">
+            {(metrics.average_confidence * 100).toFixed(0)}<span className="text-xl text-gray-400">%</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
+          <div className="text-sm text-gray-500 mb-2">Positive Feedback Rate</div>
+          <div className="text-4xl font-light">
+            {totalFeedback > 0 ? positiveRate.toFixed(0) : '--'}<span className="text-xl text-gray-400">%</span>
+          </div>
+          <div className="text-xs text-gray-400 mt-2">{totalFeedback} total ratings</div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
+        <h3 className="text-lg font-medium mb-6">User Satisfaction</h3>
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-green-500 flex items-center gap-2"><ThumbsUp className="w-4 h-4" /> Helpful</span>
+              <span>{metrics.thumbs_up}</span>
+            </div>
+            <div className="w-full bg-gray-100 dark:bg-white/5 rounded-full h-2">
+              <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${totalFeedback > 0 ? (metrics.thumbs_up/totalFeedback)*100 : 0}%` }}></div>
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-red-500 flex items-center gap-2"><ThumbsDown className="w-4 h-4" /> Unhelpful</span>
+              <span>{metrics.thumbs_down}</span>
+            </div>
+            <div className="w-full bg-gray-100 dark:bg-white/5 rounded-full h-2">
+              <div className="bg-red-500 h-2 rounded-full transition-all" style={{ width: `${totalFeedback > 0 ? (metrics.thumbs_down/totalFeedback)*100 : 0}%` }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChatView({ conversationId, setConversationId }) {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
@@ -352,6 +416,17 @@ function ChatView({ conversationId, setConversationId }) {
     }
   };
 
+  const handleFeedback = async (index, isPositive) => {
+    if (!conversationId) return;
+    try {
+      const { submitFeedback } = await import('./lib/api');
+      await submitFeedback(conversationId, index / 2, isPositive);
+      setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, feedback: isPositive } : msg));
+    } catch (err) {
+      console.error("Failed to submit feedback", err);
+    }
+  };
+
   const isHighConfidence = confidenceInfo?.composite >= 0.7;
   const isLowConfidence = confidenceInfo?.composite < 0.4;
 
@@ -376,6 +451,25 @@ function ChatView({ conversationId, setConversationId }) {
               <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-gray-100 dark:bg-white/10' : ''}`}>
                 {m.content}
               </div>
+              
+              {m.role === 'assistant' && (
+                <div className="flex items-center gap-4 mt-2 px-2 text-gray-400">
+                  <button 
+                    onClick={() => handleFeedback(i, true)}
+                    className={`hover:text-green-500 transition-colors ${m.feedback === true ? 'text-green-500' : ''}`}
+                    title="Helpful"
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => handleFeedback(i, false)}
+                    className={`hover:text-red-500 transition-colors ${m.feedback === false ? 'text-red-500' : ''}`}
+                    title="Unhelpful"
+                  >
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               
               {m.role === 'assistant' && i === messages.length - 1 && confidenceInfo && (
                 <details className="mt-2 text-xs">
