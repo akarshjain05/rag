@@ -88,7 +88,7 @@ async def ask(
 
     # Note: Dynamic Context Pruning happens inside the generator now!
 
-    result = run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=None, verify_citations=payload.verify_citations)
+    result = run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
     
     cid = payload.conversation_id or store.create_conversation()
     store.append_turn(cid, Turn(user=payload.question, assistant=result.answer))
