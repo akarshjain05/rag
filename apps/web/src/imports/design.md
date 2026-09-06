@@ -1,4 +1,4 @@
-# Project "Omniscient": A Crazy New Design Paradigm for RAG
+# Project "Nexus": A Crazy New Design Paradigm for RAG
 
 If we want to break out of the standard "chatbot interface" box and build something truly revolutionary, we need to rethink how humans interact with retrieved knowledge. 
 

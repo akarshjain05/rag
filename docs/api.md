@@ -49,6 +49,18 @@ curl -X POST localhost:8000/v1/ingest \
 }
 ```
 
+## `POST /v1/auth`
+
+Verifies the provided API key (sent in the `X-API-Key` header). Used by the frontend to validate login credentials before rendering the application.
+
+## `GET /v1/conversations`
+
+Returns a list of all historical conversations, including their `id`, auto-generated `title`, and `updated_at` timestamp.
+
+## `GET /v1/conversations/{conversation_id}`
+
+Returns the full turn-by-turn history of a specific conversation.
+
 ## `POST /v1/ask`
 
 Hybrid retrieval (fused, optionally reranked), then a grounded, cited
@@ -110,25 +122,6 @@ local development only. See
 for the full list of what this implies, and
 [`../security/02-authentication-and-access-control.md`](02-authentication-and-access-control.md)
 for the remediation plan.
-
-## Planned: API-key authentication
-
-A shared-secret header check, gating every `/v1/*` route via a
-router-level FastAPI dependency:
-
-```
-X-API-Key: <key>
-```
-
-Configuration: `api_keys: list[str]` in `Settings` (empty list = auth
-disabled — intended for local dev only, never for a deployed
-environment). Requests with a missing or unrecognized key receive `401`.
-
-This is deliberately the simplest thing that gates access. If
-per-customer identity, scoped permissions, or token expiry are required,
-the natural upgrade path is OAuth2 / JWT bearer tokens on top of the same
-dependency-injection point — the route wiring does not need to change,
-only the `verify_api_key` dependency's implementation.
 
 ## CORS
 

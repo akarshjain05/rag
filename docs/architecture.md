@@ -47,7 +47,7 @@ documents (.md/.txt/.html/.pdf/.docx/.pptx/.xlsx)
 User question
         │
         ▼
- [query condensation]   only if there is prior conversation history
+ [query condensation]   only if there is prior conversation history (drops context if entirely unrelated)
         │
         ▼
  [HyDE]                 hypothetical-answer expansion, if an LLM is configured
