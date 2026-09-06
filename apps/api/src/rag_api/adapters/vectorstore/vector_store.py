@@ -233,9 +233,9 @@ class VectorStore:
         out = []
         for point in res.points:
             out.append({
-                "chunk_id": point.id,
+                "chunk_id": point.payload.get("chunk_id", str(point.id)),
                 "text": point.payload.get("text", ""),
-                "metadata": point.payload.get("metadata", {}),
+                "metadata": point.payload,
                 "similarity": point.score
             })
         return out

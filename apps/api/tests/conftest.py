@@ -57,12 +57,8 @@ def fake_embedder() -> DeterministicFakeEmbeddingClient:
 
 @pytest.fixture
 def vector_store(tmp_path: Path) -> VectorStore:
-    return VectorStore(persist_dir=tmp_path / "qdrant", collection_name="test_collection")
+    return VectorStore(persist_dir=tmp_path / "qdrant", collection_name="test_collection", dense_dimension=128)
 
-
-@pytest.fixture
-def sparse_index() -> SparseIndex:
-    return SparseIndex()
 
 @pytest.fixture
 def docx_path(tmp_path: Path) -> Path:

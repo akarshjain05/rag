@@ -19,12 +19,12 @@ def test_build_sample_corpus_writes_all_docs(tmp_path):
         assert p.read_text() == SAMPLE_DOCS[p.name]
 
 
-def test_evaluate_shape_and_bounds(fake_embedder, vector_store, sparse_index, tmp_path):
+def test_evaluate_shape_and_bounds(fake_embedder, vector_store, tmp_path):
     doc_paths = _build_sample_corpus(tmp_path)
-    pipeline = IngestionPipeline(fake_embedder, vector_store, None, default_strategy=ChunkingStrategy.STRUCTURE_AWARE)
+    pipeline = IngestionPipeline(fake_embedder, vector_store, default_strategy=ChunkingStrategy.STRUCTURE_AWARE)
     pipeline.ingest_files(doc_paths)
 
-    summary = evaluate(SAMPLE_QUERIES, fake_embedder, vector_store, sparse_index, top_k=3)
+    summary = evaluate(SAMPLE_QUERIES, fake_embedder, vector_store, top_k=3)
 
     assert set(summary.keys()) == {"dense", "sparse", "hybrid"}
     for mode in summary:
@@ -33,30 +33,30 @@ def test_evaluate_shape_and_bounds(fake_embedder, vector_store, sparse_index, tm
         assert 0.0 <= summary[mode]["mrr"] <= 1.0
 
 
-def test_evaluate_achieves_perfect_recall_on_the_small_well_separated_sample_corpus(fake_embedder, vector_store, sparse_index, tmp_path):
+def test_evaluate_achieves_perfect_recall_on_the_small_well_separated_sample_corpus(fake_embedder, vector_store, tmp_path):
     """The bundled sample corpus is deliberately easy (4 short, topically
     distinct docs, 5 unambiguous queries) so --sample is a fast smoke test.
     Every mode should find the right doc every time here; the harness earns
     its keep on harder, larger, real corpora where the three modes diverge."""
     doc_paths = _build_sample_corpus(tmp_path)
-    pipeline = IngestionPipeline(fake_embedder, vector_store, None, default_strategy=ChunkingStrategy.STRUCTURE_AWARE)
+    pipeline = IngestionPipeline(fake_embedder, vector_store, default_strategy=ChunkingStrategy.STRUCTURE_AWARE)
     pipeline.ingest_files(doc_paths)
 
-    summary = evaluate(SAMPLE_QUERIES, fake_embedder, vector_store, sparse_index, top_k=3)
+    summary = evaluate(SAMPLE_QUERIES, fake_embedder, vector_store, top_k=3)
 
     for mode in ("dense", "sparse", "hybrid"):
         assert summary[mode]["recall_at_k"] == 1.0
         assert summary[mode]["mrr"] >= 0.9
 
 
-def test_evaluate_empty_dataset_returns_zeroed_summary(fake_embedder, vector_store, sparse_index):
-    summary = evaluate([], fake_embedder, vector_store, sparse_index)
+def test_evaluate_empty_dataset_returns_zeroed_summary(fake_embedder, vector_store):
+    summary = evaluate([], fake_embedder, vector_store)
     for mode in ("dense", "sparse", "hybrid"):
         assert summary[mode]["recall_at_k"] == 0.0
         assert summary[mode]["mrr"] == 0.0
 
 
-def test_evaluate_empty_index_scores_all_misses(fake_embedder, vector_store, sparse_index):
-    summary = evaluate(SAMPLE_QUERIES, fake_embedder, vector_store, sparse_index)
+def test_evaluate_empty_index_scores_all_misses(fake_embedder, vector_store):
+    summary = evaluate(SAMPLE_QUERIES, fake_embedder, vector_store)
     for mode in ("dense", "sparse", "hybrid"):
         assert summary[mode]["recall_at_k"] == 0.0
