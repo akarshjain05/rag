@@ -418,3 +418,5 @@ xxhash==4.0.1
     # via langsmith
 zstandard==0.25.0
     # via langsmith
+
+flashrank>=0.2.0

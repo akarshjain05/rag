@@ -40,31 +40,55 @@ class Reranker(ABC):
 
 
 class CrossEncoderReranker(Reranker):
-    def __init__(self, model_name: str = "BAAI/bge-reranker-v2-m3"):
+    def __init__(self, model_name: str = "ms-marco-MiniLM-L-12-v2"):
         try:
-            from sentence_transformers import CrossEncoder
+            from flashrank import Ranker
         except ImportError as exc:  # pragma: no cover - exercised via mocked test instead
             raise ImportError(
-                "RERANKER_PROVIDER=cross_encoder requires sentence-transformers. "
-                "Install with: pip install -r requirements-local.txt"
+                "RERANKER_PROVIDER=cross_encoder requires flashrank. "
+                "Install with: pip install flashrank"
             ) from exc
-        self._model = CrossEncoder(model_name)
+            
+        # FlashRank has a specific whitelist of model names (e.g., ms-marco-MiniLM-L-12-v2).
+        # We safely default to it or use the requested one.
+        # Note: If the user provides an HF model name not natively bundled in flashrank's map 
+        # (like 'BAAI/bge-reranker-v2-m3' in flashrank 0.2.10), we fallback to the highest 
+        # supported flashrank equivalent so it doesn't instantly crash on load.
+        from flashrank import Config
+        if model_name not in Config.model_file_map:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Model '{model_name}' is not in flashrank's default map. "
+                "Falling back to 'ms-marco-MiniLM-L-12-v2'."
+            )
+            model_name = "ms-marco-MiniLM-L-12-v2"
+            
+        self._ranker = Ranker(model_name=model_name)
 
     def rerank(self, query: str, candidates: list[RetrievedChunk], top_k: int) -> list[RetrievedChunk]:
         if not candidates:
             return []
-        pairs = [(query, c.text) for c in candidates]
-        raw_scores = self._model.predict(pairs)
-        import math
-        for chunk, score in zip(candidates, raw_scores):
-            # Apply sigmoid to map logit to [0, 1]
-            try:
-                sig = 1.0 / (1.0 + math.exp(-float(score)))
-            except OverflowError:
-                sig = 0.0 if float(score) < 0 else 1.0
-            chunk.rerank_score = sig
-        ranked = sorted(candidates, key=lambda c: c.rerank_score, reverse=True)
-        return ranked[:top_k]
+            
+        from flashrank import RerankRequest
+        
+        # Prepare passages for flashrank
+        passages = [
+            {"id": str(i), "text": c.text, "meta": c.metadata} 
+            for i, c in enumerate(candidates)
+        ]
+        
+        req = RerankRequest(query=query, passages=passages)
+        results = self._ranker.rerank(req)
+        
+        # Map the scored results back to our chunk objects
+        chunk_map = {str(i): c for i, c in enumerate(candidates)}
+        ranked_chunks = []
+        for r in results:
+            chunk = chunk_map[r["id"]]
+            chunk.rerank_score = r["score"]
+            ranked_chunks.append(chunk)
+            
+        return ranked_chunks[:top_k]
 
 
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
