@@ -1,3 +1,4 @@
+from rag_api.adapters.vectorstore.vector_store import VectorStore
 import shutil
 import tempfile
 import asyncio
