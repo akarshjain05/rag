@@ -73,11 +73,19 @@ async def ingest_documents(
 
 
 @router.post("/ingest/large", summary="Enqueue a large file for async streaming ingestion")
-async def ingest_large_file(file: UploadFile = File(...), object_store = Depends(get_object_store)):
+def ingest_large_file(file: UploadFile = File(...), object_store = Depends(get_object_store)):
     import uuid
     from rag_api.tasks import ingest_large_file_task
     key = f"uploads/{uuid.uuid4()}/{file.filename}"
-    object_store.upload_fileobj(file.file, key)
+    import tempfile, shutil
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+    try:
+        object_store.upload_file(tmp_path, key)
+    finally:
+        import os
+        os.remove(tmp_path)
     task = ingest_large_file_task.delay(key, file.filename)
     return {"job_id": task.id, "status": "queued"}
 

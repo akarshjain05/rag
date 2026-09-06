@@ -20,6 +20,9 @@ class ObjectStore:
     def upload_fileobj(self, fileobj, key: str) -> None:
         self._client.upload_fileobj(fileobj, self.bucket, key)
 
+    def upload_file(self, filename: str, key: str) -> None:
+        self._client.upload_file(filename, self.bucket, key)
+
     def download_to_tmp(self, key: str) -> Path:
         dest = Path(tempfile.mkdtemp(prefix="rag_stream_")) / Path(key).name
         self._client.download_file(self.bucket, key, str(dest))
