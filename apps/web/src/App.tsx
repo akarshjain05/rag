@@ -2,7 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { verifyAuth, fetchConversations, fetchDocuments, deleteDocument, ingest, ask } from './lib/api';
 import { MessageCircle, Folder, Clock, BarChart, Settings, FileText, ArrowRight, X, Trash2, Check, ThumbsUp, ThumbsDown, LogOut, Moon, Sun, Menu } from 'lucide-react';
 
+
+class ErrorBoundary extends React.Component<any, any> {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, info: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    this.setState({ info });
+    console.error("ErrorBoundary caught an error", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', background: '#f8d7da', color: '#721c24' }}>
+          <h2>Something went wrong.</h2>
+          <details style={{ whiteSpace: 'pre-wrap' }}>
+            {this.state.error && this.state.error.toString()}
+            <br />
+            {this.state.info && this.state.info.componentStack}
+          </details>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
+  return <ErrorBoundary><AppContent /></ErrorBoundary>;
+}
+
+function AppContent() {
   const [apiKey, setApiKey] = useState<string | null>(import.meta.env.VITE_API_KEY || localStorage.getItem('apiKey'));
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'knowledge' | 'history' | 'insights' | 'settings'>('chat');
@@ -193,6 +227,29 @@ function KnowledgeBase() {
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
+
+  const handleUpload = async (e) => {
+    if (!e.target.files?.length) return;
+    setUploading(true);
+    setProgress({ pct: 0, msg: "Starting upload..." });
+    try {
+      const { ingest, fetchDocuments } = await import('./lib/api');
+      await ingest(e.target.files, (pct, msg) => {
+        setProgress({ pct, msg });
+      }, null);
+      const res = await fetchDocuments();
+      setDocs(res.documents || res.source_documents || []);
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
+      setProgress(null);
+      e.target.value = null;
+    }
+  };
+
 
   useEffect(() => {
     import('./lib/api').then(({ fetchDocuments }) => {
