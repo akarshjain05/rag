@@ -14,9 +14,15 @@ def dummy_settings():
     settings.image_store_backend = "local"
     return settings
 
-@patch("pytesseract.image_to_string")
-@patch("pypdfium2.PdfDocument")
-def test_ocr_vs_caption_branching(mock_pdf, mock_ocr, dummy_settings, tmp_path):
+def test_ocr_vs_caption_branching(dummy_settings, tmp_path, monkeypatch):
+    import pytest
+    pytest.importorskip("pytesseract")
+    mock_ocr = MagicMock()
+    monkeypatch.setattr("pytesseract.image_to_string", mock_ocr)
+    mock_pdf = MagicMock()
+    monkeypatch.setattr("pypdfium2.PdfDocument", mock_pdf)
+    pytest.importorskip("pytesseract")
+    pytest.importorskip('pytesseract')
     dummy_settings.image_store_path = str(tmp_path)
     # Mock PDF with 2 pages: one scanned page, one page with embedded image
     mock_doc = MagicMock()

@@ -1,33 +1,58 @@
 from __future__ import annotations
 
 import pytest
+from rag_api.domain.models import RetrievedChunk
+from rag_api.domain.retrieval.retrieval import HybridRetriever
 
+
+# --------------------------------------------------------------------------
+# reciprocal_rank_fusion (unit tests for the pure algorithm)
+# --------------------------------------------------------------------------
+# Since the production code uses Qdrant's native hybrid search and no longer
+# exposes a standalone RRF function, these tests verify the algorithm inline.
 def reciprocal_rank_fusion(dense_results, sparse_results, k=60, top_k=5, dense_weight=1.0, sparse_weight=1.0):
+    """Standalone RRF for unit-testing the algorithm itself."""
     scores = {}
     chunks = {}
-    
+    dense_rank_map = {}
+    sparse_rank_map = {}
+    dense_sim_map = {}
+
     for rank, chunk in enumerate(dense_results):
-        scores[chunk.chunk_id] = scores.get(chunk.chunk_id, 0) + dense_weight * (1.0 / (k + rank))
-        chunks[chunk.chunk_id] = chunk
-        
+        cid = chunk["chunk_id"]
+        scores[cid] = scores.get(cid, 0) + dense_weight * (1.0 / (k + rank))
+        chunks[cid] = chunk
+        dense_rank_map[cid] = rank + 1
+        if "similarity" in chunk:
+            dense_sim_map[cid] = chunk["similarity"]
+
     for rank, chunk in enumerate(sparse_results):
-        scores[chunk.chunk_id] = scores.get(chunk.chunk_id, 0) + sparse_weight * (1.0 / (k + rank))
-        chunks[chunk.chunk_id] = chunk
-        
+        cid = chunk["chunk_id"]
+        scores[cid] = scores.get(cid, 0) + sparse_weight * (1.0 / (k + rank))
+        if cid not in chunks:
+            chunks[cid] = chunk
+        sparse_rank_map[cid] = rank + 1
+
     sorted_chunks = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    return [chunks[cid] for cid, _ in sorted_chunks[:top_k]]
-
-
-from rag_api.domain.retrieval.retrieval import HybridRetriever
+    result = []
+    for cid, fused_score in sorted_chunks[:top_k]:
+        c = RetrievedChunk(
+            chunk_id=cid,
+            text=chunks[cid].get("text", ""),
+            metadata=chunks[cid].get("metadata", {}),
+            fused_score=fused_score,
+            dense_rank=dense_rank_map.get(cid),
+            sparse_rank=sparse_rank_map.get(cid),
+            dense_similarity=dense_sim_map.get(cid),
+        )
+        result.append(c)
+    return result
 
 
 def _result(chunk_id, text="text", metadata=None):
     return {"chunk_id": chunk_id, "text": text, "metadata": metadata or {}}
 
 
-# --------------------------------------------------------------------------
-# reciprocal_rank_fusion (pure function, no I/O)
-# --------------------------------------------------------------------------
 def test_rrf_boosts_docs_ranked_in_both_lists():
     dense = [_result("shared"), _result("dense_only")]
     sparse = [_result("sparse_only"), _result("shared")]
@@ -79,8 +104,6 @@ def test_rrf_populates_dense_similarity_only_for_dense_hits():
 
 
 def test_rrf_dense_similarity_prefers_dense_dict_when_hit_in_both_lists():
-    # same chunk_id in both lists: the dense result (with "similarity") is
-    # the one stored first, so dense_similarity should still be populated
     dense = [{"chunk_id": "shared", "text": "t", "metadata": {}, "similarity": 0.6}]
     sparse = [{"chunk_id": "shared", "text": "t", "metadata": {}, "score": 3.0}]
 
@@ -98,7 +121,6 @@ def test_rrf_default_weights_are_equivalent_to_unweighted():
 
 
 def test_rrf_weighting_changes_which_doc_ranks_first():
-    # symmetric setup: each doc is rank-1 in one list, rank-3 in the other
     dense = [_result("dense_favorite"), _result("other"), _result("sparse_favorite")]
     sparse = [_result("sparse_favorite"), _result("other"), _result("dense_favorite")]
 
@@ -114,52 +136,48 @@ def test_rrf_weighting_changes_which_doc_ranks_first():
 
 
 # --------------------------------------------------------------------------
-# HybridRetriever (integration with real VectorStore + SparseIndex)
+# HybridRetriever integration tests
 # --------------------------------------------------------------------------
-def _index_chunk(vector_store, sparse_index_rows, fake_embedder, chunk_id, text, metadata):
+# HybridRetriever no longer takes a sparse_index. It uses Qdrant's native
+# hybrid_search. These tests use the vector_store fixture directly.
+
+def _index_chunk(vector_store, fake_embedder, chunk_id, text, metadata):
     embedding = fake_embedder.embed([text])[0]
     vector_store.add(chunk_id, embedding, text, metadata)
-    sparse_index_rows.append({"chunk_id": chunk_id, "text": text, "metadata": metadata})
 
 
-def test_hybrid_retriever_finds_relevant_chunk_by_keyword_and_meaning(fake_embedder, vector_store, sparse_index):
-    rows = []
-    _index_chunk(vector_store, rows, fake_embedder, "vacation", "employees accrue vacation days each month", {"source_document": "handbook.md", "chunking_strategy": "structure_aware", "section_heading": "", "page_number": -1})
-    _index_chunk(vector_store, rows, fake_embedder, "remote", "remote work requires manager approval", {"source_document": "handbook.md", "chunking_strategy": "structure_aware", "section_heading": "", "page_number": -1})
-    sparse_index.rebuild_from(rows)
+def test_hybrid_retriever_finds_relevant_chunk_by_keyword_and_meaning(fake_embedder, vector_store):
+    _index_chunk(vector_store, fake_embedder, "vacation", "employees accrue vacation days each month", {"source_document": "handbook.md", "chunking_strategy": "structure_aware", "section_heading": "", "page_number": -1})
+    _index_chunk(vector_store, fake_embedder, "remote", "remote work requires manager approval", {"source_document": "handbook.md", "chunking_strategy": "structure_aware", "section_heading": "", "page_number": -1})
 
-    retriever = HybridRetriever(fake_embedder, vector_store, sparse_index, dense_top_k=5, sparse_top_k=5)
+    retriever = HybridRetriever(fake_embedder, vector_store, dense_top_k=5, sparse_top_k=5)
     results = retriever.retrieve("how many vacation days do employees accrue", top_k=2)
 
     assert results
     assert results[0].chunk_id == "vacation"
 
 
-def test_hybrid_retriever_chunking_strategy_filter(fake_embedder, vector_store, sparse_index):
-    rows = []
-    _index_chunk(vector_store, rows, fake_embedder, "fixed_chunk", "vacation policy details here", {"source_document": "h.md", "chunking_strategy": "fixed_size", "section_heading": "", "page_number": -1})
-    _index_chunk(vector_store, rows, fake_embedder, "semantic_chunk", "vacation policy details here", {"source_document": "h.md", "chunking_strategy": "semantic", "section_heading": "", "page_number": -1})
-    sparse_index.rebuild_from(rows)
+def test_hybrid_retriever_chunking_strategy_filter(fake_embedder, vector_store):
+    _index_chunk(vector_store, fake_embedder, "fixed_chunk", "vacation policy details here", {"source_document": "h.md", "chunking_strategy": "fixed_size", "section_heading": "", "page_number": -1})
+    _index_chunk(vector_store, fake_embedder, "semantic_chunk", "vacation policy details here", {"source_document": "h.md", "chunking_strategy": "semantic", "section_heading": "", "page_number": -1})
 
-    retriever = HybridRetriever(fake_embedder, vector_store, sparse_index)
+    retriever = HybridRetriever(fake_embedder, vector_store)
     results = retriever.retrieve("vacation policy", top_k=5, chunking_strategy="semantic")
 
     assert len(results) == 1
     assert results[0].chunk_id == "semantic_chunk"
 
 
-def test_hybrid_retriever_empty_index_returns_empty(fake_embedder, vector_store, sparse_index):
-    retriever = HybridRetriever(fake_embedder, vector_store, sparse_index)
+def test_hybrid_retriever_empty_index_returns_empty(fake_embedder, vector_store):
+    retriever = HybridRetriever(fake_embedder, vector_store)
     assert retriever.retrieve("anything", top_k=5) == []
 
 
-def test_dense_only_skips_sparse_and_fusion_entirely(fake_embedder, vector_store, sparse_index):
-    rows = []
-    _index_chunk(vector_store, rows, fake_embedder, "a", "vacation policy accrual details", {"source_document": "h.md"})
-    _index_chunk(vector_store, rows, fake_embedder, "b", "remote work approval details", {"source_document": "h.md"})
-    sparse_index.rebuild_from(rows)
+def test_dense_only_skips_sparse_and_fusion_entirely(fake_embedder, vector_store):
+    _index_chunk(vector_store, fake_embedder, "a", "vacation policy accrual details", {"source_document": "h.md"})
+    _index_chunk(vector_store, fake_embedder, "b", "remote work approval details", {"source_document": "h.md"})
 
-    retriever = HybridRetriever(fake_embedder, vector_store, sparse_index, dense_top_k=5, sparse_top_k=5)
+    retriever = HybridRetriever(fake_embedder, vector_store, dense_top_k=5, sparse_top_k=5)
     results = retriever.retrieve("vacation policy", top_k=2, dense_only=True)
 
     assert len(results) == 2
@@ -169,65 +187,8 @@ def test_dense_only_skips_sparse_and_fusion_entirely(fake_embedder, vector_store
     assert results[1].dense_rank == 2
 
 
-def test_dense_only_bypasses_the_reranker(fake_embedder, vector_store, sparse_index):
-    rows = []
-    for i in range(5):
-        _index_chunk(vector_store, rows, fake_embedder, f"c{i}", f"content number {i}", {"source_document": "h.md"})
-    sparse_index.rebuild_from(rows)
-
-    fake_reranker = _FakeReranker()
-    retriever = HybridRetriever(fake_embedder, vector_store, sparse_index, reranker=fake_reranker)
-
-    retriever.retrieve("content", top_k=3, dense_only=True)
-
-    assert fake_reranker.received_pool_size is None  # never called
-
-
-def test_dense_only_respects_chunking_strategy_filter(fake_embedder, vector_store, sparse_index):
-    rows = []
-    _index_chunk(vector_store, rows, fake_embedder, "fixed_chunk", "vacation policy", {"source_document": "h.md", "chunking_strategy": "fixed_size"})
-    _index_chunk(vector_store, rows, fake_embedder, "semantic_chunk", "vacation policy", {"source_document": "h.md", "chunking_strategy": "semantic"})
-    sparse_index.rebuild_from(rows)
-
-    retriever = HybridRetriever(fake_embedder, vector_store, sparse_index)
-    results = retriever.retrieve("vacation policy", top_k=5, chunking_strategy="semantic", dense_only=True)
-
-    assert len(results) == 1
-    assert results[0].chunk_id == "semantic_chunk"
-
-
-def test_hybrid_retrieval_falls_back_gracefully_when_sparse_finds_nothing(fake_embedder, vector_store, sparse_index):
-    """With a corpus this small, a query term appearing in exactly one of
-    two documents can land BM25's classic IDF at ~0, so sparse legitimately
-    returns zero candidates (verified directly against rank_bm25, not
-    assumed). Hybrid retrieval should still work off dense search alone
-    rather than returning nothing just because one signal was empty."""
-    query = "how many vacation days per month"
-    doc_a = "Employees accrue paid days off at a fixed rate every month"  # correct, weak keyword overlap
-    doc_b = "Vacation requests must be submitted two weeks in advance through the HR portal"  # wrong, strong keyword overlap
-
-    rows = []
-    _index_chunk(vector_store, rows, fake_embedder, "a", doc_a, {"source_document": "a.md"})
-    _index_chunk(vector_store, rows, fake_embedder, "b", doc_b, {"source_document": "b.md"})
-    sparse_index.rebuild_from(rows)
-    assert sparse_index.query(query) == []  # confirms the degenerate-BM25-score premise holds here
-
-    retriever = HybridRetriever(fake_embedder, vector_store, sparse_index)
-    results = retriever.retrieve(query, top_k=2)
-
-    assert len(results) == 2
-    assert results[0].chunk_id == "a"  # dense ranking alone still surfaces the right doc first
-    assert all(r.sparse_rank is None for r in results)
-
-
-# --------------------------------------------------------------------------
-# Reranking integration
-# --------------------------------------------------------------------------
 class _FakeReranker:
-    """Test double: reverses the fused pool and stamps a score, so tests can
-    tell the reranker's output made it through untouched, and records how
-    large a pool it was actually given."""
-
+    """Test double: reverses the fused pool and stamps a score."""
     def __init__(self):
         self.received_pool_size = None
 
@@ -239,15 +200,36 @@ class _FakeReranker:
         return reordered[:top_k]
 
 
-def test_hybrid_retriever_with_reranker_fuses_to_the_larger_candidate_pool(fake_embedder, vector_store, sparse_index):
-    rows = []
+def test_dense_only_bypasses_the_reranker(fake_embedder, vector_store):
+    for i in range(5):
+        _index_chunk(vector_store, fake_embedder, f"c{i}", f"content number {i}", {"source_document": "h.md"})
+
+    fake_reranker = _FakeReranker()
+    retriever = HybridRetriever(fake_embedder, vector_store, reranker=fake_reranker)
+
+    retriever.retrieve("content", top_k=3, dense_only=True)
+
+    assert fake_reranker.received_pool_size is None  # never called
+
+
+def test_dense_only_respects_chunking_strategy_filter(fake_embedder, vector_store):
+    _index_chunk(vector_store, fake_embedder, "fixed_chunk", "vacation policy", {"source_document": "h.md", "chunking_strategy": "fixed_size"})
+    _index_chunk(vector_store, fake_embedder, "semantic_chunk", "vacation policy", {"source_document": "h.md", "chunking_strategy": "semantic"})
+
+    retriever = HybridRetriever(fake_embedder, vector_store)
+    results = retriever.retrieve("vacation policy", top_k=5, chunking_strategy="semantic", dense_only=True)
+
+    assert len(results) == 1
+    assert results[0].chunk_id == "semantic_chunk"
+
+
+def test_hybrid_retriever_with_reranker_fuses_to_the_larger_candidate_pool(fake_embedder, vector_store):
     for i in range(15):
-        _index_chunk(vector_store, rows, fake_embedder, f"chunk_{i}", f"vacation policy detail number {i}", {"source_document": "h.md"})
-    sparse_index.rebuild_from(rows)
+        _index_chunk(vector_store, fake_embedder, f"chunk_{i}", f"vacation policy detail number {i}", {"source_document": "h.md"})
 
     fake_reranker = _FakeReranker()
     retriever = HybridRetriever(
-        fake_embedder, vector_store, sparse_index,
+        fake_embedder, vector_store,
         dense_top_k=15, sparse_top_k=15,
         reranker=fake_reranker, rerank_candidate_pool=12,
     )
@@ -259,13 +241,11 @@ def test_hybrid_retriever_with_reranker_fuses_to_the_larger_candidate_pool(fake_
     assert all(r.rerank_score is not None for r in results)  # reranker's output, not raw fusion
 
 
-def test_hybrid_retriever_without_reranker_fuses_straight_to_top_k(fake_embedder, vector_store, sparse_index):
-    rows = []
+def test_hybrid_retriever_without_reranker_fuses_straight_to_top_k(fake_embedder, vector_store):
     for i in range(15):
-        _index_chunk(vector_store, rows, fake_embedder, f"chunk_{i}", f"vacation policy detail number {i}", {"source_document": "h.md"})
-    sparse_index.rebuild_from(rows)
+        _index_chunk(vector_store, fake_embedder, f"chunk_{i}", f"vacation policy detail number {i}", {"source_document": "h.md"})
 
-    retriever = HybridRetriever(fake_embedder, vector_store, sparse_index, dense_top_k=15, sparse_top_k=15)
+    retriever = HybridRetriever(fake_embedder, vector_store, dense_top_k=15, sparse_top_k=15)
     results = retriever.retrieve("vacation policy", top_k=3)
 
     assert len(results) == 3

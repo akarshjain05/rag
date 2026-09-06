@@ -85,30 +85,55 @@ def test_local_embedding_client_wraps_sentence_transformers(monkeypatch):
     """sentence-transformers (and torch) are a large optional dependency not
     installed in this environment; the wrapper's own logic — calling
     .encode() correctly and exposing .dimension — is verified by injecting
-    a fake sentence_transformers module rather than skipping the test."""
-    fake_model = MagicMock()
-    fake_model.get_sentence_embedding_dimension.return_value = 384
-    fake_model.encode.return_value = np.array([[0.1, 0.2, 0.3]])
+    fake modules rather than skipping the test."""
+    fake_st_model = MagicMock()
+    fake_st_model.get_sentence_embedding_dimension.return_value = 384
+    fake_st_model.encode.return_value = np.array([[0.1, 0.2, 0.3]])
 
-    fake_module = types.ModuleType("sentence_transformers")
-    fake_module.SentenceTransformer = MagicMock(return_value=fake_model)
-    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    fake_st_module = types.ModuleType("sentence_transformers")
+    fake_st_module.SentenceTransformer = MagicMock(return_value=fake_st_model)
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_st_module)
+
+    # LocalEmbeddingClient also imports transformers and torch
+    fake_auto_model = MagicMock()
+    fake_auto_model.config.hidden_size = 384
+    fake_transformers = types.ModuleType("transformers")
+    fake_transformers.AutoModel = MagicMock()
+    fake_transformers.AutoModel.from_pretrained = MagicMock(return_value=fake_auto_model)
+    fake_transformers.AutoTokenizer = MagicMock()
+    fake_transformers.AutoTokenizer.from_pretrained = MagicMock(return_value=MagicMock())
+    monkeypatch.setitem(sys.modules, "transformers", fake_transformers)
+
+    fake_torch = types.ModuleType("torch")
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
 
     client = LocalEmbeddingClient(model_name="fake/model")
     result = client.embed(["hello"])
 
     assert result == [[0.1, 0.2, 0.3]]
     assert client.dimension == 384
-    fake_model.encode.assert_called_once_with(["hello"], normalize_embeddings=True, show_progress_bar=False)
+    fake_st_model.encode.assert_called_once_with(["hello"], normalize_embeddings=True, show_progress_bar=False)
 
 
 def test_local_embedding_client_empty_list_returns_empty(monkeypatch):
-    fake_model = MagicMock()
-    fake_model.get_sentence_embedding_dimension.return_value = 384
-    fake_module = types.ModuleType("sentence_transformers")
-    fake_module.SentenceTransformer = MagicMock(return_value=fake_model)
-    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    fake_st_model = MagicMock()
+    fake_st_model.get_sentence_embedding_dimension.return_value = 384
+    fake_st_module = types.ModuleType("sentence_transformers")
+    fake_st_module.SentenceTransformer = MagicMock(return_value=fake_st_model)
+    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_st_module)
+
+    fake_auto_model = MagicMock()
+    fake_auto_model.config.hidden_size = 384
+    fake_transformers = types.ModuleType("transformers")
+    fake_transformers.AutoModel = MagicMock()
+    fake_transformers.AutoModel.from_pretrained = MagicMock(return_value=fake_auto_model)
+    fake_transformers.AutoTokenizer = MagicMock()
+    fake_transformers.AutoTokenizer.from_pretrained = MagicMock(return_value=MagicMock())
+    monkeypatch.setitem(sys.modules, "transformers", fake_transformers)
+
+    fake_torch = types.ModuleType("torch")
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
 
     client = LocalEmbeddingClient(model_name="fake/model")
     assert client.embed([]) == []
-    fake_model.encode.assert_not_called()
+    fake_st_model.encode.assert_not_called()

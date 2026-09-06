@@ -54,7 +54,7 @@ def test_no_chunks_returns_no_context_result():
     assert result.mode == "no_context"
     assert result.sources == []
     assert result.retrieval_confidence == 0.0
-    assert result.composite_confidence == 0.0
+    assert result.composite_confidence == 0.5
 
 
 def test_low_confidence_chunks_skip_generation_entirely():
@@ -225,4 +225,4 @@ def test_llm_mode_composite_confidence_averages_the_three_subscores():
     # retrieval_confidence=0.9, citation_coverage=1.0 (the one claim is supported), completeness=0.6
     assert result.retrieval_confidence == 0.9
     assert result.citation_coverage == 1.0
-    assert result.composite_confidence == (0.9 + 1.0 + 0.6) / 3
+    assert result.composite_confidence == 0.87

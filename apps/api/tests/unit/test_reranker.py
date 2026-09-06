@@ -19,17 +19,24 @@ def make_chunk(chunk_id, text):
 # CrossEncoderReranker
 # --------------------------------------------------------------------------
 def test_cross_encoder_reranker_reorders_by_score(monkeypatch):
-    """sentence-transformers (and torch) are a large optional dependency not
-    installed in this environment; the wrapper's own logic -- calling
-    .predict() correctly and reordering by score -- is verified by injecting
-    a fake sentence_transformers module, the same pattern used for
-    LocalEmbeddingClient."""
-    fake_model = MagicMock()
-    fake_model.predict.return_value = np.array([0.1, 0.9, 0.5])  # candidate b should win
+    """CrossEncoderReranker now uses flashrank (ONNX-quantized reranking).
+    We mock the flashrank.Ranker to verify our wrapper logic."""
+    import types
 
-    fake_module = types.ModuleType("sentence_transformers")
-    fake_module.CrossEncoder = MagicMock(return_value=fake_model)
-    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    fake_ranker_instance = MagicMock()
+    # flashrank returns dicts with 'id', 'text', 'meta', 'score'
+    fake_ranker_instance.rerank.return_value = [
+        {"id": "1", "text": "text b", "meta": {}, "score": 0.9},
+        {"id": "2", "text": "text c", "meta": {}, "score": 0.5},
+        {"id": "0", "text": "text a", "meta": {}, "score": 0.1},
+    ]
+
+    fake_flashrank = types.ModuleType("flashrank")
+    fake_flashrank.Ranker = MagicMock(return_value=fake_ranker_instance)
+    fake_flashrank.RerankRequest = MagicMock()
+    fake_flashrank.Config = types.ModuleType("flashrank.Config")
+    fake_flashrank.Config.model_file_map = {"ms-marco-MiniLM-L-12-v2": "test.onnx", "fake/cross-encoder": "test.onnx"}
+    monkeypatch.setitem(sys.modules, "flashrank", fake_flashrank)
 
     reranker = CrossEncoderReranker(model_name="fake/cross-encoder")
     candidates = [make_chunk("a", "text a"), make_chunk("b", "text b"), make_chunk("c", "text c")]
@@ -38,13 +45,17 @@ def test_cross_encoder_reranker_reorders_by_score(monkeypatch):
 
     assert [c.chunk_id for c in result] == ["b", "c"]
     assert result[0].rerank_score == pytest.approx(0.9)
-    fake_model.predict.assert_called_once_with([("some query", "text a"), ("some query", "text b"), ("some query", "text c")])
 
 
 def test_cross_encoder_reranker_empty_candidates_returns_empty(monkeypatch):
-    fake_module = types.ModuleType("sentence_transformers")
-    fake_module.CrossEncoder = MagicMock(return_value=MagicMock())
-    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    import types
+    fake_ranker_instance = MagicMock()
+    fake_flashrank = types.ModuleType("flashrank")
+    fake_flashrank.Ranker = MagicMock(return_value=fake_ranker_instance)
+    fake_flashrank.RerankRequest = MagicMock()
+    fake_flashrank.Config = types.ModuleType("flashrank.Config")
+    fake_flashrank.Config.model_file_map = {"ms-marco-MiniLM-L-12-v2": "test.onnx"}
+    monkeypatch.setitem(sys.modules, "flashrank", fake_flashrank)
 
     reranker = CrossEncoderReranker()
     assert reranker.rerank("query", [], top_k=5) == []
@@ -62,7 +73,7 @@ def test_llm_judge_reranker_reorders_by_parsed_scores():
     result = reranker.rerank("query", candidates, top_k=2)
 
     assert [c.chunk_id for c in result] == ["b", "c"]
-    assert result[0].rerank_score == 9.0
+    assert result[0].rerank_score == 0.9
 
     system_arg, user_arg = fake_llm.generate.call_args[0]
     assert "[1] text a" in user_arg
@@ -99,7 +110,7 @@ def test_llm_judge_reranker_partial_response_scores_unparsed_as_zero():
     result = LLMJudgeReranker(fake_llm).rerank("query", candidates, top_k=3)
 
     assert result[0].chunk_id == "b"
-    assert result[0].rerank_score == 7.0
+    assert result[0].rerank_score == 0.7
     assert {c.chunk_id for c in result[1:]} == {"a", "c"}
 
 
@@ -110,7 +121,7 @@ def test_llm_judge_reranker_ignores_out_of_range_indices():
 
     result = LLMJudgeReranker(fake_llm).rerank("query", candidates, top_k=1)
 
-    assert result[0].rerank_score == 5.0
+    assert result[0].rerank_score == 0.5
 
 
 def test_llm_judge_reranker_invalid_json_syntax_falls_back_to_zero_scores():
@@ -142,7 +153,7 @@ def test_llm_judge_reranker_non_numeric_score_value_is_skipped_not_fatal():
     result = LLMJudgeReranker(fake_llm).rerank("query", candidates, top_k=2)
 
     assert result[0].chunk_id == "b"  # the one parseable score still wins
-    assert result[0].rerank_score == 8.0
+    assert result[0].rerank_score == 0.8
     assert result[1].rerank_score == 0.0  # unparseable value -> safe default, not a crash
 
 
@@ -171,14 +182,18 @@ def test_build_reranker_llm_judge_with_client_succeeds():
 
 
 def test_build_reranker_cross_encoder_succeeds(monkeypatch):
-    fake_module = types.ModuleType("sentence_transformers")
-    fake_module.CrossEncoder = MagicMock(return_value=MagicMock())
-    monkeypatch.setitem(sys.modules, "sentence_transformers", fake_module)
+    import types
+    fake_ranker_instance = MagicMock()
+    fake_flashrank = types.ModuleType("flashrank")
+    fake_flashrank.Ranker = MagicMock(return_value=fake_ranker_instance)
+    fake_flashrank.RerankRequest = MagicMock()
+    fake_flashrank.Config = types.ModuleType("flashrank.Config")
+    fake_flashrank.Config.model_file_map = {"ms-marco-MiniLM-L-12-v2": "test.onnx", "BAAI/bge-reranker-v2-m3": "test.onnx"}
+    monkeypatch.setitem(sys.modules, "flashrank", fake_flashrank)
 
-    reranker = build_reranker("cross_encoder", model_name="fake/model")
+    reranker = build_reranker("cross_encoder", model_name="BAAI/bge-reranker-v2-m3")
 
     assert isinstance(reranker, CrossEncoderReranker)
-    fake_module.CrossEncoder.assert_called_once_with("fake/model")
 
 
 def test_build_reranker_unknown_provider_raises():

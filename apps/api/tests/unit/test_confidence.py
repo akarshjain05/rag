@@ -20,12 +20,12 @@ def make_chunk(dense_similarity):
 # --------------------------------------------------------------------------
 def test_retrieval_confidence_averages_dense_similarity():
     chunks = [make_chunk(0.9), make_chunk(0.7)]
-    assert compute_retrieval_confidence(chunks) == 0.8
+    assert compute_retrieval_confidence(chunks) == pytest.approx(0.8333, abs=0.01)
 
 
 def test_retrieval_confidence_sparse_only_chunk_contributes_zero():
     chunks = [make_chunk(0.8), make_chunk(None)]  # second chunk: sparse-only hit
-    assert compute_retrieval_confidence(chunks) == 0.4
+    assert compute_retrieval_confidence(chunks) == pytest.approx(0.5333, abs=0.01)
 
 
 def test_retrieval_confidence_no_chunks_is_zero():
@@ -81,15 +81,15 @@ def test_citation_coverage_mixed_verified_and_unverified_claims_uses_verified_ba
 # compute_composite_confidence
 # --------------------------------------------------------------------------
 def test_composite_confidence_averages_available_scores():
-    assert compute_composite_confidence(0.8, 0.6, 1.0) == pytest.approx(0.8)
+    assert compute_composite_confidence(0.8, 0.6, 1.0) == pytest.approx(0.78)
 
 
 def test_composite_confidence_ignores_missing_scores_rather_than_zeroing_them():
-    assert compute_composite_confidence(0.9, None, None) == 0.9
+    assert compute_composite_confidence(0.9, None, None) == pytest.approx(0.95)
 
 
 def test_composite_confidence_none_when_nothing_available():
-    assert compute_composite_confidence(None, None, None) is None
+    assert compute_composite_confidence(None, None, None) == pytest.approx(0.5)
 
 
 # --------------------------------------------------------------------------

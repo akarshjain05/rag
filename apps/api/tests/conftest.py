@@ -61,6 +61,12 @@ def vector_store(tmp_path: Path) -> VectorStore:
 
 
 @pytest.fixture
+def small_vector_store(tmp_path: Path) -> VectorStore:
+    """3-dimensional store for tests using hand-crafted vectors like [1.0, 0.0, 0.0]."""
+    return VectorStore(persist_dir=tmp_path / "qdrant_small", collection_name="test_small", dense_dimension=3)
+
+
+@pytest.fixture
 def docx_path(tmp_path: Path) -> Path:
     import docx
     path = tmp_path / "sample.docx"

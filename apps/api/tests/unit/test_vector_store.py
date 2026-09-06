@@ -7,78 +7,79 @@ import urllib.request
 import pytest
 
 
-def test_empty_store_count_and_queries(vector_store):
-    assert vector_store.count() == 0
-    assert vector_store.nearest([1.0, 0.0, 0.0], top_k=1) == []
-    assert vector_store.query([1.0, 0.0, 0.0], top_k=5) == []
-    assert vector_store.get_all() == []
-    assert vector_store.list_source_documents() == []
+def test_empty_store_count_and_queries(small_vector_store):
+    assert small_vector_store.count() == 0
+    assert small_vector_store.nearest([1.0, 0.0, 0.0], top_k=1) == []
+    assert small_vector_store.query([1.0, 0.0, 0.0], top_k=5) == []
+    assert small_vector_store.get_all() == []
+    assert small_vector_store.list_source_documents() == []
 
 
-def test_add_and_query_returns_nearest_first(vector_store):
-    vector_store.add("a", [1.0, 0.0, 0.0], "doc a text", {"source_document": "x.md"})
-    vector_store.add("b", [0.0, 1.0, 0.0], "doc b text", {"source_document": "y.md"})
-    vector_store.add("c", [0.9, 0.1, 0.0], "doc c text", {"source_document": "x.md"})
+def test_add_and_query_returns_nearest_first(small_vector_store):
+    small_vector_store.add("a", [1.0, 0.0, 0.0], "doc a text", {"source_document": "x.md"})
+    small_vector_store.add("b", [0.0, 1.0, 0.0], "doc b text", {"source_document": "y.md"})
+    small_vector_store.add("c", [0.9, 0.1, 0.0], "doc c text", {"source_document": "x.md"})
 
-    assert vector_store.count() == 3
+    assert small_vector_store.count() == 3
 
-    results = vector_store.query([1.0, 0.0, 0.0], top_k=3)
+    results = small_vector_store.query([1.0, 0.0, 0.0], top_k=3)
     assert results[0]["chunk_id"] == "a"  # exact match should rank first
     assert results[0]["similarity"] > results[-1]["similarity"]
 
 
-def test_query_top_k_caps_at_collection_size(vector_store):
-    vector_store.add("a", [1.0, 0.0], "a", {"source_document": "x"})
-    results = vector_store.query([1.0, 0.0], top_k=50)
+def test_query_top_k_caps_at_collection_size(small_vector_store):
+    small_vector_store.add("a", [1.0, 0.0, 0.0], "a", {"source_document": "x"})
+    results = small_vector_store.query([1.0, 0.0, 0.0], top_k=50)
     assert len(results) == 1
 
 
-def test_query_with_metadata_filter(vector_store):
-    vector_store.add("a", [1.0, 0.0], "a", {"source_document": "x", "chunking_strategy": "fixed_size"})
-    vector_store.add("b", [0.99, 0.1], "b", {"source_document": "x", "chunking_strategy": "semantic"})
+def test_query_with_metadata_filter(small_vector_store):
+    small_vector_store.add("a", [1.0, 0.0, 0.0], "a", {"source_document": "x", "chunking_strategy": "fixed_size"})
+    small_vector_store.add("b", [0.99, 0.1, 0.0], "b", {"source_document": "x", "chunking_strategy": "semantic"})
 
-    results = vector_store.query([1.0, 0.0], top_k=5, where={"chunking_strategy": "semantic"})
+    results = small_vector_store.query([1.0, 0.0, 0.0], top_k=5, where={"chunking_strategy": "semantic"})
     assert len(results) == 1
     assert results[0]["chunk_id"] == "b"
 
 
-def test_add_many_and_get_all(vector_store):
-    vector_store.add_many(
+def test_add_many_and_get_all(small_vector_store):
+    small_vector_store.add_many(
         chunk_ids=["a", "b"],
-        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        embeddings=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
         texts=["text a", "text b"],
         metadatas=[{"source_document": "x"}, {"source_document": "y"}],
     )
-    rows = vector_store.get_all()
+    rows = small_vector_store.get_all()
     assert {r["chunk_id"] for r in rows} == {"a", "b"}
 
 
-def test_list_source_documents_deduplicates(vector_store):
-    vector_store.add("a", [1.0, 0.0], "t1", {"source_document": "x.md"})
-    vector_store.add("b", [0.0, 1.0], "t2", {"source_document": "x.md"})
-    vector_store.add("c", [1.0, 1.0], "t3", {"source_document": "y.md"})
-    assert set(vector_store.list_source_documents()) == {"x.md", "y.md"}
+def test_list_source_documents_deduplicates(small_vector_store):
+    small_vector_store.add("a", [1.0, 0.0, 0.0], "t1", {"source_document": "x.md"})
+    small_vector_store.add("b", [0.0, 1.0, 0.0], "t2", {"source_document": "x.md"})
+    small_vector_store.add("c", [1.0, 1.0, 0.0], "t3", {"source_document": "y.md"})
+    assert set(small_vector_store.list_source_documents()) == {"x.md", "y.md"}
 
 
-def test_delete_source_document_removes_only_matching_chunks(vector_store):
-    vector_store.add("a", [1.0, 0.0], "t1", {"source_document": "x.md"})
-    vector_store.add("b", [0.0, 1.0], "t2", {"source_document": "y.md"})
+def test_delete_source_document_removes_only_matching_chunks(small_vector_store):
+    small_vector_store.add("a", [1.0, 0.0, 0.0], "t1", {"source_document": "x.md"})
+    small_vector_store.add("b", [0.0, 1.0, 0.0], "t2", {"source_document": "y.md"})
 
-    deleted = vector_store.delete_source_document("x.md")
+    deleted = small_vector_store.delete_source_document("x.md")
 
     assert deleted == 1
-    assert vector_store.count() == 1
-    assert vector_store.list_source_documents() == ["y.md"]
+    assert small_vector_store.count() == 1
+    assert small_vector_store.list_source_documents() == ["y.md"]
 
 
 def test_persistence_across_instances(tmp_path):
     from rag_api.adapters.vectorstore.vector_store import VectorStore
 
     persist_dir = tmp_path / "qdrant"
-    store1 = VectorStore(persist_dir=persist_dir, collection_name="persisted")
-    store1.add("a", [1.0, 0.0], "hello", {"source_document": "x"})
+    store1 = VectorStore(persist_dir=persist_dir, collection_name="persisted", dense_dimension=3)
+    store1.add("a", [1.0, 0.0, 0.0], "hello", {"source_document": "x"})
+    store1._client.close()
 
-    store2 = VectorStore(persist_dir=persist_dir, collection_name="persisted")
+    store2 = VectorStore(persist_dir=persist_dir, collection_name="persisted", dense_dimension=3)
     assert store2.count() == 1
     assert store2.get_all()[0]["chunk_id"] == "a"
 
