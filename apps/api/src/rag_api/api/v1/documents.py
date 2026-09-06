@@ -110,19 +110,12 @@ def list_documents(vector_store = Depends(get_vector_store)) -> DocumentsRespons
         total_chunks=vector_store.count(),
     )
 
-@router.delete("/documents/{source_document}", response_model=DeleteResponse, summary="Remove a document from the index", description="Deletes every chunk (across all chunking strategies) belonging to `source_document` from both the vector store and the sparse index.")
-def delete_document(
-    source_document: str,
-    vector_store = Depends(get_vector_store),
-) -> DeleteResponse:
-    deleted = vector_store.delete_source_document(source_document)
-    return DeleteResponse(source_document=source_document, chunks_deleted=deleted)
 
 from pydantic import BaseModel
 class BulkDeleteRequest(BaseModel):
     document_ids: list[str]
 
-@router.post("/bulk_delete", summary="Bulk delete documents")
+@router.post("/documents/bulk_delete", summary="Bulk delete documents")
 def bulk_delete_documents(
     payload: BulkDeleteRequest,
     vector_store: VectorStore = Depends(get_vector_store),
@@ -133,3 +126,11 @@ def bulk_delete_documents(
         except Exception:
             pass
     return {"status": "ok"}
+
+@router.delete("/documents/{source_document}", response_model=DeleteResponse, summary="Remove a document from the index", description="Deletes every chunk (across all chunking strategies) belonging to `source_document` from both the vector store and the sparse index.")
+def delete_document(
+    source_document: str,
+    vector_store = Depends(get_vector_store),
+) -> DeleteResponse:
+    deleted = vector_store.delete_source_document(source_document)
+    return DeleteResponse(source_document=source_document, chunks_deleted=deleted)
