@@ -7,9 +7,15 @@
 async function request(path, options = {}, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
+      const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey");
+      const headers = { 
+        "Content-Type": "application/json",
+        ...(apiKey ? { "X-API-Key": apiKey } : {}),
+        ...(options.headers || {}) 
+      };
       const res = await fetch(path, {
-        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
         ...options,
+        headers,
       });
       if (!res.ok) {
         let detail = res.statusText;
@@ -75,8 +81,9 @@ export async function ingest(files, onProgress, signal) {
       const formData = new FormData();
       formData.append("file", file);
       
+      const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey");
       const res = await fetch("/v1/ingest/large", {
-        headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {},
+        headers: apiKey ? { "X-API-Key": apiKey } : {},
         method: "POST",
         body: formData,
       });
@@ -87,12 +94,12 @@ export async function ingest(files, onProgress, signal) {
       // Poll
       while (true) {
         if (signal?.aborted) {
-            await fetch(`/v1/ingest/jobs/${job_id}`, { method: 'DELETE', headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {} }).catch(() => {});
+            await fetch(`/v1/ingest/jobs/${job_id}`, { method: 'DELETE', headers: apiKey ? { "X-API-Key": apiKey } : {} }).catch(() => {});
             throw new DOMException("Aborted", "AbortError");
         }
         await new Promise(r => setTimeout(r, 2000));
         const pollRes = await fetch(`/v1/ingest/jobs/${job_id}`, {
-          headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : {}
+          headers: apiKey ? { "X-API-Key": apiKey } : {}
         });
         if (!pollRes.ok) continue; // Skip this tick if the API is temporarily unavailable
         const statusData = await pollRes.json();
@@ -119,10 +126,9 @@ export async function ingest(files, onProgress, signal) {
   
   if (onProgress) onProgress(0, "Uploading to server...");
   
+  const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey");
   const res = await fetch("/v1/ingest", {
-    headers: import.meta.env.VITE_API_KEY ? {
-      "X-API-Key": import.meta.env.VITE_API_KEY
-    } : {},
+    headers: apiKey ? { "X-API-Key": apiKey } : {},
     method: "POST",
     body: formData,
     signal,
@@ -182,5 +188,24 @@ export async function ingest(files, onProgress, signal) {
 export function deleteDocument(sourceDocument) {
   return request(`/v1/documents/${encodeURIComponent(sourceDocument)}`, {
     method: "DELETE",
+  });
+}
+
+export function verifyAuth() {
+  return request("/v1/auth", {
+    method: "POST",
+    headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : (localStorage.getItem("apiKey") ? { "X-API-Key": localStorage.getItem("apiKey") } : {})
+  });
+}
+
+export function fetchConversations() {
+  return request("/v1/conversations", {
+    headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : (localStorage.getItem("apiKey") ? { "X-API-Key": localStorage.getItem("apiKey") } : {})
+  });
+}
+
+export function fetchConversation(id) {
+  return request(`/v1/conversations/${encodeURIComponent(id)}`, {
+    headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : (localStorage.getItem("apiKey") ? { "X-API-Key": localStorage.getItem("apiKey") } : {})
   });
 }

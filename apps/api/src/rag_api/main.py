@@ -185,6 +185,8 @@ def create_app(
         )
 
     v1 = APIRouter(prefix="/v1")
+    v1.include_router(auth.router, dependencies=[Depends(verify_api_key)])
+    v1.include_router(conversations.router, dependencies=[Depends(verify_api_key)])
     v1.include_router(documents.router, dependencies=[Depends(verify_api_key)])
     v1.include_router(ask.router, dependencies=[Depends(verify_api_key)])
     app.include_router(v1)
