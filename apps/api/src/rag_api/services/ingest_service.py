@@ -81,37 +81,29 @@ class IngestionPipeline:
 
             import concurrent.futures
 
+
             # --- CONTEXTUAL RETRIEVAL PREPROCESSING (Anthropic Method) ---
-            if self.llm_client and chunks:
+            from rag_api.core.settings import get_settings
+            from rag_api.domain.chunking.text_utils import estimate_tokens
+            settings = get_settings()
+            
+            if self.llm_client and chunks and getattr(settings, 'contextual_retrieval_enabled', True):
                 if progress_callback: progress_callback(30, "Generating Contextual Summaries...")
-                print(f"Generating Contextual Retrieval summaries for {len(chunks)} chunks in {doc.source_file} (leveraging Prompt Caching)...")
                 
-                # Format the massive document as the system prompt and explicitly add Anthropic's cache_control flag
-                system_prompt = [
-                    {
-                        "type": "text",
-                        "text": "You are a specialized preprocessing agent. Generate a concise context summary to improve search retrieval."
-                    },
-                    {
-                        "type": "text",
-                        "text": f"<document>\n{doc.text[:250000]}\n</document>\n\n",
-                        "cache_control": {"type": "ephemeral"}
-                    }
-                ]
+                estimated_tokens = estimate_tokens(doc.text)
+                max_tokens = getattr(settings, 'contextual_retrieval_max_document_tokens', 100000)
                 
-                def situate_chunk(c):
-                    prompt = f"Here is the chunk we want to situate within the whole document:\n<chunk>\n{c.text}\n</chunk>\n\nPlease give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."
-                    try:
-                        context = self.llm_client.generate(system_prompt, prompt).strip()
-                        # Prepend the context to the chunk, so it is embedded, indexed by BM25, and visible to the final Generator LLM
-                        c.text = f"[{context}]\n\n{c.text}"
-                    except Exception as e:
-                        print(f"Warning: Context generation failed for chunk {c.chunk_id} - {e}")
-                    return c
-                    
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                    chunks = list(executor.map(situate_chunk, chunks))
+                if estimated_tokens > max_tokens:
+                    log.warning(
+                        "contextual_retrieval.document_exceeds_context_budget",
+                        source=doc.source_file, estimated_tokens=estimated_tokens,
+                        budget=max_tokens,
+                    )
+                    chunks = self._situate_fallback(doc, chunks, progress_callback)
+                else:
+                    chunks = self._situate_full_document(doc, chunks, progress_callback)
             # -------------------------------------------------------------
+
 
             report = IngestReport(
                 source_file=doc.source_file,
@@ -153,6 +145,148 @@ class IngestionPipeline:
             return report
         except Exception as exc:
             return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=f"Ingestion failed: {str(exc)}")
+
+
+    def _situate_full_document(self, doc, chunks, progress_callback):
+        import concurrent.futures
+        print(f"Generating Contextual Retrieval summaries for {len(chunks)} chunks in {doc.source_file} (leveraging Prompt Caching)...")
+        system_prompt = [
+            {
+                "type": "text",
+                "text": "You are a specialized preprocessing agent. Generate a concise context summary to improve search retrieval."
+            },
+            {
+                "type": "text",
+                "text": f"<document>\n{doc.text}\n</document>\n\n",
+                "cache_control": {"type": "ephemeral"}
+            }
+        ]
+        def situate_chunk(c):
+            prompt = f"Here is the chunk we want to situate within the whole document:\n<chunk>\n{c.text}\n</chunk>\n\nPlease give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."
+            try:
+                context = self.llm_client.generate(system_prompt, prompt).strip()
+                c.text = f"[{context}]\n\n{c.text}"
+            except Exception as e:
+                error_str = str(e).lower()
+                if "maximum context length" in error_str or "prompt is too long" in error_str or "context_length_exceeded" in error_str:
+                    raise  # Deterministic error, fail fast
+                from rag_api.core.logging import log
+                log.warning("contextual_retrieval.chunk_situate_failed", chunk_id=c.chunk_id, error=str(e))
+            return c
+            
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            return list(executor.map(situate_chunk, chunks))
+
+    def _situate_fallback(self, doc, chunks, progress_callback):
+        from rag_api.core.settings import get_settings
+        from rag_api.core.logging import log
+        settings = get_settings()
+        fallback = getattr(settings, 'contextual_retrieval_fallback', 'hierarchical')
+        
+        if fallback == "skip":
+            return chunks
+        
+        elif fallback == "hierarchical":
+            from rag_api.domain.chunking.chunking import _structure_aware_split
+            target_tokens = getattr(settings, 'contextual_retrieval_section_target_tokens', 20000)
+            sections_data = _structure_aware_split(doc.text, max_section_size=target_tokens * 4)
+            
+            sections = []
+            for sec_text, heading in sections_data:
+                start = doc.text.find(sec_text.strip())
+                if start != -1:
+                    end = start + len(sec_text.strip())
+                    sections.append((start, end, sec_text, heading))
+            
+            if not sections:
+                return chunks
+                
+            section_summaries = []
+            for _, _, sec_text, _ in sections:
+                prompt = (
+                    "Summarize this section of a larger document in 2-3 sentences -- "
+                    "what a reader would need to know to understand a fragment from "
+                    "this section out of context.\n\n"
+                    f"<section>\n{sec_text}\n</section>"
+                )
+                try:
+                    summary = self.llm_client.generate(
+                        [{"type": "text", "text": "You are a summarizing agent."}], 
+                        prompt
+                    ).strip()
+                except Exception as e:
+                    error_str = str(e).lower()
+                    if "maximum context length" in error_str or "prompt is too long" in error_str or "context_length_exceeded" in error_str:
+                        raise  # Deterministic error, fail fast
+                    from rag_api.core.logging import log
+                    log.warning("contextual_retrieval.section_summarize_failed", error=str(e))
+                    summary = "Context generation failed."
+                section_summaries.append(summary)
+
+            def _section_index_for_offset(offset):
+                if offset is None: return 0
+                for i, (start, end, _, _) in enumerate(sections):
+                    if start <= offset <= end:
+                        return i
+                return 0
+
+            def situate_chunk(c):
+                section_idx = _section_index_for_offset(c.char_start)
+                section_summary = section_summaries[section_idx]
+                prompt = (
+                    f"Section summary: {section_summary}\n\n"
+                    f"Chunk from this section:\n<chunk>\n{c.text}\n</chunk>\n\n"
+                    "Give a short succinct context to situate this chunk for search retrieval."
+                )
+                try:
+                    situating = self.llm_client.generate(
+                        [{"type": "text", "text": "You are a specialized preprocessing agent."}],
+                        prompt
+                    ).strip()
+                    c.text = f"[{situating}]\n\n{c.text}"
+                except Exception as e:
+                    error_str = str(e).lower()
+                    if "maximum context length" in error_str or "prompt is too long" in error_str or "context_length_exceeded" in error_str:
+                        raise  # Deterministic error, fail fast
+                    from rag_api.core.logging import log
+                    log.warning("contextual_retrieval.chunk_situate_failed", chunk_id=c.chunk_id, error=str(e))
+                return c
+
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                return list(executor.map(situate_chunk, chunks))
+                
+        elif fallback == "local_window":
+            def situate_chunk(c):
+                window = 8000
+                start = max(0, (c.char_start or 0) - window)
+                end = min(len(doc.text), (c.char_end or len(doc.text)) + window)
+                window_text = doc.text[start:end]
+                prompt = (
+                    f"Here is a chunk and its surrounding local window of text.\n"
+                    f"<local_window>\n{window_text}\n</local_window>\n\n"
+                    f"<chunk>\n{c.text}\n</chunk>\n\n"
+                    "Give a short succinct context to situate this chunk for search retrieval."
+                )
+                try:
+                    situating = self.llm_client.generate(
+                        [{"type": "text", "text": "You are a specialized preprocessing agent."}],
+                        prompt
+                    ).strip()
+                    c.text = f"[{situating}]\n\n{c.text}"
+                except Exception as e:
+                    error_str = str(e).lower()
+                    if "maximum context length" in error_str or "prompt is too long" in error_str or "context_length_exceeded" in error_str:
+                        raise  # Deterministic error, fail fast
+                    from rag_api.core.logging import log
+                    log.warning("contextual_retrieval.chunk_situate_failed", chunk_id=c.chunk_id, error=str(e))
+                return c
+                
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                return list(executor.map(situate_chunk, chunks))
+
+        return chunks
 
     def ingest_files(self, paths: list[str | Path], strategy: ChunkingStrategy | None = None, progress_callback = None) -> list[IngestReport]:
         reports = []

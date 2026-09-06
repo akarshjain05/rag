@@ -71,4 +71,6 @@ def ingest_large_file_task(self, object_key: str, source_filename: str):
             progress_cb=lambda n: self.update_state(state="PROGRESS", meta={"chunks_processed": n}),
         )
     local_path.unlink(missing_ok=True)
+    if report.error:
+        raise ValueError(report.error)
     return vars(report)

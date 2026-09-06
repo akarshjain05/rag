@@ -104,6 +104,10 @@ class Settings(BaseSettings):
 
     # M5
     hyde_enabled: bool = True
+    contextual_retrieval_enabled: bool = True
+    contextual_retrieval_max_document_tokens: int = 100_000
+    contextual_retrieval_fallback: str = "hierarchical"
+    contextual_retrieval_section_target_tokens: int = 20_000
     query_condensation_enabled: bool = True
     crag_expansion_enabled: bool = True
     crag_threshold_lower: float = 0.40

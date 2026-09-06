@@ -27,3 +27,10 @@ def split_sentences(text: str) -> list[str]:
             continue
         sentences.extend(s.strip() for s in _SENTENCE_SPLIT_RE.split(para) if s.strip())
     return sentences
+
+def estimate_tokens(text: str) -> int:
+    """Fast, provider-agnostic heuristic (~4 chars/token for English
+    prose). Exact tokenization isn't needed to decide whether ~440k
+    tokens will blow a 128k context window -- it's needed to decide
+    *before spending an API call finding out*."""
+    return len(text) // 4
