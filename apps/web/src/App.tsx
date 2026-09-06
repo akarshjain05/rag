@@ -141,7 +141,7 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 currentView === item.id 
                   ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white font-medium' 
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500'
               }`}
               aria-label={item.label}
             >
@@ -166,7 +166,7 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm ${
               currentView === 'settings' 
                 ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white font-medium' 
-                : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
+                : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500'
             }`}
             aria-label="Settings"
           >
@@ -176,7 +176,7 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
           
           <button 
             onClick={onLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all mt-2 text-sm"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all mt-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             aria-label="Log out"
           >
             <LogOut className="w-4 h-4" />
@@ -316,7 +316,7 @@ function HistoryView({ onSelect }) {
               <button 
                 key={c.id} 
                 onClick={() => onSelect(c.id)}
-                className="flex justify-between items-center p-4 bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl hover:border-blue-500 transition-colors text-left"
+                className="flex justify-between items-center p-4 bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl hover:border-blue-500 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 <span className="font-medium">{c.title}</span>
                 <span className="text-xs text-gray-400">{new Date(c.updated_at * 1000).toLocaleString()}</span>
@@ -555,13 +555,13 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAsk()}
               placeholder="Ask a question..."
-              className="flex-1 bg-transparent border-none outline-none px-3 text-sm"
+              className="flex-1 bg-transparent border-none outline-none px-3 text-sm focus-visible:ring-0"
             />
             <button 
               onClick={handleAsk}
               aria-label="Send message"  
               disabled={loading || !query.trim()}
-              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0A0A0A]"
             >
               <ArrowRight className="w-4 h-4" />
             </button>
