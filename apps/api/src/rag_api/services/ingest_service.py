@@ -94,7 +94,7 @@ class IngestionPipeline:
                     },
                     {
                         "type": "text",
-                        "text": f"<document>\n{doc.text}\n</document>\n\n",
+                        "text": f"<document>\n{doc.text[:250000]}\n</document>\n\n",
                         "cache_control": {"type": "ephemeral"}
                     }
                 ]
