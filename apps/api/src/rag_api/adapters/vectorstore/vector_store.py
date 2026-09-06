@@ -15,11 +15,20 @@ class VectorStore:
         dense_dimension: int = 768,
     ):
         self.collection_name = collection_name
-        from fastembed import SparseTextEmbedding
+        
+        # Initialize fastembed ONNX runtime immediately on the main thread
+        # to prevent OpenMP thread-pool conflicts with PyTorch later.
+        self._sparse_model = None
         try:
-            self._sparse_model = SparseTextEmbedding('Qdrant/bm25')
+            from fastembed import SparseTextEmbedding
+            self._sparse_model = SparseTextEmbedding("Qdrant/bm25")
+        except ImportError:
+            import logging
+            logging.getLogger(__name__).warning("fastembed is not installed; sparse search disabled.")
         except Exception as e:
-            print(f'Failed to load fastembed: {e}')
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to load fastembed sparse model: {e}")
+            
         if mode == "http":
             self._client = QdrantClient(host=host, port=port)
         elif mode == "embedded":
@@ -29,14 +38,6 @@ class VectorStore:
             self._client = QdrantClient(path=str(persist_dir))
         else:
             raise ValueError(f"Unknown VectorStore mode: {mode!r}")
-            
-        # Initialize fastembed ONNX runtime immediately on the main thread
-        # to prevent OpenMP thread-pool conflicts with PyTorch later.
-        try:
-            from fastembed import SparseTextEmbedding
-            self._sparse_model = SparseTextEmbedding("Qdrant/bm25")
-        except ImportError:
-            pass
 
         # Ensure collection exists with both dense and sparse configurations
         if not self._client.collection_exists(collection_name=self.collection_name):
@@ -153,6 +154,9 @@ class VectorStore:
                 conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
             filter_obj = models.Filter(must=conditions)
             
+        if not getattr(self, "_sparse_model", None):
+            return self.query(dense_vector, top_k=top_k, where=where)
+            
         sp_emb = list(self._sparse_model.embed([query_text]))[0]
             
         response = self._client.query_points(
@@ -216,6 +220,9 @@ class VectorStore:
             for k, v in where.items():
                 conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
             filter_obj = models.Filter(must=conditions)
+            
+        if not getattr(self, "_sparse_model", None):
+            return []
             
         sp_emb = list(self._sparse_model.embed([query_text]))[0]
             
