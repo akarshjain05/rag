@@ -44,8 +44,11 @@ def ingest_large_file_task(self, object_key: str, source_filename: str):
     
     if not is_text:
         llm_client = build_llm_client(
-            provider=s.llm_provider, openai_model=s.openai_model, openai_api_key=s.openai_api_key, 
-            openai_base_url=s.openai_base_url, anthropic_model=s.anthropic_model, anthropic_api_key=s.anthropic_api_key
+            provider=s.llm_provider,
+            model=s.anthropic_model if s.llm_provider == "anthropic" else s.openai_llm_model,
+            api_key=s.anthropic_api_key if s.llm_provider == "anthropic" else s.openai_api_key,
+            base_url=s.openai_base_url if s.llm_provider == "openai" else None,
+            timeout=s.llm_request_timeout_seconds,
         )
         pipeline = IngestionPipeline(
             embedding_client=embedding_client, vector_store=vector_store,
