@@ -74,7 +74,7 @@ function AuthScreen({ onAuth }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] text-white">
       <div className="w-full max-w-md p-8 bg-[#141414] border border-white/10 rounded-xl shadow-2xl">
-        <h1 className="text-2xl font-semibold mb-2">Sign in to Omniscient</h1>
+        <h1 className="text-2xl font-semibold mb-2">Sign in to Nexus</h1>
         <p className="text-gray-400 text-sm mb-6">Enter your API key to continue.</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input 
@@ -110,7 +110,7 @@ function Sidebar({ currentView, setCurrentView, onLogout }) {
     <div className="w-[220px] bg-gray-100 dark:bg-[#0A0A0A] border-r border-gray-200 dark:border-white/10 flex flex-col p-4">
       <div className="flex items-center gap-3 mb-8 px-2">
         <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">OM</div>
-        <span className="font-semibold tracking-wide">Omniscient</span>
+        <span className="font-semibold tracking-wide">Nexus</span>
       </div>
       
       <div className="flex flex-col gap-1">
