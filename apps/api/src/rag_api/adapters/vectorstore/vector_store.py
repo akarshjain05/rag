@@ -208,3 +208,34 @@ class VectorStore:
         count = self._client.count(collection_name=self.collection_name, count_filter=filter_obj).count
         self._client.delete(collection_name=self.collection_name, points_selector=filter_obj)
         return count
+
+    def sparse_query(self, query_text: str, top_k: int = 10, where: dict | None = None) -> list[dict]:
+        filter_obj = None
+        if where:
+            conditions = []
+            for k, v in where.items():
+                conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+            filter_obj = models.Filter(must=conditions)
+            
+        sp_emb = list(self._sparse_model.embed([query_text]))[0]
+            
+        res = self._client.query_points(
+            collection_name=self.collection_name,
+            query=models.SparseVector(
+                indices=sp_emb.indices.tolist(),
+                values=sp_emb.values.tolist()
+            ),
+            using="sparse_bm25",
+            limit=top_k,
+            query_filter=filter_obj,
+            with_payload=True
+        )
+        out = []
+        for point in res.points:
+            out.append({
+                "chunk_id": point.id,
+                "text": point.payload.get("text", ""),
+                "metadata": point.payload.get("metadata", {}),
+                "similarity": point.score
+            })
+        return out

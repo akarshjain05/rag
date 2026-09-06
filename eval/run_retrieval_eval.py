@@ -33,8 +33,6 @@ from rag_api.adapters.vectorstore.embeddings import build_embedding_client  # no
 from rag_api.adapters.storage.loaders import SUPPORTED_EXTENSIONS  # noqa: E402
 from rag_api.domain.models import ChunkingStrategy  # noqa: E402
 from rag_api.services.ingest_service import IngestionPipeline  # noqa: E402
-from rag_api.domain.retrieval.retrieval import reciprocal_rank_fusion  # noqa: E402
-from rag_api.adapters.vectorstore.sparse_index import SparseIndex  # noqa: E402
 from rag_api.adapters.vectorstore.vector_store import VectorStore  # noqa: E402
 
 SAMPLE_DOCS = {
@@ -86,7 +84,6 @@ def evaluate(
     dataset: list[dict],
     embedding_client,
     vector_store: VectorStore,
-    sparse_index: SparseIndex,
     *,
     top_k: int = 5,
     dense_fetch_k: int = 10,
@@ -106,10 +103,10 @@ def evaluate(
     for item in dataset:
         query_embedding = embedding_client.embed([item["query"]])[0]
         dense_pool = vector_store.query(query_embedding, top_k=dense_fetch_k)
-        sparse_pool = sparse_index.query(item["query"], top_k=sparse_fetch_k)
-        hybrid = reciprocal_rank_fusion(dense_pool, sparse_pool, k=rrf_k, top_k=top_k)
+        sparse_pool = vector_store.sparse_query(item["query"], top_k=sparse_fetch_k)
+        hybrid_pool = vector_store.hybrid_search(item["query"], query_embedding, top_k=top_k, prefetch_limit=rrf_k)
 
-        for mode, ranked in (("dense", dense_pool[:top_k]), ("sparse", sparse_pool[:top_k]), ("hybrid", hybrid)):
+        for mode, ranked in (("dense", dense_pool[:top_k]), ("sparse", sparse_pool[:top_k]), ("hybrid", hybrid_pool)):
             sources = _extract_sources(ranked)
             if item["expected_source"] in sources:
                 hits[mode] += 1
@@ -160,10 +157,9 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
-        vector_store = VectorStore(tmp_path / "chroma", "eval_collection")
-        sparse_index = SparseIndex()
+        vector_store = VectorStore(tmp_path / "chroma", "eval_collection", dense_dimension=embedding_client.dimension)
         pipeline = IngestionPipeline(
-            embedding_client, vector_store, sparse_index, default_strategy=ChunkingStrategy(args.chunking_strategy)
+            embedding_client, vector_store, default_strategy=ChunkingStrategy(args.chunking_strategy)
         )
 
         if args.sample:
@@ -181,7 +177,7 @@ def main() -> None:
             print(f"  {report.source_file}: {status}")
 
         print(f"\nEvaluating {len(dataset)} queries at top_k={args.top_k}...")
-        summary = evaluate(dataset, embedding_client, vector_store, sparse_index, top_k=args.top_k, rrf_k=settings.rrf_k)
+        summary = evaluate(dataset, embedding_client, vector_store, top_k=args.top_k, rrf_k=settings.rrf_k)
         _print_report(summary, args.top_k)
 
 

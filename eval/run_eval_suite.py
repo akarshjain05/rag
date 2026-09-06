@@ -38,7 +38,6 @@ from rag_api.adapters.storage.loaders import SUPPORTED_EXTENSIONS  # noqa: E402
 from rag_api.domain.models import ChunkingStrategy  # noqa: E402
 from rag_api.services.ingest_service import IngestionPipeline  # noqa: E402
 from rag_api.domain.retrieval.retrieval import HybridRetriever  # noqa: E402
-from rag_api.adapters.vectorstore.sparse_index import SparseIndex  # noqa: E402
 from rag_api.adapters.vectorstore.vector_store import VectorStore  # noqa: E402
 from rag_api.domain.generation.verification import CitationVerifier  # noqa: E402
 from eval.eval_runner import format_comparison_report, run_chunking_strategy_comparison, run_eval_suite  # noqa: E402
@@ -86,9 +85,8 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
-        vector_store = VectorStore(tmp_path / "chroma", "eval_collection")
-        sparse_index = SparseIndex()
-        pipeline = IngestionPipeline(embedding_client, vector_store, sparse_index)
+        vector_store = VectorStore(tmp_path / "chroma", "eval_collection", dense_dimension=embedding_client.dimension)
+        pipeline = IngestionPipeline(embedding_client, vector_store)
         retriever = HybridRetriever(
             embedding_client, vector_store, dense_top_k=args.top_k * 2, sparse_top_k=args.top_k * 2
         )
