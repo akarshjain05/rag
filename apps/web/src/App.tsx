@@ -77,6 +77,10 @@ function AppContent() {
         <Sidebar 
           currentView={currentView} 
           setCurrentView={setCurrentView} 
+          theme={theme}
+          setTheme={setTheme}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
           onLogout={() => { localStorage.removeItem('apiKey'); setApiKey(null); }} 
         />
         
@@ -254,7 +258,7 @@ function KnowledgeBase() {
   useEffect(() => {
     import('./lib/api').then(({ fetchDocuments }) => {
       fetchDocuments().then(res => {
-        setDocs(res.documents);
+        setDocs(res.source_documents || []);
         setLoading(false);
       }).catch(err => {
         console.error(err);
@@ -279,7 +283,7 @@ function KnowledgeBase() {
     try {
       const { bulkDeleteDocuments } = await import('./lib/api');
       await bulkDeleteDocuments(ids);
-      setDocs(prev => prev.filter(d => !ids.includes(d.source_document)));
+      setDocs(prev => prev.filter(d => !ids.includes(d)));
     } catch (err) {
       console.error(err);
     }
@@ -296,11 +300,19 @@ function KnowledgeBase() {
     <div className="flex-1 p-8 flex flex-col overflow-hidden">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">Knowledge Base</h2>
-        <div className="relative">
-          <input type="file" multiple onChange={handleUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" disabled={uploading} />
-          <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50" disabled={uploading}>
-            {uploading ? "Uploading..." : "+ Upload File"}
-          </button>
+                <div className="relative">
+          {selectedDocs.size > 0 ? (
+            <button onClick={handleBulkDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+              <Trash2 className="w-4 h-4" /> Delete {selectedDocs.size} Selected
+            </button>
+          ) : (
+            <>
+              <input type="file" multiple onChange={handleUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" disabled={uploading} />
+              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50" disabled={uploading}>
+                {uploading ? "Uploading..." : "+ Upload File"}
+              </button>
+            </>
+          )}
         </div>
       </div>
       
@@ -323,14 +335,33 @@ function KnowledgeBase() {
         ) : (
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
-              <tr>
+                            <tr>
+                <th className="px-6 py-4 w-12 text-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 dark:border-gray-600"
+                    checked={docs.length > 0 && selectedDocs.size === docs.length}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedDocs(new Set(docs));
+                      else setSelectedDocs(new Set());
+                    }}
+                  />
+                </th>
                 <th className="px-6 py-4 font-medium text-gray-500">Document Name</th>
                 <th className="px-6 py-4 font-medium text-gray-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {docs.map((doc, i) => (
-                <tr key={i} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                                <tr key={i} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                  <td className="px-6 py-4 w-12 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 dark:border-gray-600"
+                      checked={selectedDocs.has(doc)}
+                      onChange={() => toggleSelect(doc)}
+                    />
+                  </td>
                   <td className="px-6 py-4 flex items-center gap-3">
                     <FileText className="w-4 h-4 text-gray-400" />
                     {doc}
