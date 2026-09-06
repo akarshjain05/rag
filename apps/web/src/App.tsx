@@ -234,9 +234,9 @@ function AppContent() {
                 <div className="relative w-8 h-8 shrink-0">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                     <circle cx="18" cy="18" r="16" fill="none" className="stroke-white/10" strokeWidth="3"></circle>
-                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-[#00F0FF] transition-all duration-300" strokeWidth="3" strokeDasharray="100" strokeDashoffset={100 - uploadProgress}></circle>
+                    <circle cx="18" cy="18" r="16" fill="none" className={uploadProgress > 100 ? "stroke-[#00F0FF] animate-spin origin-center" : "stroke-[#00F0FF] transition-all duration-300"} strokeWidth="3" strokeDasharray="100" strokeDashoffset={uploadProgress > 100 ? 25 : Math.max(0, 100 - uploadProgress)}></circle>
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-[#00F0FF]">{uploadProgress}%</div>
+                  <div className="absolute inset-0 flex items-center justify-center text-[8px] font-mono text-[#00F0FF]">{uploadProgress > 100 ? uploadProgress : `${uploadProgress}%`}</div>
                 </div>
                 <span className="text-[10px] font-mono text-[#00F0FF]/70 truncate max-w-[120px]">
                   {uploadMessage}
