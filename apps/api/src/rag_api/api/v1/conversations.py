@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class FeedbackRequest(BaseModel):
     turn_index: int
-    is_positive: bool
+    is_positive: bool | None = None
 
 from rag_api.api.deps import get_conversation_store
 

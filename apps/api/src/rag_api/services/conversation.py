@@ -45,7 +45,7 @@ class ConversationStore:
             result.append({"id": cid, "title": meta.get("title", "New Conversation"), "updated_at": meta.get("updated_at", 0)})
         return sorted(result, key=lambda x: x["updated_at"], reverse=True)
 
-    def update_turn_feedback(self, conversation_id: str, turn_index: int, is_positive: bool) -> None:
+    def update_turn_feedback(self, conversation_id: str, turn_index: int, is_positive: bool | None) -> None:
         if conversation_id in self._conversations:
             if 0 <= turn_index < len(self._conversations[conversation_id]):
                 self._conversations[conversation_id][turn_index].is_positive = is_positive
