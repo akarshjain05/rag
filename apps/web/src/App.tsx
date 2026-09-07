@@ -120,7 +120,7 @@ function AuthScreen({ onAuth }) {
  return (
  <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] text-[var(--color-ink)]">
  <div className="w-full max-w-md p-8 bg-[#141414] border border-white/10 rounded-sm ">
- <h1 className="text-2xl font-semibold mb-2">Sign in to Nexus</h1>
+ <h1 className="text-2xl font-semibold mb-2">Sign in to Vellumiq</h1>
  <p className="text-[var(--color-ink-muted)] text-sm mb-6">Enter your API key to continue.</p>
  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
  <input 
@@ -160,7 +160,7 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
       
       <aside className={`fixed md:relative z-50 w-64 h-full bg-[var(--color-surface-sunken)] border-r border-[var(--color-border-strong)] flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-6 pb-2 border-b border-[var(--color-border)] flex justify-between items-center">
-          <h1 className="font-serif italic font-semibold text-[17px] text-[var(--color-ink)] tracking-wide cursor-pointer" onClick={() => setCurrentView('chat')}>Stacks</h1>
+          <h1 className="font-serif italic font-semibold text-[17px] text-[var(--color-ink)] tracking-wide cursor-pointer" onClick={() => setCurrentView('chat')}>Vellumiq</h1>
           <button className="md:hidden text-[var(--color-ink-secondary)]" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
             <X className="w-5 h-5" />
           </button>
