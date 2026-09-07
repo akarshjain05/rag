@@ -3,7 +3,7 @@ from rag_api.main import limiter
 from rag_api.core.logging import log
 from fastapi import APIRouter, Depends, Request
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
-from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings, get_vector_store
+from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings, get_vector_store, get_normalizer_llm_client
 from rag_api.core.settings import Settings
 from rag_api.services.query_condensation import condense_query, expand_query, generate_hyde, normalize_query, should_expand_query, expand_query, generate_hyde
 from rag_api.services.conversation import Turn
@@ -20,6 +20,7 @@ async def ask(
     vector_store = Depends(get_vector_store),
     store = Depends(get_conversation_store),
     llm_client = Depends(get_llm_client),
+    normalizer_llm_client = Depends(get_normalizer_llm_client),
     settings: Settings = Depends(get_settings)
 ) -> QueryResponse:
     strategy_value = payload.chunking_strategy.value if payload.chunking_strategy else None
@@ -45,8 +46,8 @@ async def ask(
     # dense embeddings, BM25 tokens, and (most severely) the cross-encoder
     # reranker's token-level comparison identically.
     normalize_enabled = payload.query_normalization_enabled if payload.query_normalization_enabled is not None else settings.query_normalization_enabled
-    if llm_client and normalize_enabled:
-        search_query = run_or_502(normalize_query, search_query, llm_client)
+    if normalizer_llm_client and normalize_enabled:
+        search_query = run_or_502(normalize_query, search_query, normalizer_llm_client)
 
     condense_enabled = payload.query_condensation_enabled if payload.query_condensation_enabled is not None else settings.query_condensation_enabled
     if history and llm_client and condense_enabled:

@@ -169,6 +169,18 @@ def create_app(
     from rag_api.services.redis_conversation import RedisConversationStore
     app.state.conversation_store = RedisConversationStore(settings.redis_url) if settings.redis_url else ConversationStore()
     app.state.llm_client = llm_client
+    
+    normalizer_llm = llm_client
+    if settings.normalizer_model and settings.llm_provider != "none":
+        normalizer_llm = build_llm_client(
+            settings.llm_provider,
+            model=settings.normalizer_model,
+            api_key=settings.anthropic_api_key if settings.llm_provider == "anthropic" else settings.openai_api_key,
+            base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
+            timeout=settings.llm_request_timeout_seconds,
+        )
+    app.state.normalizer_llm_client = normalizer_llm
+    
     app.state.image_store = image_store_instance
 
     @app.get("/health", response_model=HealthResponse, tags=["health"])

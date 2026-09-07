@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     citation_verification_enabled: bool = True  # LLM-as-judge; no-ops automatically without an LLM client
     citation_verification_strictness: str = "lenient"  # "lenient" | "strict"
     citation_verifier_model: str | None = None
+    normalizer_model: str | None = None
     llm_request_timeout_seconds: float = 30.0
     low_confidence_threshold: float = 0.3  # retrieval confidence below this skips generation entirely
     image_indexing_enabled: bool = False

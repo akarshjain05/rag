@@ -32,6 +32,9 @@ def get_conversation_store(request: Request):
 def get_llm_client(request: Request):
     return request.app.state.llm_client
 
+def get_normalizer_llm_client(request: Request):
+    return request.app.state.normalizer_llm_client
+
 async def run_or_502_async(coro):
     from fastapi import HTTPException
     from openai import OpenAIError
