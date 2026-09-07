@@ -224,12 +224,7 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
           >
             Knowledge Base
           </button>
-          <button
-            onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
-            className={`text-left text-[13px] font-sans px-2 ${currentView === 'settings' ? 'text-ink' : 'text-ink-secondary hover:text-ink'}`}
-          >
-            Settings
-          </button>
+
         </div>
 
         <div className="p-6 pt-4 border-t border-border flex justify-between items-center text-ink-muted">
