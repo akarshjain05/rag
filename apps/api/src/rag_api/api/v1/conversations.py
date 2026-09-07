@@ -21,3 +21,8 @@ def get_conversation(conversation_id: str, store=Depends(get_conversation_store)
 def submit_feedback(conversation_id: str, payload: FeedbackRequest, store=Depends(get_conversation_store)):
     store.update_turn_feedback(conversation_id, payload.turn_index, payload.is_positive)
     return {"status": "ok"}
+
+@router.delete("/{conversation_id}", summary="Delete conversation")
+def delete_conversation(conversation_id: str, store=Depends(get_conversation_store)):
+    store.delete_conversation(conversation_id)
+    return {"status": "deleted"}

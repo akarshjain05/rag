@@ -4,31 +4,81 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-canvas: #F5F0E6;
-  --color-surface: #FBF8F1;
-  --color-surface-sunken: #EFE8D8;
-  --color-surface-card: #FDFBF6;
-
-  --color-ink: #2A2521;
-  --color-ink-secondary: #6B6255;
-  --color-ink-muted: #A69C8C;
-
-  --color-border: #DCD3C4;
-  --color-border-strong: #C7BBA8;
-
-  --color-accent: #A8462B;
-  --color-accent-tint: #F0DCD2;
-
-  --color-success: #3F6B4A;
-  --color-success-tint: #E3EDE1;
-  --color-warning: #A67C1F;
-  --color-warning-tint: #F5ECD3;
-  --color-danger: #8C2F1D;
-  --color-danger-tint: #F5E1DC;
-
   --font-serif: 'Lora', serif;
   --font-sans: -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
+
+  /* We must map these so tailwind uses them in utilities like bg-canvas */
+  --color-canvas: var(--theme-canvas);
+  --color-surface: var(--theme-surface);
+  --color-surface-sunken: var(--theme-surface-sunken);
+  --color-surface-card: var(--theme-surface-card);
+
+  --color-ink: var(--theme-ink);
+  --color-ink-secondary: var(--theme-ink-secondary);
+  --color-ink-muted: var(--theme-ink-muted);
+
+  --color-border: var(--theme-border);
+  --color-border-strong: var(--theme-border-strong);
+
+  --color-accent: var(--theme-accent);
+  --color-accent-tint: var(--theme-accent-tint);
+
+  --color-success: var(--theme-success);
+  --color-success-tint: var(--theme-success-tint);
+  --color-warning: var(--theme-warning);
+  --color-warning-tint: var(--theme-warning-tint);
+  --color-danger: var(--theme-danger);
+  --color-danger-tint: var(--theme-danger-tint);
+}
+
+@layer base {
+  :root {
+    --theme-canvas: #F5F0E6;
+    --theme-surface: #FBF8F1;
+    --theme-surface-sunken: #EFE8D8;
+    --theme-surface-card: #FDFBF6;
+
+    --theme-ink: #2A2521;
+    --theme-ink-secondary: #6B6255;
+    --theme-ink-muted: #A69C8C;
+
+    --theme-border: #DCD3C4;
+    --theme-border-strong: #C7BBA8;
+
+    --theme-accent: #A8462B;
+    --theme-accent-tint: #F0DCD2;
+
+    --theme-success: #3F6B4A;
+    --theme-success-tint: #E3EDE1;
+    --theme-warning: #A67C1F;
+    --theme-warning-tint: #F5ECD3;
+    --theme-danger: #8C2F1D;
+    --theme-danger-tint: #F5E1DC;
+  }
+
+  .dark {
+    --theme-canvas: #121212;
+    --theme-surface: #1E1E1E;
+    --theme-surface-sunken: #0A0A0A;
+    --theme-surface-card: #252525;
+
+    --theme-ink: #E0E0E0;
+    --theme-ink-secondary: #A0A0A0;
+    --theme-ink-muted: #808080; /* A bit dark, let's use a standard gray */
+    --theme-border: #333333;
+    --theme-border-strong: #444444;
+
+    --theme-accent: #D47B62; /* Lighter accent for contrast */
+    --theme-accent-tint: #3B2019; /* Darker tint */
+
+    --theme-success: #6CB281;
+    --theme-success-tint: #1E3324;
+    --theme-warning: #D1A33F;
+    --theme-warning-tint: #3D3013;
+    --theme-danger: #C2503A;
+    --theme-danger-tint: #3B1610;
+  }
 }
 
 html, body, #root {

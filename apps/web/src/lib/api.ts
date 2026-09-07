@@ -239,3 +239,10 @@ export function bulkDeleteDocuments(documentIds: string[]) {
     body: JSON.stringify({ document_ids: documentIds })
   });
 }
+
+export function deleteConversation(conversationId) {
+  return request(`/v1/conversations/${encodeURIComponent(conversationId)}`, {
+    method: 'DELETE',
+    headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : (localStorage.getItem("apiKey") ? { "X-API-Key": localStorage.getItem("apiKey") } : {})
+  });
+}

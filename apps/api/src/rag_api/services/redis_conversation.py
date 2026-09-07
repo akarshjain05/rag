@@ -43,6 +43,11 @@ class RedisConversationStore:
                 })
         return sorted(result, key=lambda x: x["updated_at"], reverse=True)
 
+    def delete_conversation(self, conversation_id: str) -> None:
+        self._client.delete(f"conv:{conversation_id}")
+        self._client.delete(f"conv_meta:{conversation_id}")
+        self._client.srem("conversations:all", conversation_id)
+
     def update_turn_feedback(self, conversation_id: str, turn_index: int, is_positive: bool | None) -> None:
         history = self.get_history(conversation_id)
         if 0 <= turn_index < len(history):
