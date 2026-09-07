@@ -93,12 +93,12 @@ async def ask(
     result = run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
     
     cid = payload.conversation_id or store.create_conversation()
-    sources_dicts = [s for s in result.sources]
+    sources_dicts = [SourceSchema(**s).model_dump(mode="json") for s in result.sources]
     confidence_info = {
-        "retrieval": result.retrieval_confidence,
-        "citation": result.citation_coverage,
-        "completeness": result.completeness,
-        "composite": result.composite_confidence
+        "retrieval": float(result.retrieval_confidence) if result.retrieval_confidence is not None else None,
+        "citation": float(result.citation_coverage) if result.citation_coverage is not None else None,
+        "completeness": float(result.completeness) if result.completeness is not None else None,
+        "composite": float(result.composite_confidence) if result.composite_confidence is not None else None
     }
     store.append_turn(cid, Turn(user=payload.question, assistant=result.answer, sources=sources_dicts, confidence_info=confidence_info))
     
