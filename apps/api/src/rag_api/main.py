@@ -8,7 +8,7 @@ from fastapi import FastAPI, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastAPIIntegration
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 sentry_dsn = os.getenv("SENTRY_DSN")
@@ -22,7 +22,7 @@ if sentry_dsn:
         profiles_sample_rate=1.0 if environment == "local" else 0.1,
         integrations=[
             StarletteIntegration(transaction_style="url"),
-            FastAPIIntegration(),
+            FastApiIntegration(),
         ],
     )
 from dotenv import load_dotenv

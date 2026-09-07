@@ -45,6 +45,7 @@ services:
       RERANKER_MODEL: ${RERANKER_MODEL:-BAAI/bge-reranker-v2-m3}
       CITATION_VERIFICATION_ENABLED: ${CITATION_VERIFICATION_ENABLED:-true}
       LOW_CONFIDENCE_THRESHOLD: ${LOW_CONFIDENCE_THRESHOLD:-0.3}
+      SENTRY_DSN: ${SENTRY_DSN}
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       OBJECT_STORE_ENDPOINT: http://minio:9000
@@ -134,6 +135,7 @@ services:
       RERANKER_MODEL: ${RERANKER_MODEL:-BAAI/bge-reranker-v2-m3}
       CITATION_VERIFICATION_ENABLED: ${CITATION_VERIFICATION_ENABLED:-true}
       LOW_CONFIDENCE_THRESHOLD: ${LOW_CONFIDENCE_THRESHOLD:-0.3}
+      SENTRY_DSN: ${SENTRY_DSN}
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       OBJECT_STORE_ENDPOINT: http://minio:9000
@@ -149,6 +151,8 @@ services:
       qdrant:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      disable: true
 volumes:
   qdrant_data: null
   hf_cache: null

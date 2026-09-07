@@ -20,9 +20,12 @@ def init_observability(app, settings):
         )
 
     # OpenTelemetry Tracing
+    import os
     provider = TracerProvider()
-    processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.otlp_endpoint))
-    provider.add_span_processor(processor)
+    # Only export OTLP traces if explicitly enabled, to prevent noisy Sentry errors
+    if os.getenv("OTLP_ENABLED") == "true":
+        processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=settings.otlp_endpoint))
+        provider.add_span_processor(processor)
     trace.set_tracer_provider(provider)
 
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
