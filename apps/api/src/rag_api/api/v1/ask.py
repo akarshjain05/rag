@@ -1,7 +1,7 @@
 from fastapi import Request
 from rag_api.main import limiter
 from rag_api.core.logging import log
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
 from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings
 from rag_api.core.settings import Settings
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/ask", tags=["query"])
 
 @router.post("", response_model=QueryResponse, summary="Ask a question over the indexed documents", description="Hybrid dense+sparse retrieval, fused (and optionally reranked), then a grounded, cited answer. Response includes retrieval/citation/completeness confidence sub-scores and a composite. Set `compare_dense_only` to also retrieve with dense search alone, for side-by-side comparison against the hybrid result actually used to generate the answer.")
 async def ask(
+    request: Request,
     payload: QueryRequest,
     retriever = Depends(get_retriever),
     generator = Depends(get_generator),
@@ -100,6 +101,10 @@ async def ask(
         "completeness": float(result.completeness) if result.completeness is not None else None,
         "composite": float(result.composite_confidence) if result.composite_confidence is not None else None
     }
+    
+    if await request.is_disconnected():
+        return QueryResponse(conversation_id=cid, answer="[Discarded]", mode="hybrid", sources=[], used_citation_markers=[], invalid_citation_markers=[], unsupported_citation_markers=[], retrieval_confidence=0, citation_coverage=0, completeness=0, composite_confidence=0, dense_only_sources=None)
+        
     store.append_turn(cid, Turn(user=payload.question, assistant=result.answer, sources=sources_dicts, confidence_info=confidence_info))
     
     dense_only_sources = None

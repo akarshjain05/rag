@@ -624,6 +624,13 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
   const [confidenceInfo, setConfidenceInfo] = React.useState<any>(null);
 
   const [compareDenseOnly, setCompareDenseOnly] = React.useState(false);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+  
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
   const isInitialMount = React.useRef(true);
   const skipFetch = React.useRef(false);
 
@@ -784,11 +791,20 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
       <div className="flex-1 px-6 md:px-12 pt-0 pb-20 max-w-4xl w-full mx-auto flex flex-col gap-10">
         
         {loading && (
-           <div className="mt-4 flex flex-col gap-1 w-32">
-              <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-ink-muted">Analyzing...</span>
-              <div className="h-[1px] bg-border w-full overflow-hidden">
-                <div className="h-full bg-accent animate-[loading-rule_1.5s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
-              </div>
+           <div className="mt-4 flex items-center gap-4">
+             <div className="flex flex-col gap-1 w-32">
+                <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-ink-muted">Analyzing...</span>
+                <div className="h-[1px] bg-border w-full overflow-hidden">
+                  <div className="h-full bg-accent animate-[loading-rule_1.5s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
+                </div>
+             </div>
+             <button 
+               onClick={handleStop} 
+               className="text-[10px] uppercase font-mono tracking-widest text-ink-muted hover:text-danger flex items-center gap-1 px-2 py-1 transition-colors"
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+               Stop
+             </button>
            </div>
         )}
 
