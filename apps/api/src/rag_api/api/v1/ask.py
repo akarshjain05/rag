@@ -9,8 +9,9 @@ from rag_api.core.settings import Settings
 from rag_api.services.query_condensation import condense_query, expand_query, generate_hyde, normalize_query, should_expand_query, expand_query, generate_hyde
 from rag_api.services.conversation import Turn
 from rag_api.domain.generation.generation import build_sources
+from rag_api.api.auth import verify_api_key
 
-router = APIRouter(prefix="/ask", tags=["query"])
+router = APIRouter(prefix="/ask", tags=["query"], dependencies=[Depends(verify_api_key)])
 
 @router.post("", response_model=QueryResponse, summary="Ask a question over the indexed documents", description="Hybrid dense+sparse retrieval, fused (and optionally reranked), then a grounded, cited answer. Response includes retrieval/citation/completeness confidence sub-scores and a composite. Set `compare_dense_only` to also retrieve with dense search alone, for side-by-side comparison against the hybrid result actually used to generate the answer.")
 async def ask(

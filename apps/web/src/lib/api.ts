@@ -7,7 +7,7 @@
 async function request(path, options = {}, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey");
+      const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey") || "sk-default-test-key";
       const headers = { 
         "Content-Type": "application/json",
         ...(apiKey ? { "X-API-Key": apiKey } : {}),
@@ -81,7 +81,7 @@ export async function ingest(files, onProgress, signal) {
       const formData = new FormData();
       formData.append("file", file);
       
-      const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey");
+      const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey") || "sk-default-test-key";
       const res = await fetch("/v1/ingest/large", {
         headers: apiKey ? { "X-API-Key": apiKey } : {},
         method: "POST",
@@ -126,7 +126,7 @@ export async function ingest(files, onProgress, signal) {
   
   if (onProgress) onProgress('0%', "Uploading to server...");
   
-  const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey");
+  const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey") || "sk-default-test-key";
   const res = await fetch("/v1/ingest", {
     headers: apiKey ? { "X-API-Key": apiKey } : {},
     method: "POST",

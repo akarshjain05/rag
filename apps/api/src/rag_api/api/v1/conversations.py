@@ -6,8 +6,9 @@ class FeedbackRequest(BaseModel):
     is_positive: bool | None = None
 
 from rag_api.api.deps import get_conversation_store
+from rag_api.api.auth import verify_api_key
 
-router = APIRouter(prefix="/conversations", tags=["conversations"])
+router = APIRouter(prefix="/conversations", tags=["conversations"], dependencies=[Depends(verify_api_key)])
 
 @router.get("", summary="List conversations")
 def list_conversations(store=Depends(get_conversation_store)):

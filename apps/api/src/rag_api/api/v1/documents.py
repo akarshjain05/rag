@@ -10,8 +10,9 @@ from fastapi.responses import StreamingResponse
 from rag_api.schemas.schemas import IngestResponse, IngestReportSchema, DocumentsResponse, DeleteResponse
 from rag_api.domain.models import ChunkingStrategy
 from rag_api.api.deps import get_pipeline, get_vector_store, run_or_502, get_object_store
+from rag_api.api.auth import verify_api_key
 
-router = APIRouter(prefix="", tags=["documents"])
+router = APIRouter(prefix="", tags=["documents"], dependencies=[Depends(verify_api_key)])
 
 @router.post(
     "/ingest",
