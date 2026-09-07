@@ -147,8 +147,24 @@ function AuthScreen({ onAuth }) {
  );
 }
 
-function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobileMenuOpen, setMobileMenuOpen, activeConversationId, setActiveConversationId, refreshTrigger }) {
+function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobileMenuOpen, setMobileMenuOpen, activeConversationId, setActiveConversationId, refreshTrigger, onRefreshTrigger }) {
   const [conversations, setConversations] = React.useState([]);
+  const [dropdownId, setDropdownId] = React.useState(null);
+
+  const handleDelete = async (id) => {
+    try {
+      const { deleteConversation } = await import('./lib/api');
+      await deleteConversation(id);
+      if (activeConversationId === id) {
+        setActiveConversationId(null);
+        setCurrentView('chat');
+      }
+      setDropdownId(null);
+      if (onRefreshTrigger) onRefreshTrigger();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   React.useEffect(() => {
     import('./lib/api').then(({ fetchConversations }) => {
