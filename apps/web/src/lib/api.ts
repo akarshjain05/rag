@@ -191,12 +191,6 @@ export function deleteDocument(sourceDocument) {
   });
 }
 
-export function verifyAuth() {
-  return request("/v1/auth", {
-    method: "POST",
-    headers: import.meta.env.VITE_API_KEY ? { "X-API-Key": import.meta.env.VITE_API_KEY } : (localStorage.getItem("apiKey") ? { "X-API-Key": localStorage.getItem("apiKey") } : {})
-  });
-}
 
 export function fetchConversations() {
   return request("/v1/conversations", {

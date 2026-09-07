@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { verifyAuth, fetchConversations, fetchDocuments, deleteDocument, ingest, ask } from './lib/api';
+import { fetchConversations, fetchDocuments, deleteDocument, ingest, ask } from './lib/api';
 import { MessageCircle, Folder, Clock, BarChart, Settings, FileText, ArrowRight, X, Trash2, Check, ThumbsUp, ThumbsDown, LogOut, Moon, Sun, Menu, MoreHorizontal } from 'lucide-react';
 
 
@@ -85,7 +85,7 @@ function AppContent() {
           setActiveConversationId={setActiveConversationId}
           refreshTrigger={refreshTrigger}
           onRefreshTrigger={() => setRefreshTrigger(prev => prev + 1)}
-          onLogout={() => { localStorage.removeItem('apiKey'); setApiKey(null); }} 
+           
         />
  
  <div className="flex-1 flex overflow-hidden">
@@ -99,55 +99,9 @@ function AppContent() {
  );
 }
 
-function AuthScreen({ onAuth }) {
- const [key, setKey] = useState("");
- const [error, setError] = useState("");
- const [loading, setLoading] = useState(false);
 
- const handleSubmit = async (e) => {
- e.preventDefault();
- setLoading(true);
- setError("");
- try {
- localStorage.setItem('apiKey', key);
- await verifyAuth();
- onAuth(key);
- } catch (err) {
- setError("Invalid API Key");
- localStorage.removeItem('apiKey');
- } finally {
- setLoading(false);
- }
- };
 
- return (
- <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] text-ink">
- <div className="w-full max-w-md p-8 bg-[#141414] border border-white/10 rounded-sm ">
- <h1 className="text-2xl font-semibold mb-2">Sign in to Vellumiq</h1>
- <p className="text-ink-muted text-sm mb-6">Enter your API key to continue.</p>
- <form onSubmit={handleSubmit} className="flex flex-col gap-4">
- <input 
- type="password" 
- value={key} 
- onChange={e => setKey(e.target.value)}
- placeholder="sk-..." 
- className="p-3 rounded-sm bg-black/50 border border-white/10 focus:border-blue-500 focus:outline-none transition-colors"
- />
- {error && <div className="text-red-400 text-sm">{error}</div>}
- <button 
- type="submit" 
- disabled={loading || !key}
- className="p-3 bg-white text-black font-medium rounded-sm hover:border-l-2 border-accent transition-colors disabled:opacity-50"
- >
- {loading ? "Verifying..." : "Sign in"}
- </button>
- </form>
- </div>
- </div>
- );
-}
-
-function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobileMenuOpen, setMobileMenuOpen, activeConversationId, setActiveConversationId, refreshTrigger, onRefreshTrigger }) {
+function Sidebar({ currentView, setCurrentView, theme, setTheme, mobileMenuOpen, setMobileMenuOpen, activeConversationId, setActiveConversationId, refreshTrigger, onRefreshTrigger }) {
   const [conversations, setConversations] = React.useState([]);
   const [dropdownId, setDropdownId] = React.useState(null);
 

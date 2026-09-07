@@ -26,7 +26,6 @@ if sentry_dsn:
         ],
     )
 from dotenv import load_dotenv
-from rag_api.api.auth import verify_api_key
 
 from rag_api.core.settings import Settings, get_settings
 from rag_api.core.observability import init_observability
@@ -227,11 +226,10 @@ def create_app(
         )
 
     v1 = APIRouter(prefix="/v1")
-    v1.include_router(auth.router, dependencies=[Depends(verify_api_key)])
-    v1.include_router(conversations.router, dependencies=[Depends(verify_api_key)])
-    v1.include_router(documents.router, dependencies=[Depends(verify_api_key)])
-    v1.include_router(ask.router, dependencies=[Depends(verify_api_key)])
-    v1.include_router(insights.router, dependencies=[Depends(verify_api_key)])
+    v1.include_router(conversations.router)
+    v1.include_router(documents.router)
+    v1.include_router(ask.router)
+    v1.include_router(insights.router)
 
     @v1.get("/sentry-debug")
     async def trigger_error():
