@@ -35,10 +35,10 @@ async def ask(
     import asyncio
     query_embedding = await asyncio.to_thread(retriever.embedding_client.embed, [search_query])
     query_vector = query_embedding[0]
-    cached_payload = await asyncio.to_thread(vector_store.semantic_cache_get, query_vector, 0.92)
+    cached_payload = await asyncio.to_thread(vector_store.semantic_cache_get, query_vector, 0.95)
     if cached_payload:
         print("Semantic Cache Hit! Bypassing pipeline.")
-        return QueryResponse(**cached_payload["response"])
+        return QueryResponse(**cached_payload)
 
     # Step 1 (proactive): fix spelling/typos and expand obvious acronyms
     # before anything else touches the query. Retrieval, condensation, and

@@ -256,19 +256,27 @@ class VectorStore:
             })
         return out
 
-    def semantic_cache_get(self, query_vector: list[float], threshold: float = 0.92) -> dict | None:
+    def semantic_cache_get(self, query_vector: list[float], threshold: float = 0.95, ttl_seconds: int = 604800) -> dict | None:
+        import time
         res = self._client.query_points(
             collection_name=self.cache_collection,
             query=query_vector,
             limit=1,
             score_threshold=threshold,
         )
-        if res.points:
-            return res.points[0].payload
-        return None
+        if not res.points:
+            return None
+            
+        point = res.points[0]
+        # Time-To-Live (TTL) Validation
+        if time.time() - point.payload.get("timestamp", 0) > ttl_seconds:
+            return None # Cache expired
+            
+        return point.payload["response"]
 
     def semantic_cache_set(self, query_text: str, query_vector: list[float], response: dict) -> None:
         import uuid
+        import time
         self._client.upsert(
             collection_name=self.cache_collection,
             points=[
@@ -277,7 +285,8 @@ class VectorStore:
                     vector=query_vector,
                     payload={
                         "original_query": query_text,
-                        "response": response
+                        "response": response,
+                        "timestamp": time.time()
                     }
                 )
             ]
