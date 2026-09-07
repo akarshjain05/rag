@@ -149,8 +149,27 @@ class VectorStore:
             })
         return out
         
-    def hybrid_search(self, query_text: str, dense_vector: list[float], top_k: int = 25, where: dict | None = None, prefetch_limit: int = 60) -> list[dict]:
-        conditions = [models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))]
+    def hybrid_search(self, query_text: str, dense_vector: list[float], top_k: int = 25, where: dict | None = None, prefetch_limit: int = 60, temporal_filter: dict | None = None) -> list[dict]:
+        conditions = []
+        if temporal_filter:
+            # E.g. temporal_filter = {"start": 1704067200, "end": 1735689600}
+            range_kwargs = {}
+            if "start" in temporal_filter and temporal_filter["start"]:
+                range_kwargs["gte"] = temporal_filter["start"]
+            if "end" in temporal_filter and temporal_filter["end"]:
+                range_kwargs["lte"] = temporal_filter["end"]
+            
+            if range_kwargs:
+                conditions.append(
+                    models.FieldCondition(
+                        key="valid_from", 
+                        range=models.Range(**range_kwargs)
+                    )
+                )
+            # We don't restrict to IsNull if asking for history, or maybe we still need to make sure they overlap.
+            # But the user said: "drops the default IsNullCondition (which restricts the search to active documents), and injects a specific Qdrant Range filter"
+        else:
+            conditions = [models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))]
         if where:
             for k, v in where.items():
                 if isinstance(v, list):
@@ -226,8 +245,18 @@ class VectorStore:
             
         return count
 
-    def sparse_query(self, query_text: str, top_k: int = 10, where: dict | None = None) -> list[dict]:
-        conditions = [models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))]
+    def sparse_query(self, query_text: str, top_k: int = 10, where: dict | None = None, temporal_filter: dict | None = None) -> list[dict]:
+        conditions = []
+        if temporal_filter:
+            range_kwargs = {}
+            if "start" in temporal_filter and temporal_filter["start"]:
+                range_kwargs["gte"] = temporal_filter["start"]
+            if "end" in temporal_filter and temporal_filter["end"]:
+                range_kwargs["lte"] = temporal_filter["end"]
+            if range_kwargs:
+                conditions.append(models.FieldCondition(key="valid_from", range=models.Range(**range_kwargs)))
+        else:
+            conditions = [models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))]
         if where:
             for k, v in where.items():
                 if isinstance(v, list):

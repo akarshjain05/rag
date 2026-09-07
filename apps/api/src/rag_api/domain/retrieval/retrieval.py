@@ -42,6 +42,7 @@ class HybridRetriever:
         dense_only: bool = False,
         original_query: str | None = None,
         document_filter: list[str] | None = None,
+        temporal_filter: dict | None = None,
     ) -> list[RetrievedChunk]:
         import logging; logging.warning('EMBEDDING...'); query_embedding = await asyncio.to_thread(self.embedding_client.embed, [query]); import logging; logging.warning('EMBEDDING DONE')
         query_embedding = query_embedding[0]
@@ -49,7 +50,7 @@ class HybridRetriever:
         where = {"chunking_strategy": chunking_strategy} if chunking_strategy else None
 
         if dense_only:
-            dense = await asyncio.to_thread(self.vector_store.query, query_embedding, top_k=self.dense_top_k, where=where)
+            dense = await asyncio.to_thread(self.vector_store.query, query_embedding, top_k=self.dense_top_k, where=where, temporal_filter=temporal_filter)
             return [
                 RetrievedChunk(
                     chunk_id=r["chunk_id"],

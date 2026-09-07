@@ -46,9 +46,15 @@ async def ask(
     # HyDE all then operate on clean text -- a typo would otherwise corrupt
     # dense embeddings, BM25 tokens, and (most severely) the cross-encoder
     # reranker's token-level comparison identically.
+    temporal_filter = None
     normalize_enabled = payload.query_normalization_enabled if payload.query_normalization_enabled is not None else settings.query_normalization_enabled
     if normalizer_llm_client and normalize_enabled:
-        search_query = run_or_502(normalize_query, search_query, normalizer_llm_client)
+        norm_result = run_or_502(normalize_query, search_query, normalizer_llm_client)
+        if isinstance(norm_result, dict):
+            search_query = norm_result.get("clean_query", search_query)
+            temporal_filter = norm_result.get("temporal_filter")
+        else:
+            search_query = norm_result
 
     condense_enabled = payload.query_condensation_enabled if payload.query_condensation_enabled is not None else settings.query_condensation_enabled
     if history and llm_client and condense_enabled:
@@ -100,7 +106,8 @@ async def ask(
                         top_k=payload.top_k, 
                         chunking_strategy=strategy_value,
                         original_query=search_query,
-                        document_filter=payload.document_filter
+                        document_filter=payload.document_filter,
+                        temporal_filter=temporal_filter
                     )
                 )
                 new_max_score = max([c.rerank_score or 0.0 for c in crag_chunks]) if crag_chunks else 0.0
@@ -136,7 +143,7 @@ async def ask(
     dense_only_sources = None
     if payload.compare_dense_only:
         dense_chunks = await run_or_502_async(
-            retriever.retrieve_async(search_query, top_k=payload.top_k, chunking_strategy=strategy_value, dense_only=True, document_filter=payload.document_filter)
+            retriever.retrieve_async(search_query, top_k=payload.top_k, chunking_strategy=strategy_value, dense_only=True, document_filter=payload.document_filter, temporal_filter=temporal_filter)
         )
         dense_only_sources = [SourceSchema(**s) for s in build_sources(dense_chunks)]
 

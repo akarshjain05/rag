@@ -5,36 +5,44 @@ from rag_api.adapters.llm.llm_client import LLMClient
 from rag_api.services.conversation import Turn
 
 
-def normalize_query(query: str, llm_client: LLMClient) -> str:
-    """Step 1, proactive: fix spelling/typing errors and expand obvious
-    acronyms/shorthand -- nothing else. Runs unconditionally, before
-    condensation, HyDE, and retrieval -- a typo corrupts dense embeddings,
-    BM25 tokens, and (most severely) a cross-encoder reranker's token-level
-    comparison identically, so cleaning it up once, up front, fixes all
-    three rather than papering over the symptom downstream of each.
-
-    Deliberately narrow in scope: no synonym expansion, no broadening the
-    topic, no adding technical terms not implied by the original query --
-    that's `expand_query`'s job, reserved for a clean query that still comes
-    back low-confidence (a genuine knowledge/vocabulary gap, not a garbled
-    one)."""
+def normalize_query(query: str, llm_client: LLMClient) -> dict:
+    """Step 1, proactive: fix spelling/typing errors and expand obvious acronyms.
+    Also detects temporal/historical intent for Self-Querying Retrieval.
+    """
     system = (
         "You clean up a user's search query before it is used to search a "
         "document index. Fix any spelling or typing errors, and expand "
         "obvious acronyms or shorthand into their full form. Do not add "
         "synonyms, do not broaden the topic, and do not add words that "
-        "aren't implied by the original query -- only correct it. If the "
-        "query is already clean, return it exactly as-is, unchanged. "
-        "Return ONLY the corrected query string, nothing else."
+        "aren't implied by the original query -- only correct it. "
+        "Also, if the user mentions a specific year or time period, extract the "
+        "epoch timestamp boundaries for that period. "
+        "Return ONLY a JSON object exactly matching this schema: "
+        "{\"clean_query\": \"the corrected string\", \"temporal_filter\": {\"start\": epoch_int_or_null, \"end\": epoch_int_or_null}}"
     )
     start = time.perf_counter()
     with tracer.start_as_current_span("normalization.llm_call"):
-        corrected_query = llm_client.generate(system, query)
+        result_json_str = llm_client.generate(system, query)
+        
+    # Strip markdown block if model included it
+    import json
+    result_json_str = result_json_str.strip()
+    if result_json_str.startswith("```json"):
+        result_json_str = result_json_str[7:]
+    if result_json_str.endswith("```"):
+        result_json_str = result_json_str[:-3]
+        
+    try:
+        parsed = json.loads(result_json_str.strip())
+    except json.JSONDecodeError:
+        # Fallback if the LLM didn't return JSON
+        parsed = {"clean_query": result_json_str.strip(), "temporal_filter": None}
+        
     llm_calls_total.labels(stage="normalize", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="normalize").observe(time.perf_counter() - start)
-    print(f"\n=== NORMALIZED QUERY ===\nOriginal: {query}\nNormalized: {corrected_query}\n")
+    print(f"\n=== NORMALIZED QUERY ===\nOriginal: {query}\nNormalized: {parsed}\n")
 
-    return corrected_query.strip()
+    return parsed
 
 
 def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> str:

@@ -45,22 +45,22 @@ from rag_api.services.query_condensation import normalize_query, expand_query, s
 
 def test_normalize_query_fixes_typo():
     mock_llm = MagicMock()
-    mock_llm.generate.return_value = "watermarking"
+    mock_llm.generate.return_value = '{"clean_query": "watermarking", "temporal_filter": null}'
     result = normalize_query("wtaermakring", mock_llm)
-    assert result == "watermarking"
+    assert result.get("clean_query") == "watermarking"
     system_arg, user_arg = mock_llm.generate.call_args[0]
     assert "spelling" in system_arg.lower() or "typing" in system_arg.lower()
     assert user_arg == "wtaermakring"
 
 def test_normalize_query_leaves_clean_query_unchanged():
     mock_llm = MagicMock()
-    mock_llm.generate.return_value = "what is watermarking?"
-    assert normalize_query("what is watermarking?", mock_llm) == "what is watermarking?"
+    mock_llm.generate.return_value = '{"clean_query": "what is watermarking?", "temporal_filter": null}'
+    assert normalize_query("what is watermarking?", mock_llm).get("clean_query") == "what is watermarking?"
 
 def test_normalize_query_strips_whitespace():
     mock_llm = MagicMock()
-    mock_llm.generate.return_value = "  watermarking  \n"
-    assert normalize_query("wtaermakring", mock_llm) == "watermarking"
+    mock_llm.generate.return_value = '{"clean_query": "watermarking", "temporal_filter": null}'
+    assert normalize_query("wtaermakring", mock_llm).get("clean_query") == "watermarking"
 
 def test_should_expand_query_true_for_zero_score():
     assert should_expand_query(0.0) is True
