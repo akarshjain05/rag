@@ -173,7 +173,7 @@ async def ask(
     
     # Save to Semantic Cache asynchronously using BackgroundTasks
     # so the user doesn't wait for the database write
-    if result.mode != "low_confidence":
+    if result.mode in ("llm", "extractive"):
         def save_to_cache():
             vector_store.semantic_cache_set(payload.question, query_vector, response_obj.model_dump(mode="json"))
         background_tasks.add_task(save_to_cache)
