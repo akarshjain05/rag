@@ -642,6 +642,22 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
               mapped.push({ role: 'assistant', content: t.assistant });
             });
             setMessages(mapped);
+            
+            // Restore sources and confidence from the very last turn
+            if (res.history.length > 0) {
+              const lastTurn = res.history[res.history.length - 1];
+              if (lastTurn.sources) {
+                setSources(lastTurn.sources);
+              }
+              if (lastTurn.confidence_info) {
+                setConfidenceInfo({
+                  retrieval_confidence: lastTurn.confidence_info.retrieval,
+                  citation_coverage: lastTurn.confidence_info.citation,
+                  completeness: lastTurn.confidence_info.completeness,
+                  composite_confidence: lastTurn.confidence_info.composite
+                });
+              }
+            }
           }
         }).catch(console.error);
       });

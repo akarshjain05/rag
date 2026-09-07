@@ -93,7 +93,14 @@ async def ask(
     result = run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
     
     cid = payload.conversation_id or store.create_conversation()
-    store.append_turn(cid, Turn(user=payload.question, assistant=result.answer))
+    sources_dicts = [s for s in result.sources]
+    confidence_info = {
+        "retrieval": result.retrieval_confidence,
+        "citation": result.citation_coverage,
+        "completeness": result.completeness,
+        "composite": result.composite_confidence
+    }
+    store.append_turn(cid, Turn(user=payload.question, assistant=result.answer, sources=sources_dicts, confidence_info=confidence_info))
     
     dense_only_sources = None
     if payload.compare_dense_only:

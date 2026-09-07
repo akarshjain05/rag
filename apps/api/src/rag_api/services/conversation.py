@@ -8,6 +8,8 @@ class Turn:
     user: str
     assistant: str
     is_positive: bool | None = None
+    sources: List[dict] | None = None
+    confidence_info: dict | None = None
 
 class ConversationStore:
     def __init__(self):
