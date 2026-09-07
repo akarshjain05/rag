@@ -1,5 +1,4 @@
-from fastapi import Header, HTTPException, Depends, Request
-from rag_api.core.settings import Settings
+from fastapi import Header, HTTPException, Request
 
 async def verify_api_key(
     request: Request,
@@ -14,11 +13,5 @@ async def verify_api_key(
     
     if x_api_key in settings.api_keys:
         return
-
-    store = request.app.state.conversation_store
-    if hasattr(store, "_client"):
-        is_member = store._client.sismember("api_keys:active", x_api_key)
-        if is_member:
-            return
 
     raise HTTPException(status_code=401, detail="Invalid or missing API key")
