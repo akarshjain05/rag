@@ -66,12 +66,14 @@ class HybridRetriever:
         fusion_pool_size = max(self.rerank_candidate_pool, top_k) if self.reranker else top_k
         
         # Native Qdrant Hybrid Search!
-        import logging; logging.warning('HYBRID SEARCH...'); fused_dicts = self.vector_store.hybrid_search(
-            query, 
-            query_embedding, 
+        fused_dicts = await asyncio.to_thread(
+            self.vector_store.hybrid_search,
+            query_text=query, 
+            dense_vector=query_embedding, 
             top_k=fusion_pool_size, 
-            where=where
-        ); import logging; logging.warning('HYBRID SEARCH DONE')
+            where=where,
+            temporal_filter=temporal_filter
+        )
         
         fused = [
             RetrievedChunk(
