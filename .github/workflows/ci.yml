@@ -31,3 +31,12 @@ jobs:
     - name: Run unit tests
       run: |
         PYTHONPATH=apps/api/src pytest apps/api/tests/unit -v --cov=rag_api
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: cd apps/web && npm install && npm run build
