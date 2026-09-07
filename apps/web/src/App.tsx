@@ -72,8 +72,8 @@ function AppContent() {
  }
 
  return (
- <div className="min-h-screen bg-[var(--color-surface-card)] text-[var(--color-ink)] font-sans flex items-center justify-center p-8">
- <div className="w-full max-w-7xl h-[85vh] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-sm flex overflow-hidden ">
+ <div className="min-h-screen bg-surface-card text-ink font-sans flex items-center justify-center p-8">
+ <div className="w-full max-w-7xl h-[85vh] bg-surface border border-border rounded-sm flex overflow-hidden ">
  <Sidebar 
  currentView={currentView} 
  setCurrentView={setCurrentView} 
@@ -118,10 +118,10 @@ function AuthScreen({ onAuth }) {
  };
 
  return (
- <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] text-[var(--color-ink)]">
+ <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] text-ink">
  <div className="w-full max-w-md p-8 bg-[#141414] border border-white/10 rounded-sm ">
  <h1 className="text-2xl font-semibold mb-2">Sign in to Vellumiq</h1>
- <p className="text-[var(--color-ink-muted)] text-sm mb-6">Enter your API key to continue.</p>
+ <p className="text-ink-muted text-sm mb-6">Enter your API key to continue.</p>
  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
  <input 
  type="password" 
@@ -134,7 +134,7 @@ function AuthScreen({ onAuth }) {
  <button 
  type="submit" 
  disabled={loading || !key}
- className="p-3 bg-white text-black font-medium rounded-sm hover:border-l-2 border-[var(--color-accent)] transition-colors disabled:opacity-50"
+ className="p-3 bg-white text-black font-medium rounded-sm hover:border-l-2 border-accent transition-colors disabled:opacity-50"
  >
  {loading ? "Verifying..." : "Sign in"}
  </button>
@@ -158,10 +158,10 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
         <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
       )}
       
-      <aside className={`fixed md:relative z-50 w-64 h-full bg-[var(--color-surface-sunken)] border-r border-[var(--color-border-strong)] flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="p-6 pb-2 border-b border-[var(--color-border)] flex justify-between items-center">
-          <h1 className="font-serif italic font-semibold text-[17px] text-[var(--color-ink)] tracking-wide cursor-pointer" onClick={() => setCurrentView('chat')}>Vellumiq</h1>
-          <button className="md:hidden text-[var(--color-ink-secondary)]" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+      <aside className={`fixed md:relative z-50 w-64 h-full bg-surface-sunken border-r border-border-strong flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-6 pb-2 border-b border-border flex justify-between items-center">
+          <h1 className="font-serif italic font-semibold text-[17px] text-ink tracking-wide cursor-pointer" onClick={() => setCurrentView('chat')}>Vellumiq</h1>
+          <button className="md:hidden text-ink-secondary" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -171,21 +171,21 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
             <button
               key={item.id}
               onClick={() => { setCurrentView(item.id as any); setMobileMenuOpen(false); }}
-              className={`text-left font-sans ${currentView === item.id ? 'text-[var(--color-ink)] border-l-2 border-[var(--color-accent)] pl-3 -ml-[2px]' : 'text-[var(--color-ink-secondary)] pl-3 hover:text-[var(--color-ink)]'}`}
+              className={`text-left font-sans ${currentView === item.id ? 'text-ink border-l-2 border-accent pl-3 -ml-[2px]' : 'text-ink-secondary pl-3 hover:text-ink'}`}
             >
               {item.label}
             </button>
           ))}
           <button
             onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
-            className={`text-left font-sans mt-auto ${currentView === 'settings' ? 'text-[var(--color-ink)] border-l-2 border-[var(--color-accent)] pl-3 -ml-[2px]' : 'text-[var(--color-ink-secondary)] pl-3 hover:text-[var(--color-ink)]'}`}
+            className={`text-left font-sans mt-auto ${currentView === 'settings' ? 'text-ink border-l-2 border-accent pl-3 -ml-[2px]' : 'text-ink-secondary pl-3 hover:text-ink'}`}
           >
             Settings
           </button>
         </nav>
         
-        <div className="p-6 pt-4 border-t border-[var(--color-border)]">
-          <button onClick={onLogout} className="text-[13px] text-[var(--color-accent)] font-sans hover:underline">
+        <div className="p-6 pt-4 border-t border-border">
+          <button onClick={onLogout} className="text-[13px] text-accent font-sans hover:underline">
             Log out
           </button>
         </div>
@@ -199,21 +199,21 @@ function Modal({ isOpen, onClose, title, message, onConfirm, confirmText, isAler
  if (!isOpen) return null;
  return (
  <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
- <div className="bg-[var(--color-surface-sunken)] border border-[var(--color-border)] rounded-sm max-w-md w-full p-6 ">
- <h3 className="text-lg font-medium text-[var(--color-ink)] mb-2">{title}</h3>
- <p className="text-[var(--color-ink-secondary)] mb-6">{message}</p>
+ <div className="bg-surface-sunken border border-border rounded-sm max-w-md w-full p-6 ">
+ <h3 className="text-lg font-medium text-ink mb-2">{title}</h3>
+ <p className="text-ink-secondary mb-6">{message}</p>
  <div className="flex justify-end gap-3">
  {!isAlert && (
  <button
  onClick={onClose}
- className="px-4 py-2 rounded-sm text-sm font-medium text-[var(--color-ink)] hover:bg-gray-100 transition-colors"
+ className="px-4 py-2 rounded-sm text-sm font-medium text-ink hover:bg-gray-100 transition-colors"
  >
  Cancel
  </button>
  )}
  <button
  onClick={() => { if (onConfirm) onConfirm(); onClose(); }}
- className={`px-4 py-2 rounded-sm text-sm font-medium text-[var(--color-ink)] transition-colors ${isAlert ? 'bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)]' : 'bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)]'}`}
+ className={`px-4 py-2 rounded-sm text-sm font-medium text-ink transition-colors ${isAlert ? 'bg-transparent border border-accent text-accent hover:bg-accent-tint' : 'bg-transparent border border-accent text-accent hover:bg-accent-tint'}`}
  >
  {confirmText || 'Confirm'}
  </button>
@@ -311,13 +311,13 @@ function KnowledgeBase() {
  <h2 className="text-xl font-semibold">Knowledge Base</h2>
  <div className="relative">
  {selectedDocs.size > 0 ? (
- <button onClick={handleBulkDelete} className="px-4 py-2 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)] rounded-sm text-sm font-medium transition-colors flex items-center gap-2 ">
+ <button onClick={handleBulkDelete} className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint rounded-sm text-sm font-medium transition-colors flex items-center gap-2 ">
  <Trash2 className="w-4 h-4" /> Delete {selectedDocs.size} Selected
  </button>
  ) : (
  <>
  <input type="file" multiple onChange={handleUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" disabled={uploading} />
- <button className="px-4 py-2 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)] rounded-sm text-sm font-medium transition-colors disabled:opacity-50" disabled={uploading}>
+ <button className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint rounded-sm text-sm font-medium transition-colors disabled:opacity-50" disabled={uploading}>
  {uploading ? "Uploading..." : "+ Upload File"}
  </button>
  </>
@@ -332,23 +332,23 @@ function KnowledgeBase() {
  </div>
  )}
 
- <div className="flex-1 overflow-auto bg-[var(--color-surface-card)] rounded-sm border border-[var(--color-border)]">
+ <div className="flex-1 overflow-auto bg-surface-card rounded-sm border border-border">
  {loading ? (
- <div className="p-8 text-center text-[var(--color-ink-secondary)]">Loading documents...</div>
+ <div className="p-8 text-center text-ink-secondary">Loading documents...</div>
  ) : docs.length === 0 ? (
- <div className="p-12 text-center text-[var(--color-ink-secondary)] flex flex-col items-center">
+ <div className="p-12 text-center text-ink-secondary flex flex-col items-center">
  <Folder className="w-12 h-12 mb-4 opacity-20" />
  <p>Your knowledge base is empty.</p>
  <p className="text-sm mt-2 opacity-60">Upload PDFs, Markdown, or text files to begin.</p>
  </div>
  ) : (
  <table className="w-full text-sm text-left">
- <thead className="text-xs uppercase bg-[var(--color-surface-card)] border-b border-[var(--color-border)]">
+ <thead className="text-xs uppercase bg-surface-card border-b border-border">
  <tr>
  <th className="px-6 py-4 w-12 text-center">
  <input 
  type="checkbox" 
- className="rounded border-[var(--color-border)]"
+ className="rounded border-border"
  checked={docs.length > 0 && selectedDocs.size === docs.length}
  onChange={(e) => {
  if (e.target.checked) setSelectedDocs(new Set(docs));
@@ -356,8 +356,8 @@ function KnowledgeBase() {
  }}
  />
  </th>
- <th className="px-6 py-4 font-medium text-[var(--color-ink-secondary)]">Document Name</th>
- <th className="px-6 py-4 font-medium text-[var(--color-ink-secondary)] text-right">Actions</th>
+ <th className="px-6 py-4 font-medium text-ink-secondary">Document Name</th>
+ <th className="px-6 py-4 font-medium text-ink-secondary text-right">Actions</th>
  </tr>
  </thead>
  <tbody>
@@ -366,17 +366,17 @@ function KnowledgeBase() {
  <td className="px-6 py-4 w-12 text-center">
  <input 
  type="checkbox" 
- className="rounded border-[var(--color-border)]"
+ className="rounded border-border"
  checked={selectedDocs.has(doc)}
  onChange={() => toggleSelect(doc)}
  />
  </td>
  <td className="px-6 py-4 flex items-center gap-3">
- <FileText className="w-4 h-4 text-[var(--color-ink-muted)]" />
+ <FileText className="w-4 h-4 text-ink-muted" />
  {doc}
  </td>
  <td className="px-6 py-4 text-right">
- <button onClick={() => handleDelete(doc)} className="text-[var(--color-ink-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
+ <button onClick={() => handleDelete(doc)} className="text-ink-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
  <Trash2 className="w-4 h-4" />
  </button>
  </td>
@@ -409,19 +409,19 @@ function HistoryView({ onSelect }) {
  <h2 className="text-xl font-semibold mb-6">Conversation History</h2>
  <div className="flex-1 overflow-auto">
  {loading ? (
- <div className="text-[var(--color-ink-secondary)]">Loading...</div>
+ <div className="text-ink-secondary">Loading...</div>
  ) : conversations.length === 0 ? (
- <div className="text-[var(--color-ink-secondary)]">No history found.</div>
+ <div className="text-ink-secondary">No history found.</div>
  ) : (
  <div className="flex flex-col gap-2">
  {conversations.map(c => (
  <button 
  key={c.id} 
  onClick={() => onSelect(c.id)}
- className="flex justify-between items-center p-4 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm hover:border-blue-500 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+ className="flex justify-between items-center p-4 bg-surface-card border border-border rounded-sm hover:border-blue-500 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
  >
  <span className="font-medium">{c.title}</span>
- <span className="text-xs text-[var(--color-ink-muted)]">{new Date(c.updated_at * 1000).toLocaleString()}</span>
+ <span className="text-xs text-ink-muted">{new Date(c.updated_at * 1000).toLocaleString()}</span>
  </button>
  ))}
  </div>
@@ -476,24 +476,24 @@ function SettingsView() {
  <div className="flex-1 p-8 overflow-auto">
  <h2 className="text-2xl font-semibold mb-8">Settings & API Keys</h2>
  
- <div className="max-w-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
+ <div className="max-w-2xl bg-surface-card border border-border rounded-sm p-6">
  <div className="flex justify-between items-center mb-6">
  <div>
  <h3 className="text-lg font-medium">API Keys</h3>
- <p className="text-sm text-[var(--color-ink-secondary)]">Manage API keys used for external access</p>
+ <p className="text-sm text-ink-secondary">Manage API keys used for external access</p>
  </div>
- <button onClick={handleGenerate} className="border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)] px-4 py-2 rounded-sm text-sm font-medium transition-colors">
+ <button onClick={handleGenerate} className="border border-accent text-accent hover:bg-accent-tint px-4 py-2 rounded-sm text-sm font-medium transition-colors">
  Generate New Key
  </button>
  </div>
  
  <div className="space-y-4">
- {keys.length === 0 && <div className="py-4 font-serif italic text-[var(--color-ink-muted)]">No dynamic keys generated yet.</div>}
+ {keys.length === 0 && <div className="py-4 font-serif italic text-ink-muted">No dynamic keys generated yet.</div>}
  {keys.map(k => (
- <div key={k.api_key} className="flex justify-between items-center p-4 border border-[var(--color-border)] rounded-sm bg-[var(--color-surface-card)]">
+ <div key={k.api_key} className="flex justify-between items-center p-4 border border-border rounded-sm bg-surface-card">
  <div>
  <div className="font-mono text-sm">{k.api_key}</div>
- <div className="text-xs text-[var(--color-ink-secondary)] mt-1">Created: {new Date(k.created_at * 1000).toLocaleString()}</div>
+ <div className="text-xs text-ink-secondary mt-1">Created: {new Date(k.created_at * 1000).toLocaleString()}</div>
  </div>
  <button onClick={() => handleRevoke(k.api_key)} className="text-red-500 hover:text-red-600 text-sm font-medium">
  Revoke
@@ -520,7 +520,7 @@ function InsightsView() {
  });
  }, []);
 
- if (!metrics) return <div className="flex-1 flex items-center justify-center text-[var(--color-ink-secondary)]">Loading...</div>;
+ if (!metrics) return <div className="flex-1 flex items-center justify-center text-ink-secondary">Loading...</div>;
 
  const totalFeedback = metrics.thumbs_up + metrics.thumbs_down;
  const positiveRate = totalFeedback > 0 ? (metrics.thumbs_up / totalFeedback) * 100 : 0;
@@ -530,28 +530,28 @@ function InsightsView() {
  <h2 className="text-2xl font-semibold mb-8">System Insights</h2>
  
  <div className="grid grid-cols-3 gap-6 mb-8">
- <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
- <div className="text-sm text-[var(--color-ink-secondary)] mb-2">Total Queries Served</div>
+ <div className="bg-surface-card border border-border rounded-sm p-6">
+ <div className="text-sm text-ink-secondary mb-2">Total Queries Served</div>
  <div className="text-4xl font-light">{metrics.total_queries}</div>
  </div>
  
- <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
- <div className="text-sm text-[var(--color-ink-secondary)] mb-2">Avg Retrieval Confidence</div>
+ <div className="bg-surface-card border border-border rounded-sm p-6">
+ <div className="text-sm text-ink-secondary mb-2">Avg Retrieval Confidence</div>
  <div className="text-4xl font-light">
- {(metrics.average_confidence * 100).toFixed(0)}<span className="text-xl text-[var(--color-ink-muted)]">%</span>
+ {(metrics.average_confidence * 100).toFixed(0)}<span className="text-xl text-ink-muted">%</span>
  </div>
  </div>
 
- <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
- <div className="text-sm text-[var(--color-ink-secondary)] mb-2">Positive Feedback Rate</div>
+ <div className="bg-surface-card border border-border rounded-sm p-6">
+ <div className="text-sm text-ink-secondary mb-2">Positive Feedback Rate</div>
  <div className="text-4xl font-light">
- {totalFeedback > 0 ? positiveRate.toFixed(0) : '--'}<span className="text-xl text-[var(--color-ink-muted)]">%</span>
+ {totalFeedback > 0 ? positiveRate.toFixed(0) : '--'}<span className="text-xl text-ink-muted">%</span>
  </div>
- <div className="text-xs text-[var(--color-ink-muted)] mt-2">{totalFeedback} total ratings</div>
+ <div className="text-xs text-ink-muted mt-2">{totalFeedback} total ratings</div>
  </div>
  </div>
 
- <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
+ <div className="bg-surface-card border border-border rounded-sm p-6">
  <h3 className="text-lg font-medium mb-6">User Satisfaction</h3>
  <div className="space-y-4">
  <div>
@@ -595,8 +595,10 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
       const citeNum = citeMatch ? citeMatch[1] : '';
       result.push(
         <span key={match.index} className="inline group">
-          <span className="border-b border-dotted border-[var(--color-accent)] cursor-pointer">{phrase}</span>
-          <sup className="text-[var(--color-accent)] font-mono cursor-pointer ml-[2px]">{citeNum}</sup>
+          {phrase}
+          <span className="border-b border-dotted border-accent cursor-pointer">
+            <sup className="text-accent font-mono ml-[2px]">{citeNum}</sup>
+          </span>
         </span>
       );
       lastIndex = regex.lastIndex;
@@ -711,49 +713,33 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
   const isLowConf = compScore < 0.4;
 
   return (
-    <div className="flex-1 bg-[var(--color-surface)] relative flex flex-col overflow-y-auto">
+    <div className="flex-1 bg-surface relative flex flex-col overflow-y-auto">
       
       {/* Top Header / Input Area */}
       <header className="px-6 md:px-12 pt-8 pb-6 max-w-4xl w-full mx-auto shrink-0">
-        <div className="flex justify-between items-center mb-6">
-           <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)]" aria-label="Open menu">
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-           </button>
-           <div className="flex items-center gap-4">
-             {conversationId && (
-               <button onClick={handleExport} className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] border border-[var(--color-border)] px-3 py-1 bg-[var(--color-surface-card)] transition-colors">
-                 Export .md
-               </button>
-             )}
-             {conversationId && (
-               <button onClick={() => setConversationId(null)} className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)] border border-[var(--color-accent)] px-3 py-1 transition-colors" aria-label="Start new chat">
-                 New Search
-               </button>
-             )}
-           </div>
-        </div>
 
-        <div className="relative border-b border-[var(--color-border-strong)] pb-2 flex items-end">
+
+        <div className="relative border-b border-border-strong pb-2 flex items-end">
           <input 
             type="text" 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAsk()}
             placeholder="Ask the archive..." 
-            className="flex-1 bg-transparent border-none outline-none font-serif italic text-[18px] placeholder:text-[var(--color-ink-muted)] text-[var(--color-ink)] focus-visible:ring-0"
+            className="flex-1 bg-transparent border-none outline-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink focus-visible:ring-0"
             disabled={loading}
           />
           <button 
             onClick={handleAsk}
             disabled={loading || !query.trim()}
-            className="ml-4 px-4 py-1 border border-[var(--color-accent)] text-[var(--color-accent)] font-sans text-[13px] hover:bg-[var(--color-accent-tint)] transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+            className="ml-4 px-4 py-1 border border-accent text-accent font-sans text-[13px] hover:bg-accent-tint transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
           >
             Ask
           </button>
         </div>
         <div className="flex gap-2 items-center mt-3">
-           <label className="flex items-center gap-2 text-[11px] font-mono text-[var(--color-ink-secondary)] cursor-pointer uppercase tracking-wider">
-             <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded-none border-[var(--color-border)] accent-[var(--color-accent)]" />
+           <label className="flex items-center gap-2 text-[11px] font-mono text-ink-secondary cursor-pointer uppercase tracking-wider">
+             <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded-none border-border accent-accent" />
              Dense-only mode
            </label>
         </div>
@@ -764,9 +750,9 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
         
         {loading && (
            <div className="mt-4 flex flex-col gap-1 w-32">
-              <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-[var(--color-ink-muted)]">Analyzing...</span>
-              <div className="h-[1px] bg-[var(--color-border)] w-full overflow-hidden">
-                <div className="h-full bg-[var(--color-accent)] animate-[loading-rule_1.5s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
+              <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-ink-muted">Analyzing...</span>
+              <div className="h-[1px] bg-border w-full overflow-hidden">
+                <div className="h-full bg-accent animate-[loading-rule_1.5s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
               </div>
            </div>
         )}
@@ -777,46 +763,46 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
               {m.role === 'assistant' && i === messages.length - 1 && confidenceInfo && (
                 <details className="mb-6 group/details">
                   <summary className="flex items-center gap-4 cursor-pointer list-none">
-                    <div className={`inline-block px-2 py-0.5 border ${isHighConf ? 'border-[var(--color-success)] bg-[var(--color-success-tint)] text-[var(--color-success)]' : isLowConf ? 'border-[var(--color-danger)] bg-[var(--color-danger-tint)] text-[var(--color-danger)]' : 'border-[var(--color-warning)] bg-[var(--color-warning-tint)] text-[var(--color-warning)]'} font-mono text-[11px] uppercase tracking-widest -rotate-2`}>
+                    <div className={`inline-block px-2 py-0.5 border ${isHighConf ? 'border-success bg-success-tint text-success' : isLowConf ? 'border-danger bg-danger-tint text-danger' : 'border-warning bg-warning-tint text-warning'} font-mono text-[11px] uppercase tracking-widest -rotate-2`}>
                       {isHighConf ? 'Verified · High Confidence' : isLowConf ? 'Needs review · Low confidence' : 'Moderate confidence'}
                     </div>
-                    <div className="font-mono text-[11px] text-[var(--color-ink-muted)] uppercase tracking-wider">
+                    <div className="font-mono text-[11px] text-ink-muted uppercase tracking-wider">
                       Composite Score: {confidenceInfo.composite?.toFixed(2) || 'N/A'}
                     </div>
                   </summary>
-                  <div className="mt-4 p-4 bg-[var(--color-surface-card)] border border-[var(--color-border)] flex gap-6 text-[var(--color-ink)] font-mono text-[11px]">
+                  <div className="mt-4 p-4 bg-surface-card border border-border flex gap-6 text-ink font-mono text-[11px]">
                     <span className="flex flex-col">
-                      <span className="text-[var(--color-ink-muted)] mb-1">RETRIEVAL</span>
+                      <span className="text-ink-muted mb-1">RETRIEVAL</span>
                       <span>{confidenceInfo.retrieval?.toFixed(2) || 'N/A'}</span>
                     </span>
                     <span className="flex flex-col">
-                      <span className="text-[var(--color-ink-muted)] mb-1">CITATIONS</span>
+                      <span className="text-ink-muted mb-1">CITATIONS</span>
                       <span>{confidenceInfo.coverage?.toFixed(2) || 'N/A'}</span>
                     </span>
                     <span className="flex flex-col">
-                      <span className="text-[var(--color-ink-muted)] mb-1">COMPLETENESS</span>
+                      <span className="text-ink-muted mb-1">COMPLETENESS</span>
                       <span>{confidenceInfo.completeness?.toFixed(2) || 'N/A'}</span>
                     </span>
                   </div>
                 </details>
               )}
 
-              <div className={`${m.role === 'user' ? 'bg-[var(--color-surface-card)] border border-[var(--color-border)] px-4 py-3 rounded-none text-[14px] font-sans' : 'font-serif text-[16px] leading-[1.75] text-[var(--color-ink)]'} max-w-full whitespace-pre-wrap`}>
+              <div className={`${m.role === 'user' ? 'bg-surface-card border border-border px-4 py-3 rounded-none text-[14px] font-sans' : 'font-serif text-[16px] leading-[1.75] text-ink'} max-w-full whitespace-pre-wrap`}>
                  {m.role === 'assistant' ? renderContentWithCitations(m.content) : m.content}
               </div>
 
               {m.role === 'assistant' && (
-                <div className="flex items-center gap-4 mt-3 text-[var(--color-ink-muted)]">
+                <div className="flex items-center gap-4 mt-3 text-ink-muted">
                   <button 
                     onClick={() => handleFeedback(i, true)}
-                    className={`hover:text-[var(--color-success)] transition-colors ${m.feedback === true ? 'text-[var(--color-success)]' : ''}`}
+                    className={`hover:text-success transition-colors ${m.feedback === true ? 'text-success' : ''}`}
                     title="Helpful"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>
                   </button>
                   <button 
                     onClick={() => handleFeedback(i, false)}
-                    className={`hover:text-[var(--color-danger)] transition-colors ${m.feedback === false ? 'text-[var(--color-danger)]' : ''}`}
+                    className={`hover:text-danger transition-colors ${m.feedback === false ? 'text-danger' : ''}`}
                     title="Unhelpful"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z"/></svg>
@@ -828,29 +814,29 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
 
         {/* Sources Section */}
         {sources.length > 0 && (
-           <div className="pt-8 border-t border-[var(--color-border)]">
-             <h3 className="font-sans text-[13px] text-[var(--color-ink-secondary)] mb-4 uppercase tracking-wider">Sources</h3>
+           <div className="pt-8 border-t border-border">
+             <h3 className="font-sans text-[13px] text-ink-secondary mb-4 uppercase tracking-wider">Sources</h3>
              
              <div className="flex flex-col gap-4">
                {sources.map((s, i) => (
-                 <div key={i} className="bg-[var(--color-surface-card)] border border-[var(--color-border)] border-t-[3px] border-t-[var(--color-accent)] p-4 flex flex-col gap-3 transition-colors hover:border-b-[var(--color-accent)] hover:border-l-[var(--color-accent)] hover:border-r-[var(--color-accent)]">
+                 <div key={i} className="bg-surface-card border border-border border-t-[3px] border-t-accent p-4 flex flex-col gap-3 transition-colors hover:border-b-accent hover:border-l-accent hover:border-r-accent">
                     <div className="flex items-baseline justify-between">
                       <div className="flex items-center gap-3 truncate">
-                        <span className="font-mono text-[12px] text-[var(--color-ink)]"><sup className="text-[var(--color-accent)] mr-0.5">{s.marker}</sup>{s.source_document}</span>
-                        {s.section_heading && <span className="font-serif italic text-[13px] text-[var(--color-ink-muted)] truncate">{s.section_heading}</span>}
+                        <span className="font-mono text-[12px] text-ink"><sup className="text-accent mr-0.5">{s.marker}</sup>{s.source_document}</span>
+                        {s.section_heading && <span className="font-serif italic text-[13px] text-ink-muted truncate">{s.section_heading}</span>}
                       </div>
-                      {s.chunk_id && <span className="font-mono text-[11px] text-[var(--color-ink-muted)] shrink-0 ml-4 hidden sm:block">CHUNK ID: {s.chunk_id.substring(0, 12)}</span>}
+                      {s.chunk_id && <span className="font-mono text-[11px] text-ink-muted shrink-0 ml-4 hidden sm:block">CHUNK ID: {s.chunk_id.substring(0, 12)}</span>}
                     </div>
-                    <div className="font-serif text-[15px] leading-relaxed text-[var(--color-ink-secondary)] border-l-2 border-[var(--color-border-strong)] pl-4 italic line-clamp-4">
+                    <div className="font-serif text-[15px] leading-relaxed text-ink-secondary border-l-2 border-border-strong pl-4 italic line-clamp-4">
                       "{s.text}"
                     </div>
                     <div className="flex justify-between items-center mt-1">
-                      <div className="text-[9px] flex gap-3 font-mono text-[var(--color-ink-secondary)] tracking-[0.05em] uppercase">
+                      <div className="text-[9px] flex gap-3 font-mono text-ink-secondary tracking-[0.05em] uppercase">
                         <span title="Dense Score">D: {s.dense_score?.toFixed(2) || '-'}</span>
                         {!compareDenseOnly && <span title="Sparse Score">S: {s.sparse_score?.toFixed(2) || '-'}</span>}
                         <span title="Rerank Score">R: {s.rerank_score?.toFixed(2) || '-'}</span>
                       </div>
-                      <span className="inline-block px-2 py-0.5 border border-[var(--color-success)] bg-[var(--color-success-tint)] text-[var(--color-success)] font-mono text-[10px] uppercase tracking-wider">
+                      <span className="inline-block px-2 py-0.5 border border-success bg-success-tint text-success font-mono text-[10px] uppercase tracking-wider">
                         Supported
                       </span>
                     </div>
