@@ -37,8 +37,6 @@ export default function App() {
 }
 
 function AppContent() {
- const [apiKey, setApiKey] = useState<string | null>(import.meta.env.VITE_API_KEY || localStorage.getItem('apiKey'));
- const [isAuthenticated, setIsAuthenticated] = useState(false);
  const [currentView, setCurrentView] = useState<'chat' | 'knowledge' | 'history' | 'insights' | 'settings'>('chat');
  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
  const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -54,23 +52,6 @@ function AppContent() {
  }
  localStorage.setItem('theme', theme);
  }, [theme]);
- useEffect(() => {
- if (apiKey) {
- verifyAuth().then(() => {
- setIsAuthenticated(true);
- }).catch(() => {
- setIsAuthenticated(false);
- localStorage.removeItem('apiKey');
- setApiKey(null);
- });
- } else {
- setIsAuthenticated(false);
- }
- }, [apiKey]);
-
- if (!isAuthenticated) {
- return <AuthScreen onAuth={(key) => { localStorage.setItem('apiKey', key); setApiKey(key); }} />;
- }
 
  return (
  <div className="flex h-screen w-full bg-canvas text-ink font-sans overflow-hidden">
