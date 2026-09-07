@@ -1,10 +1,15 @@
 import time
 from rag_api.core.observability import tracer, llm_calls_total, llm_call_seconds
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    observe = lambda **kw: lambda f: f
 from rag_api.core.logging import log
 from rag_api.adapters.llm.llm_client import LLMClient
 from rag_api.services.conversation import Turn
 
 
+@observe(as_type="generation", name="normalize_query")
 def normalize_query(query: str, llm_client: LLMClient) -> dict:
     """Step 1, proactive: fix spelling/typing errors and expand obvious acronyms.
     Also detects temporal/historical intent for Self-Querying Retrieval.

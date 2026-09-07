@@ -2,6 +2,7 @@ from fastapi import Request
 from rag_api.main import limiter
 from rag_api.core.logging import log
 from fastapi import APIRouter, Depends, Request, BackgroundTasks
+import sentry_sdk
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
 from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings, get_vector_store, get_normalizer_llm_client
 from rag_api.core.settings import Settings
@@ -49,7 +50,8 @@ async def ask(
     temporal_filter = None
     normalize_enabled = payload.query_normalization_enabled if payload.query_normalization_enabled is not None else settings.query_normalization_enabled
     if normalizer_llm_client and normalize_enabled:
-        norm_result = run_or_502(normalize_query, search_query, normalizer_llm_client)
+        with sentry_sdk.start_transaction(op="task", name="normalize_query"):
+            norm_result = run_or_502(normalize_query, search_query, normalizer_llm_client)
         if isinstance(norm_result, dict):
             search_query = norm_result.get("clean_query", search_query)
             # Support both the old schema and the new target_date schema

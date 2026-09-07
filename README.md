@@ -534,3 +534,12 @@ frontend/               React dashboard (Vite) -- see "Dashboard" above
 tests/                 226 tests, mocked at the external-API boundary
 ```
 # rag
+
+## 🏢 Deployment Readiness
+This architecture explicitly decouples the stateless FastAPI compute nodes from the stateful managed database. This allows the system to easily horizontally scale on platforms like **Render**, **Fly.io**, or **AWS EC2 / Fargate** simply by spinning up additional API containers behind a load balancer whenever compute resources are provisioned.
+
+## 🖼️ User Interface
+*(Replace with high-res screenshots for portfolio)*
+- **Verified Citations**: The UI extracts explicit chunk metadata to validate LLM claims.
+- **CRAG Monitoring**: Real-time warnings log directly into the UI if fallback expansion was required due to a low-confidence retrieval.
+- **Confidence Matrix**: Complete transparency over the `composite`, `retrieval`, and `citation` sub-scores for every generation.
