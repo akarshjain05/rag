@@ -1,3 +1,5 @@
+import { createPortal } from "react-dom";
+
 import React, { useState, useEffect } from 'react';
 import { fetchConversations, fetchDocuments, deleteDocument, ingest, ask } from './lib/api';
 import { MessageCircle, Folder, Clock, BarChart, Settings, FileText, ArrowRight, X, Trash2, Check, ThumbsUp, ThumbsDown, LogOut, Moon, Sun, Menu, MoreHorizontal } from 'lucide-react';
@@ -148,20 +150,31 @@ function Sidebar({ currentView, setCurrentView, theme, setTheme, mobileMenuOpen,
                 {c.title}
               </button>
               <button
+                id={`dropdown-btn-${c.id}`}
                 onClick={(e) => { e.stopPropagation(); setDropdownId(dropdownId === c.id ? null : c.id); }}
-                className="opacity-0 group-hover:opacity-100 p-1 text-ink-muted hover:text-ink transition-opacity rounded-sm hover:bg-border"
+                className="opacity-0 group-hover:opacity-100 p-1 text-ink-muted hover:text-ink transition-opacity rounded-none hover:bg-border"
               >
                 <MoreHorizontal className="w-3 h-3" />
               </button>
-              {dropdownId === c.id && (
-                <div className="absolute right-0 top-full mt-1 w-32 bg-surface-card border border-border shadow-md z-50 py-1">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
-                    className="w-full text-left px-3 py-1.5 text-xs text-danger hover:bg-danger-tint flex items-center gap-2"
+              {dropdownId === c.id && createPortal(
+                <>
+                  <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setDropdownId(null); }} />
+                  <div 
+                    className="fixed z-[101] w-32 bg-surface-card border border-border shadow-md py-1 rounded-none"
+                    style={{ 
+                      top: document.getElementById(`dropdown-btn-${c.id}`)?.getBoundingClientRect().bottom + 4 || 0, 
+                      left: document.getElementById(`dropdown-btn-${c.id}`)?.getBoundingClientRect().left || 0 
+                    }}
                   >
-                    <Trash2 className="w-3 h-3" /> Delete
-                  </button>
-                </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-danger hover:bg-danger-tint flex items-center gap-2"
+                    >
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </button>
+                  </div>
+                </>,
+                document.body
               )}
             </div>
           ))}
