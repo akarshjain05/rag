@@ -3,7 +3,7 @@ from rag_api.main import limiter
 from rag_api.core.logging import log
 from fastapi import APIRouter, Depends, Request
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
-from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings
+from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings, get_vector_store
 from rag_api.core.settings import Settings
 from rag_api.services.query_condensation import condense_query, normalize_query, expand_query, generate_hyde
 from rag_api.services.conversation import Turn
