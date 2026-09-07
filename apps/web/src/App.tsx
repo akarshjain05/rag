@@ -154,7 +154,7 @@ function Sidebar({ currentView, setCurrentView, theme, setTheme, mobileMenuOpen,
                 <MoreHorizontal className="w-3 h-3" />
               </button>
               {dropdownId === c.id && (
-                <div className="absolute right-0 top-full mt-1 w-32 bg-surface-card border border-border shadow-md z-50 py-1">
+                <div className="absolute left-full top-0 ml-1 w-32 bg-surface-card border border-border shadow-md z-50 py-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
                     className="w-full text-left px-3 py-1.5 text-xs text-danger hover:bg-danger-tint flex items-center gap-2"
