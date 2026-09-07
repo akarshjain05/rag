@@ -48,6 +48,9 @@ class HybridRetriever:
         query_embedding = query_embedding[0]
         
         where = {"chunking_strategy": chunking_strategy} if chunking_strategy else None
+        if document_filter:
+            where = where or {}
+            where["source_document"] = document_filter
 
         if dense_only:
             dense = await asyncio.to_thread(self.vector_store.query, query_embedding, top_k=self.dense_top_k, where=where, temporal_filter=temporal_filter)
