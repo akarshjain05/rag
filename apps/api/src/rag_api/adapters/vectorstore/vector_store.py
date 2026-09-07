@@ -144,14 +144,14 @@ class VectorStore:
                 target_ts = int(dt.timestamp())
                 must_conditions.append(models.FieldCondition(key="valid_from", range=models.Range(lte=target_ts)))
                 should_conditions.extend([
-                    models.IsNullCondition(is_null=models.PayloadField(key="valid_to")),
+                    models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")),
                     models.FieldCondition(key="valid_to", range=models.Range(gt=target_ts))
                 ])
                 min_should = 1
             except Exception:
-                must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+                must_conditions.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")))
         else:
-            must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+            must_conditions.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")))
 
         if where:
             for k, v in where.items():
@@ -196,14 +196,14 @@ class VectorStore:
                 target_ts = int(dt.timestamp())
                 must_conditions.append(models.FieldCondition(key="valid_from", range=models.Range(lte=target_ts)))
                 should_conditions.extend([
-                    models.IsNullCondition(is_null=models.PayloadField(key="valid_to")),
+                    models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")),
                     models.FieldCondition(key="valid_to", range=models.Range(gt=target_ts))
                 ])
                 min_should = 1
             except Exception:
-                must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+                must_conditions.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")))
         else:
-            must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+            must_conditions.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")))
         if where:
             for k, v in where.items():
                 if isinstance(v, list):
@@ -297,14 +297,14 @@ class VectorStore:
                 target_ts = int(dt.timestamp())
                 must_conditions.append(models.FieldCondition(key="valid_from", range=models.Range(lte=target_ts)))
                 should_conditions.extend([
-                    models.IsNullCondition(is_null=models.PayloadField(key="valid_to")),
+                    models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")),
                     models.FieldCondition(key="valid_to", range=models.Range(gt=target_ts))
                 ])
                 min_should = 1
             except Exception:
-                must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+                must_conditions.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")))
         else:
-            must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+            must_conditions.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")))
 
         if where:
             for k, v in where.items():
@@ -408,7 +408,7 @@ class VectorStore:
         filter_obj = models.Filter(
             must=[
                 models.FieldCondition(key="source_document", match=models.MatchValue(value=source_document)),
-                models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))
+                models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to"))
             ]
         )
         count = self._client.count(collection_name=self.collection_name, count_filter=filter_obj).count
