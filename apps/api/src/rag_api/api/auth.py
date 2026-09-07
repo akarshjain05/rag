@@ -8,6 +8,9 @@ async def verify_api_key(
     settings = request.app.state.settings
     if not settings.api_keys:
         return
+        
+    if x_api_key is None:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
     
     if x_api_key in settings.api_keys:
         return
