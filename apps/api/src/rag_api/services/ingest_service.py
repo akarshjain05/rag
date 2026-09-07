@@ -140,6 +140,7 @@ class IngestionPipeline:
                 
                 meta = chunk.metadata()
                 meta["valid_from"] = current_time
+                meta["valid_to"] = None  # None indicates this is the currently active truth
                 
                 inserted_ids.append(chunk.chunk_id)
                 inserted_texts.append(chunk.text)
