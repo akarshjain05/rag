@@ -25,6 +25,13 @@ docker compose up -d --build
 ## Architecture
 
 ```
+
+## 🌐 Production Network Topology
+- **Compute & Storage Decoupling**: Stateless FastAPI instances deployed in AWS us-east-1, communicating with a managed Qdrant cluster co-located in the same AWS availability zone to maintain < 10ms transport latency.
+- **Transport Protocol**: Utilizes **gRPC (port 6334)** over HTTP/2 with binary protocol buffers instead of standard REST, dramatically reducing serialization overhead on high-dimensional vector search queries.
+- **Connection Pooling**: Established a persistent `QdrantClient` shared singleton via FastAPI's `@asynccontextmanager` lifespan event to eliminate TLS handshake latency on incoming queries.
+- **Enterprise Migration Path**: Designed for zero-egress VPC Peering / AWS PrivateLink integration for regulated, air-gapped deployments.
+
  documents (.md/.txt/.html/.pdf/.docx/.pptx/.xlsx)
         │
         ▼

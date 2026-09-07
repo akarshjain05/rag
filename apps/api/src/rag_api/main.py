@@ -90,6 +90,8 @@ def create_app(
         mode=settings.qdrant_mode,
         host=settings.qdrant_host,
         port=settings.qdrant_port,
+        grpc_port=6334,
+        prefer_grpc=True,
         dense_dimension=embedding_client.dimension,
     )
 
@@ -137,10 +139,19 @@ def create_app(
         low_confidence_threshold=settings.low_confidence_threshold,
     )
 
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        yield
+        if hasattr(app.state, "vector_store") and app.state.vector_store:
+            app.state.vector_store.close()
+
     app = FastAPI(
         title="RAG Pipeline with Hybrid Search Over Internal Docs",
         version="1.0.0",
         description="Ingests internal documentation, indexes it with dense + sparse hybrid search, and answers questions with grounded, cited responses.",
+        lifespan=lifespan
     )
     app.add_middleware(
         CORSMiddleware,

@@ -12,6 +12,8 @@ class VectorStore:
         mode: str = "embedded",
         host: str = "qdrant",
         port: int = 6333,
+        grpc_port: int = 6334,
+        prefer_grpc: bool = False,
         dense_dimension: int = 768,
     ):
         self.collection_name = collection_name
@@ -30,7 +32,7 @@ class VectorStore:
             logging.getLogger(__name__).warning(f"Failed to load fastembed sparse model: {e}")
             
         if mode == "http":
-            self._client = QdrantClient(host=host, port=port)
+            self._client = QdrantClient(host=host, port=port, grpc_port=grpc_port, prefer_grpc=prefer_grpc)
         elif mode == "embedded":
             if persist_dir is None:
                 raise ValueError("persist_dir is required when mode='embedded'")
@@ -416,3 +418,7 @@ class VectorStore:
                 import logging
                 logging.getLogger(__name__).warning(f"Failed to invalidate semantic cache for {source_document}: {e}")
         return count
+
+    def close(self):
+        if hasattr(self, "_client") and self._client:
+            self._client.close()

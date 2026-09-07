@@ -1,20 +1,33 @@
-import re
 with open("README.md", "r") as f:
     text = f.read()
 
-new_feature = """
+header = """# Enterprise RAG Pipeline (Temporal Hybrid Search)
 
-## Perfect Hybrid RAG Architecture
+**Architected a modular RAG pipeline using FastAPI and Qdrant. Implemented hybrid search with cross-encoder reranking, proactive query normalization, temporal versioning, and observability to eliminate hallucinations and track pipeline latency.**
 
-This pipeline implements a multi-stage, highly resilient orchestration flow designed for production reliability and cost efficiency:
+## 🌟 The "Zero-Cost" Pro Stack
+- **Database**: Qdrant running locally via Docker (Rust-based, native Hybrid Search).
+- **Embeddings & Reranking**: FastEmbed (ONNX runtime) executing Jina embeddings and cross-encoder reranking directly on CPU. Zero API costs.
+- **LLM Routing**: Tiered architecture routing proactive normalization to cheaper/faster models (e.g., Claude 3.5 Haiku) to drop TTFT.
+- **UI**: React/Vite interface featuring a Gemini-style chat history, dynamic explicit citations, and transparent confidence logging.
+- **Observability**: Fully instrumented with OpenTelemetry and Prometheus to track component execution latency and token metrics.
 
-- **Proactive Normalization**: Uses a fast, cheap Tier 3 LLM (e.g., `NORMALIZER_MODEL` like `claude-3-haiku` or `gpt-4o-mini`) at the edge to fix typos, expand acronyms, and clean syntax unconditionally before the query touches the database. This neutralizes cross-encoder token destruction without wasting heavy LLM compute.
-- **Reactive Concept Expansion (CRAG)**: If the normalized query still yields a low-confidence retrieval score (below `0.80`), the system dynamically rewrites the query to include domain-specific synonyms and architectural terms, attempting a broader recall search before giving up.
-- **Semantic Caching**: Implements a highly aggressive front-line cache in Qdrant with Time-To-Live (TTL) expiration. If an incoming query has 95%+ cosine similarity to a recently answered question, the pipeline instantly returns the cached payload, bypassing the normalizer, reranker, and generator entirely, reducing latency to milliseconds and operational costs by ~86%.
+## 🚀 Quickstart (Single-Command Setup)
+
+```bash
+# 1. Copy the example environment file
+cp .env.example .env
+
+# 2. Add your LLM API Key to .env
+# ANTHROPIC_API_KEY=your_key_here
+
+# 3. Spin up the entire stack (API, Frontend, Qdrant, Redis, MinIO)
+docker compose up -d --build
+```
 """
 
-if "Perfect Hybrid RAG Architecture" not in text:
-    text = text.replace("## Quickstart", new_feature + "\n## Quickstart")
-
+# Replace the beginning of the file
+import re
+new_text = re.sub(r"# RAG Pipeline with Hybrid Search Over Internal Docs.*?\n## Architecture", header + "\n## Architecture", text, flags=re.DOTALL)
 with open("README.md", "w") as f:
-    f.write(text)
+    f.write(new_text)
