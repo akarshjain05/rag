@@ -705,12 +705,22 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
   const handleFeedback = async (idx, isHelpful) => {
     if (!conversationId) return;
     const { submitFeedback } = await import('./lib/api');
-    await submitFeedback(conversationId, isHelpful);
-    setMessages(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], feedback: isHelpful };
-      return next;
-    });
+    
+    // Calculate the turn index (assistant messages only)
+    // In our state, messages are [user, assistant, user, assistant]
+    // The turn index in the backend corresponds to pairs, so idx / 2
+    const turnIndex = Math.floor(idx / 2);
+    
+    try {
+      await submitFeedback(conversationId, turnIndex, isHelpful);
+      setMessages(prev => {
+        const next = [...prev];
+        next[idx] = { ...next[idx], feedback: isHelpful };
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to submit feedback", e);
+    }
   };
 
   const handleExport = () => {
