@@ -115,12 +115,20 @@ class VectorStore:
             points=points
         )
 
-    def nearest(self, embedding: list[float], top_k: int = 1) -> list[dict]:
+    def nearest(self, embedding: list[float], top_k: int = 1, exclude_source_document: str | None = None) -> list[dict]:
+        must = [models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to"))]
+        must_not = []
+        if exclude_source_document:
+            must_not.append(models.FieldCondition(key="source_document", match=models.MatchValue(value=exclude_source_document)))
+        
+        filter_obj = models.Filter(must=must, must_not=must_not) if (must or must_not) else None
+        
         res = self._client.query_points(
             collection_name=self.collection_name,
             query=embedding,
             using="dense_jina",
-            limit=top_k
+            limit=top_k,
+            query_filter=filter_obj
         ).points
         out = []
         for r in res:
@@ -131,6 +139,41 @@ class VectorStore:
                 "similarity": r.score
             })
         return out
+
+    def nearest_batch(self, embeddings: list[list[float]], top_k: int = 1, exclude_source_document: str | None = None) -> list[list[dict]]:
+        must = [models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to"))]
+        must_not = []
+        if exclude_source_document:
+            must_not.append(models.FieldCondition(key="source_document", match=models.MatchValue(value=exclude_source_document)))
+            
+        filter_obj = models.Filter(must=must, must_not=must_not) if (must or must_not) else None
+
+        requests = [
+            models.QueryRequest(
+                query=emb,
+                using="dense_jina",
+                limit=top_k,
+                filter=filter_obj
+            ) for emb in embeddings
+        ]
+        
+        batch_res = self._client.query_batch_points(
+            collection_name=self.collection_name,
+            requests=requests
+        )
+        
+        out_batch = []
+        for res_list in batch_res:
+            out = []
+            for r in res_list.points:
+                out.append({
+                    "chunk_id": r.payload["chunk_id"], 
+                    "text": r.payload["text"], 
+                    "metadata": r.payload, 
+                    "similarity": r.score
+                })
+            out_batch.append(out)
+        return out_batch
 
     def query(self, embedding: list[float], top_k: int = 10, where: dict | None = None, temporal_filter: dict | None = None) -> list[dict]:
         must_conditions = []

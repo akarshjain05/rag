@@ -130,7 +130,7 @@ class IngestionPipeline:
             inserted_embeddings = []
             
             # Batch dedup check
-            dedups = check_duplicate_batch(embeddings, self.vector_store, threshold=self.dedup_similarity_threshold)
+            dedups = check_duplicate_batch(embeddings, self.vector_store, threshold=self.dedup_similarity_threshold, exclude_source_document=source_name)
             
             for chunk, embedding, dedup in zip(chunks, embeddings, dedups):
                 if dedup.is_duplicate:
