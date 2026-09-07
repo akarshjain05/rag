@@ -389,13 +389,24 @@ class VectorStore:
             })
         return out
 
-    def semantic_cache_get(self, query_vector: list[float], threshold: float = 0.95, ttl_seconds: int = 604800) -> dict | None:
+    def semantic_cache_get(self, query_vector: list[float], threshold: float = 0.95, ttl_seconds: int = 604800, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> dict | None:
         import time
+        must = []
+        
+        must.append(models.FieldCondition(key="conversation_id", match=models.MatchValue(value=conversation_id or "")))
+        must.append(models.FieldCondition(key="chunking_strategy", match=models.MatchValue(value=chunking_strategy or "")))
+        
+        if document_filter:
+            must.append(models.FieldCondition(key="document_filter", match=models.MatchAny(any=document_filter)))
+        else:
+            must.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="document_filter")))
+            
         res = self._client.query_points(
             collection_name=self.cache_collection,
             query=query_vector,
             limit=1,
             score_threshold=threshold,
+            query_filter=models.Filter(must=must) if must else None
         )
         if not res.points:
             return None
@@ -407,7 +418,7 @@ class VectorStore:
             
         return point.payload["response"]
 
-    def semantic_cache_set(self, query_text: str, query_vector: list[float], response: dict) -> None:
+    def semantic_cache_set(self, query_text: str, query_vector: list[float], response: dict, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
         import uuid
         import time
         
@@ -426,7 +437,10 @@ class VectorStore:
                         "original_query": query_text,
                         "response": response,
                         "timestamp": time.time(),
-                        "source_documents": source_docs
+                        "source_documents": source_docs,
+                        "conversation_id": conversation_id or "",
+                        "document_filter": document_filter or [],
+                        "chunking_strategy": chunking_strategy or "",
                     }
                 )
             ]

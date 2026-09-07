@@ -39,9 +39,33 @@ async def ask(
     import asyncio
     query_embedding = await asyncio.to_thread(retriever.embedding_client.embed, [search_query])
     query_vector = query_embedding[0]
-    cached_payload = await asyncio.to_thread(vector_store.semantic_cache_get, query_vector, 0.95)
+    strategy_value = payload.chunking_strategy.value if payload.chunking_strategy else None
+    cached_payload = await asyncio.to_thread(
+        vector_store.semantic_cache_get, 
+        query_vector, 
+        0.95,
+        ttl_seconds=604800,
+        conversation_id=payload.conversation_id,
+        document_filter=payload.document_filter,
+        chunking_strategy=strategy_value
+    )
     if cached_payload:
         print("Semantic Cache Hit! Bypassing pipeline.")
+        # Reconstruct sources list for the conversation store
+        cached_sources = cached_payload.get("sources", [])
+        cid = payload.conversation_id or store.create_conversation()
+        store.append_turn(cid, Turn(
+            user=payload.question, 
+            assistant=cached_payload.get("answer", ""), 
+            sources=cached_sources, 
+            confidence_info={
+                "retrieval": cached_payload.get("retrieval_confidence"),
+                "coverage": cached_payload.get("citation_coverage"),
+                "completeness": cached_payload.get("completeness"),
+                "composite": cached_payload.get("composite_confidence")
+            }
+        ))
+        cached_payload["conversation_id"] = cid
         return QueryResponse(**cached_payload)
 
     # Step 1 (proactive): fix spelling/typos and expand obvious acronyms
@@ -177,7 +201,14 @@ async def ask(
     # so the user doesn't wait for the database write
     if result.mode in ("llm", "extractive"):
         def save_to_cache():
-            vector_store.semantic_cache_set(payload.question, query_vector, response_obj.model_dump(mode="json"))
+            vector_store.semantic_cache_set(
+                payload.question, 
+                query_vector, 
+                response_obj.model_dump(mode="json"),
+                conversation_id=payload.conversation_id,
+                document_filter=payload.document_filter,
+                chunking_strategy=strategy_value
+            )
         background_tasks.add_task(save_to_cache)
         
     return response_obj
