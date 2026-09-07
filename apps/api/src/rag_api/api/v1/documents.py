@@ -58,8 +58,7 @@ async def ingest_documents(
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    executor.submit(worker)
+    asyncio.get_running_loop().run_in_executor(None, worker)
 
     async def sse_generator():
         yield f"data: {json.dumps({'progress': 0, 'message': 'Processing started...'})}\n\n"

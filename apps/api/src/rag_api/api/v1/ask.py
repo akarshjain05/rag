@@ -1,5 +1,5 @@
 from fastapi import Request
-from rag_api.main import limiter
+from rag_api.core.rate_limit import limiter
 from rag_api.core.logging import log
 from fastapi import APIRouter, Depends, Request, BackgroundTasks
 import sentry_sdk
@@ -74,7 +74,7 @@ async def ask(
     # dense embeddings, BM25 tokens, and (most severely) the cross-encoder
     # reranker's token-level comparison identically.
     temporal_filter = None
-    normalize_enabled = payload.query_normalization_enabled if payload.query_normalization_enabled is not None else settings.query_normalization_enabled
+    normalize_enabled = settings.query_normalization_enabled
     if normalizer_llm_client and normalize_enabled:
         with sentry_sdk.start_span(op="llm_request", description="Proactive Normalizer"):
             norm_result = run_or_502(normalize_query, search_query, normalizer_llm_client)
@@ -88,7 +88,7 @@ async def ask(
         else:
             search_query = norm_result
 
-    condense_enabled = payload.query_condensation_enabled if payload.query_condensation_enabled is not None else settings.query_condensation_enabled
+    condense_enabled = settings.query_condensation_enabled
     if history and llm_client and condense_enabled:
         search_query = run_or_502(condense_query, search_query, history, llm_client)
         
@@ -102,7 +102,7 @@ async def ask(
     # 0. HyDE (Hypothetical Document Embeddings)
     # Generate a hypothetical answer to the query to maximize vector overlap
     hyde_doc = ""
-    hyde_enabled = payload.hyde_enabled if payload.hyde_enabled is not None else settings.hyde_enabled
+    hyde_enabled = settings.hyde_enabled
     if llm_client and hyde_enabled:
         hyde_doc = run_or_502(generate_hyde, search_query, llm_client)
     
@@ -122,7 +122,7 @@ async def ask(
     if retriever.reranker and chunks and llm_client:
         max_retries = settings.crag_max_retries
         retries = 0
-        crag_enabled = payload.crag_expansion_enabled if payload.crag_expansion_enabled is not None else settings.crag_expansion_enabled
+        crag_enabled = settings.crag_expansion_enabled
         while retries < max_retries and crag_enabled:
             max_score = max([c.rerank_score or 0.0 for c in chunks])
             # The query was already spell-checked in Step 1, so a low score

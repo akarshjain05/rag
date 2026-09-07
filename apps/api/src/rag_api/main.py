@@ -1,6 +1,5 @@
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-limiter = Limiter(key_func=get_remote_address)
+from slowapi import _rate_limit_exceeded_handler
+from rag_api.core.rate_limit import limiter
 from slowapi.errors import RateLimitExceeded
 from fastapi import Request
 import uvicorn
@@ -11,20 +10,6 @@ import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
-sentry_dsn = os.getenv("SENTRY_DSN")
-environment = os.getenv("ENVIRONMENT", "local")
-
-if sentry_dsn:
-    sentry_sdk.init(
-        dsn=sentry_dsn,
-        environment=environment,
-        traces_sample_rate=1.0 if environment == "local" else 0.1,
-        profiles_sample_rate=1.0 if environment == "local" else 0.1,
-        integrations=[
-            StarletteIntegration(transaction_style="url"),
-            FastApiIntegration(),
-        ],
-    )
 from dotenv import load_dotenv
 
 from rag_api.core.settings import Settings, get_settings
