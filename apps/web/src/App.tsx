@@ -629,16 +629,11 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
           if (res.history) {
             const mapped = [];
             res.history.forEach(t => {
-              if (t.role === 'user') {
-                mapped.push({ role: 'user', content: t.content });
-              } else if (t.role === 'assistant') {
-                mapped.push({ role: 'assistant', content: t.content, markers: t.markers });
-              }
+              mapped.push({ role: 'user', content: t.user });
+              mapped.push({ role: 'assistant', content: t.assistant });
             });
             setMessages(mapped);
           }
-          if (res.sources) setSources(res.sources);
-          if (res.confidence_info) setConfidenceInfo(res.confidence_info);
         }).catch(console.error);
       });
     } else {
@@ -656,8 +651,8 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
     setLoading(true);
     
     try {
-      const { askQuestion } = await import('./lib/api');
-      const res = await askQuestion(q, conversationId, compareDenseOnly);
+      const { ask } = await import('./lib/api');
+      const res = await ask({ question: q, conversationId, verifyCitations: true, compareDenseOnly });
       
       if (!conversationId && res.conversation_id) {
         skipFetch.current = true;
@@ -666,10 +661,15 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
 
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: res.answer, markers: res.sources?.map(s => s.marker) || [] }
+        { role: 'assistant', content: res.answer, markers: res.used_citation_markers || [] }
       ]);
       setSources(res.sources || []);
-      setConfidenceInfo(res.confidence_info);
+      setConfidenceInfo({
+        composite: res.composite_confidence,
+        retrieval: res.retrieval_confidence,
+        completeness: res.completeness,
+        coverage: res.citation_coverage
+      });
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: "Error: " + err.message }]);
     } finally {
