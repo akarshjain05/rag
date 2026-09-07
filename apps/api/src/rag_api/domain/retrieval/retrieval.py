@@ -104,17 +104,18 @@ class HybridRetriever:
         dense_only: bool = False,
         original_query: str | None = None,
     ) -> list[RetrievedChunk]:
-        # Synchronous wrapper over the new hybrid_search logic
+        """Synchronous wrapper for eval/script usage ONLY. Never call from FastAPI."""
         import asyncio
         try:
-            loop = asyncio.get_running_loop()
-            import nest_asyncio
-            nest_asyncio.apply()
+            asyncio.get_running_loop()
+            has_loop = True
         except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            has_loop = False
             
-        return loop.run_until_complete(
+        if has_loop:
+            raise RuntimeError("HybridRetriever.retrieve() must not be called from inside an event loop. Use retrieve_async().")
+            
+        return asyncio.run(
             self.retrieve_async(
                 query, 
                 top_k=top_k, 
