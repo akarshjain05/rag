@@ -109,6 +109,8 @@ async def ask(
         )
         dense_only_sources = [SourceSchema(**s) for s in build_sources(dense_chunks)]
 
+    store.log_query_metrics(float(result.retrieval_confidence) if result.retrieval_confidence is not None else 0.0)
+
     return QueryResponse(
         conversation_id=cid,
         answer=result.answer,
