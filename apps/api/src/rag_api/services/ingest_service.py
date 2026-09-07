@@ -117,6 +117,12 @@ class IngestionPipeline:
             if progress_callback: progress_callback(50, f"Generating {len(chunks)} Jina Embeddings...")
             embeddings = self.embedding_client.embed([c.text for c in chunks])
 
+            import time
+            current_time = int(time.time())
+
+            if progress_callback: progress_callback(70, "Expiring old document version...")
+            self.vector_store.expire_source_document(source_name, current_time)
+
             if progress_callback: progress_callback(80, "Checking for duplicates & indexing into Qdrant...")
             inserted_ids = []
             inserted_texts = []
@@ -131,9 +137,13 @@ class IngestionPipeline:
                     report.duplicates_skipped += 1
                     report.duplicate_of.append(dedup.duplicate_of)
                     continue
+                
+                meta = chunk.metadata()
+                meta["valid_from"] = current_time
+                
                 inserted_ids.append(chunk.chunk_id)
                 inserted_texts.append(chunk.text)
-                inserted_metas.append(chunk.metadata())
+                inserted_metas.append(meta)
                 inserted_embeddings.append(embedding)
                 report.chunks_inserted += 1
                 

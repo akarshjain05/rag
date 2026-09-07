@@ -150,15 +150,14 @@ class VectorStore:
         return out
         
     def hybrid_search(self, query_text: str, dense_vector: list[float], top_k: int = 25, where: dict | None = None, prefetch_limit: int = 60) -> list[dict]:
-        filter_obj = None
+        conditions = [models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))]
         if where:
-            conditions = []
             for k, v in where.items():
                 if isinstance(v, list):
                     conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
                 else:
                     conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
-            filter_obj = models.Filter(must=conditions)
+        filter_obj = models.Filter(must=conditions)
             
         if not getattr(self, "_sparse_model", None):
             return self.query(dense_vector, top_k=top_k, where=where)
@@ -228,15 +227,14 @@ class VectorStore:
         return count
 
     def sparse_query(self, query_text: str, top_k: int = 10, where: dict | None = None) -> list[dict]:
-        filter_obj = None
+        conditions = [models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))]
         if where:
-            conditions = []
             for k, v in where.items():
                 if isinstance(v, list):
                     conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
                 else:
                     conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
-            filter_obj = models.Filter(must=conditions)
+        filter_obj = models.Filter(must=conditions)
             
         if not getattr(self, "_sparse_model", None):
             return []
@@ -319,4 +317,30 @@ class VectorStore:
         )
         count = self._client.count(collection_name=self.cache_collection, count_filter=filter_obj).count
         self._client.delete(collection_name=self.cache_collection, points_selector=filter_obj, wait=True)
+        return count
+
+    def expire_source_document(self, source_document: str, current_time: int) -> int:
+        """Updates the valid_to timestamp of all active chunks for a document."""
+        filter_obj = models.Filter(
+            must=[
+                models.FieldCondition(key="source_document", match=models.MatchValue(value=source_document)),
+                models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))
+            ]
+        )
+        count = self._client.count(collection_name=self.collection_name, count_filter=filter_obj).count
+        
+        # We only need to set payload if there are points
+        if count > 0:
+            self._client.set_payload(
+                collection_name=self.collection_name,
+                payload={"valid_to": current_time},
+                points=filter_obj,
+                wait=True
+            )
+            # Also wipe semantic cache because the old doc is obsolete
+            try:
+                self.semantic_cache_invalidate(source_document)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to invalidate semantic cache for {source_document}: {e}")
         return count
