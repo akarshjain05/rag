@@ -1,0 +1,10 @@
+{
+  "description": "Creates intuitive and visually appealing user interfaces tailored for apps, enhancing user experience and streamlining app design for developers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

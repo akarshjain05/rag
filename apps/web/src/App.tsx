@@ -4,858 +4,878 @@ import { MessageCircle, Folder, Clock, BarChart, Settings, FileText, ArrowRight,
 
 
 class ErrorBoundary extends React.Component<any, any> {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null, info: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error, info) {
-    this.setState({ info });
-    console.error("ErrorBoundary caught an error", error, info);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ padding: '20px', background: '#f8d7da', color: '#721c24' }}>
-          <h2>Something went wrong.</h2>
-          <details style={{ whiteSpace: 'pre-wrap' }}>
-            {this.state.error && this.state.error.toString()}
-            <br />
-            {this.state.info && this.state.info.componentStack}
-          </details>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
+ constructor(props) {
+ super(props);
+ this.state = { hasError: false, error: null, info: null };
+ }
+ static getDerivedStateFromError(error) {
+ return { hasError: true, error };
+ }
+ componentDidCatch(error, info) {
+ this.setState({ info });
+ console.error("ErrorBoundary caught an error", error, info);
+ }
+ render() {
+ if (this.state.hasError) {
+ return (
+ <div style={{ padding: '20px', background: '#f8d7da', color: '#721c24' }}>
+ <h2>Something went wrong.</h2>
+ <details style={{ whiteSpace: 'pre-wrap' }}>
+ {this.state.error && this.state.error.toString()}
+ <br />
+ {this.state.info && this.state.info.componentStack}
+ </details>
+ </div>
+ );
+ }
+ return this.props.children;
+ }
 }
 
 export default function App() {
-  return <ErrorBoundary><AppContent /></ErrorBoundary>;
+ return <ErrorBoundary><AppContent /></ErrorBoundary>;
 }
 
 function AppContent() {
-  const [apiKey, setApiKey] = useState<string | null>(import.meta.env.VITE_API_KEY || localStorage.getItem('apiKey'));
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentView, setCurrentView] = useState<'chat' | 'knowledge' | 'history' | 'insights' | 'settings'>('chat');
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  
-  const [theme, setTheme] = useState<'light' | 'dark'>(localStorage.getItem('theme') as 'light' | 'dark' || 'dark');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+ const [apiKey, setApiKey] = useState<string | null>(import.meta.env.VITE_API_KEY || localStorage.getItem('apiKey'));
+ const [isAuthenticated, setIsAuthenticated] = useState(false);
+ const [currentView, setCurrentView] = useState<'chat' | 'knowledge' | 'history' | 'insights' | 'settings'>('chat');
+ const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+ 
+ const [theme, setTheme] = useState<'light' | 'dark'>(localStorage.getItem('theme') as 'light' | 'dark' || 'dark');
+ const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-  useEffect(() => {
-    if (apiKey) {
-      verifyAuth().then(() => {
-        setIsAuthenticated(true);
-      }).catch(() => {
-        setIsAuthenticated(false);
-        localStorage.removeItem('apiKey');
-        setApiKey(null);
-      });
-    } else {
-      setIsAuthenticated(false);
-    }
-  }, [apiKey]);
+ useEffect(() => {
+ if (theme === 'dark') {
+ document.documentElement.classList.add('dark');
+ } else {
+ document.documentElement.classList.remove('dark');
+ }
+ localStorage.setItem('theme', theme);
+ }, [theme]);
+ useEffect(() => {
+ if (apiKey) {
+ verifyAuth().then(() => {
+ setIsAuthenticated(true);
+ }).catch(() => {
+ setIsAuthenticated(false);
+ localStorage.removeItem('apiKey');
+ setApiKey(null);
+ });
+ } else {
+ setIsAuthenticated(false);
+ }
+ }, [apiKey]);
 
-  if (!isAuthenticated) {
-    return <AuthScreen onAuth={(key) => { localStorage.setItem('apiKey', key); setApiKey(key); }} />;
-  }
+ if (!isAuthenticated) {
+ return <AuthScreen onAuth={(key) => { localStorage.setItem('apiKey', key); setApiKey(key); }} />;
+ }
 
-  return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-gray-100 font-sans flex items-center justify-center p-8">
-      <div className="w-full max-w-7xl h-[85vh] bg-gray-50 dark:bg-[#141414] border border-gray-200 dark:border-white/10 rounded-2xl flex overflow-hidden shadow-2xl">
-        <Sidebar 
-          currentView={currentView} 
-          setCurrentView={setCurrentView} 
-          theme={theme}
-          setTheme={setTheme}
-          mobileMenuOpen={mobileMenuOpen}
-          setMobileMenuOpen={setMobileMenuOpen}
-          onLogout={() => { localStorage.removeItem('apiKey'); setApiKey(null); }} 
-        />
-        
-        <main className="flex-1 flex overflow-hidden">
-          {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} setMobileMenuOpen={setMobileMenuOpen} />}
-          {currentView === 'knowledge' && <KnowledgeBase />}
-          {currentView === 'history' && <HistoryView onSelect={(id) => { setActiveConversationId(id); setCurrentView('chat'); }} />}
-          {currentView === 'insights' && <InsightsView />}
-          {currentView === 'settings' && <SettingsView />}
-        </main>
-      </div>
-    </div>
-  );
+ return (
+ <div className="min-h-screen bg-[var(--color-surface-card)] text-[var(--color-ink)] font-sans flex items-center justify-center p-8">
+ <div className="w-full max-w-7xl h-[85vh] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-sm flex overflow-hidden ">
+ <Sidebar 
+ currentView={currentView} 
+ setCurrentView={setCurrentView} 
+ theme={theme}
+ setTheme={setTheme}
+ mobileMenuOpen={mobileMenuOpen}
+ setMobileMenuOpen={setMobileMenuOpen}
+ onLogout={() => { localStorage.removeItem('apiKey'); setApiKey(null); }} 
+ />
+ 
+ <main className="flex-1 flex overflow-hidden">
+ {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} setMobileMenuOpen={setMobileMenuOpen} />}
+ {currentView === 'knowledge' && <KnowledgeBase />}
+ {currentView === 'history' && <HistoryView onSelect={(id) => { setActiveConversationId(id); setCurrentView('chat'); }} />}
+ {currentView === 'insights' && <InsightsView />}
+ {currentView === 'settings' && <SettingsView />}
+ </main>
+ </div>
+ </div>
+ );
 }
 
 function AuthScreen({ onAuth }) {
-  const [key, setKey] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+ const [key, setKey] = useState("");
+ const [error, setError] = useState("");
+ const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      localStorage.setItem('apiKey', key);
-      await verifyAuth();
-      onAuth(key);
-    } catch (err) {
-      setError("Invalid API Key");
-      localStorage.removeItem('apiKey');
-    } finally {
-      setLoading(false);
-    }
-  };
+ const handleSubmit = async (e) => {
+ e.preventDefault();
+ setLoading(true);
+ setError("");
+ try {
+ localStorage.setItem('apiKey', key);
+ await verifyAuth();
+ onAuth(key);
+ } catch (err) {
+ setError("Invalid API Key");
+ localStorage.removeItem('apiKey');
+ } finally {
+ setLoading(false);
+ }
+ };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] text-white">
-      <div className="w-full max-w-md p-8 bg-[#141414] border border-white/10 rounded-xl shadow-2xl">
-        <h1 className="text-2xl font-semibold mb-2">Sign in to Nexus</h1>
-        <p className="text-gray-400 text-sm mb-6">Enter your API key to continue.</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <input 
-            type="password" 
-            value={key} 
-            onChange={e => setKey(e.target.value)}
-            placeholder="sk-..." 
-            className="p-3 rounded-lg bg-black/50 border border-white/10 focus:border-blue-500 focus:outline-none transition-colors"
-          />
-          {error && <div className="text-red-400 text-sm">{error}</div>}
-          <button 
-            type="submit" 
-            disabled={loading || !key}
-            className="p-3 bg-white text-black font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-          >
-            {loading ? "Verifying..." : "Sign in"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+ return (
+ <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] text-[var(--color-ink)]">
+ <div className="w-full max-w-md p-8 bg-[#141414] border border-white/10 rounded-sm ">
+ <h1 className="text-2xl font-semibold mb-2">Sign in to Nexus</h1>
+ <p className="text-[var(--color-ink-muted)] text-sm mb-6">Enter your API key to continue.</p>
+ <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+ <input 
+ type="password" 
+ value={key} 
+ onChange={e => setKey(e.target.value)}
+ placeholder="sk-..." 
+ className="p-3 rounded-sm bg-black/50 border border-white/10 focus:border-blue-500 focus:outline-none transition-colors"
+ />
+ {error && <div className="text-red-400 text-sm">{error}</div>}
+ <button 
+ type="submit" 
+ disabled={loading || !key}
+ className="p-3 bg-white text-black font-medium rounded-sm hover:border-l-2 border-[var(--color-accent)] transition-colors disabled:opacity-50"
+ >
+ {loading ? "Verifying..." : "Sign in"}
+ </button>
+ </form>
+ </div>
+ </div>
+ );
 }
 
 function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobileMenuOpen, setMobileMenuOpen }) {
-  const navItems = [
-    { id: 'chat', icon: MessageCircle, label: 'Ask' },
-    { id: 'knowledge', icon: Folder, label: 'Knowledge base' },
-    { id: 'history', icon: Clock, label: 'History' },
-    { id: 'insights', icon: BarChart, label: 'Insights' },
-  ];
+ const navItems = [
+ { id: 'chat', label: 'Ask' },
+ { id: 'knowledge', label: 'Knowledge base' },
+ { id: 'history', label: 'History' },
+ { id: 'insights', label: 'Insights' },
+ ];
 
-  return (
-    <>
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
-      )}
-      
-      <div className={`fixed md:relative z-50 w-64 h-full bg-[#FAFAFA] dark:bg-[#0A0A0A] border-r border-gray-200 dark:border-white/10 flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="p-6 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold tracking-tighter">
-              NX
-            </div>
-            <span className="font-semibold tracking-wide">Nexus</span>
-          </div>
-          <button className="md:hidden text-gray-500" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+ return (
+ <>
+ {/* Mobile Menu Overlay */}
+ {mobileMenuOpen && (
+ <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+ )}
+ 
+ <div className={`fixed md:relative z-50 w-64 h-full bg-[var(--color-surface-sunken)] border-r border-[var(--color-border)] flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+ <div className="p-6 flex justify-between items-center">
+ <div className="flex items-center gap-3">
+ <div className="w-8 h-8 bg-blue-600 rounded-sm flex items-center justify-center text-[var(--color-ink)] font-bold tracking-tighter">
+ NX
+ </div>
+ <span className="font-semibold tracking-wide">Nexus</span>
+ </div>
+ <button className="md:hidden text-[var(--color-ink-secondary)]" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+ <X className="w-5 h-5" />
+ </button>
+ </div>
 
-        <nav className="flex-1 px-4 py-4 flex flex-col gap-2">
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => { setCurrentView(item.id as any); setMobileMenuOpen(false); }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                currentView === item.id 
-                  ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white font-medium' 
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500'
-              }`}
-              aria-label={item.label}
-            >
-              <item.icon className="w-4 h-4" />
-              <span className="text-sm">{item.label}</span>
-            </button>
-          ))}
-        </nav>
+ <nav className="flex-1 px-4 py-4 flex flex-col gap-2">
+ {navItems.map(item => (
+ <button
+ key={item.id}
+ onClick={() => { setCurrentView(item.id as any); setMobileMenuOpen(false); }}
+ className={`flex items-center gap-3 py-2 rounded-none transition-all ${
+ currentView === item.id 
+ ? 'border-l-2 border-[var(--color-accent)] text-[var(--color-ink)] font-medium pl-[14px]' 
+ : 'text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] focus-visible:outline-none'
+ }`}
+ aria-label={item.label}
+ >
+ 
+ <span className="text-sm">{item.label}</span>
+ </button>
+ ))}
+ </nav>
 
-        <div className="p-4 flex flex-col gap-2">
-          <button 
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-all text-sm"
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-          </button>
-          
-          <button 
-            onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm ${
-              currentView === 'settings' 
-                ? 'bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white font-medium' 
-                : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500'
-            }`}
-            aria-label="Settings"
-          >
-            <Settings className="w-4 h-4" />
-            <span>Settings</span>
-          </button>
-          
-          <button 
-            onClick={onLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all mt-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Log out"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Log out</span>
-          </button>
-        </div>
-      </div>
-    </>
-  );
+ <div className="p-4 flex flex-col gap-2">
+ 
+ 
+ <button 
+ onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
+ className={`flex items-center gap-3 py-2 rounded-none transition-all text-sm ${
+ currentView === 'settings' 
+ ? 'border-l-2 border-[var(--color-accent)] text-[var(--color-ink)] font-medium pl-[14px]' 
+ : 'text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] focus-visible:outline-none'
+ }`}
+ aria-label="Settings"
+ >
+ <Settings className="w-4 h-4" />
+ <span>Settings</span>
+ </button>
+ 
+ <button 
+ onClick={onLogout}
+ className="flex items-center gap-3 py-2 rounded-none text-red-500 hover:bg-red-50 transition-all mt-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+ aria-label="Log out"
+ >
+ <LogOut className="w-4 h-4" />
+ <span>Log out</span>
+ </button>
+ </div>
+ </div>
+ </>
+ );
 }
 
 
 function Modal({ isOpen, onClose, title, message, onConfirm, confirmText, isAlert }: any) {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#FAFAFA] dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl max-w-md w-full p-6 shadow-2xl">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{title}</h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">{message}</p>
-        <div className="flex justify-end gap-3">
-          {!isAlert && (
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-            >
-              Cancel
-            </button>
-          )}
-          <button
-            onClick={() => { if (onConfirm) onConfirm(); onClose(); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors ${isAlert ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
-          >
-            {confirmText || 'Confirm'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+ if (!isOpen) return null;
+ return (
+ <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+ <div className="bg-[var(--color-surface-sunken)] border border-[var(--color-border)] rounded-sm max-w-md w-full p-6 ">
+ <h3 className="text-lg font-medium text-[var(--color-ink)] mb-2">{title}</h3>
+ <p className="text-[var(--color-ink-secondary)] mb-6">{message}</p>
+ <div className="flex justify-end gap-3">
+ {!isAlert && (
+ <button
+ onClick={onClose}
+ className="px-4 py-2 rounded-sm text-sm font-medium text-[var(--color-ink)] hover:bg-gray-100 transition-colors"
+ >
+ Cancel
+ </button>
+ )}
+ <button
+ onClick={() => { if (onConfirm) onConfirm(); onClose(); }}
+ className={`px-4 py-2 rounded-sm text-sm font-medium text-[var(--color-ink)] transition-colors ${isAlert ? 'bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)]' : 'bg-transparent border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)]'}`}
+ >
+ {confirmText || 'Confirm'}
+ </button>
+ </div>
+ </div>
+ </div>
+ );
 }
 
 function KnowledgeBase() {
-  const [docs, setDocs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
-  const [modal, setModal] = useState<any>(null);
+ const [docs, setDocs] = useState<any[]>([]);
+ const [loading, setLoading] = useState(true);
+ const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+ const [uploading, setUploading] = useState(false);
+ const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
+ const [modal, setModal] = useState<any>(null);
 
-  const handleUpload = async (e) => {
-    if (!e.target.files?.length) return;
-    setUploading(true);
-    setProgress({ pct: 0, msg: "Starting upload..." });
-    try {
-      const { ingest, fetchDocuments } = await import('./lib/api');
-      await ingest(e.target.files, (pct, msg) => {
-        setProgress({ pct, msg });
-      }, null);
-      const res = await fetchDocuments();
-      setDocs(res.documents || res.source_documents || []);
-    } catch (err) {
-      setModal({ type: 'alert', title: 'Upload Failed', message: err.message, confirmText: 'OK' });
-    } finally {
-      setUploading(false);
-      setProgress(null);
-      e.target.value = null;
-    }
-  };
+ const handleUpload = async (e) => {
+ if (!e.target.files?.length) return;
+ setUploading(true);
+ setProgress({ pct: 0, msg: "Starting upload..." });
+ try {
+ const { ingest, fetchDocuments } = await import('./lib/api');
+ await ingest(e.target.files, (pct, msg) => {
+ setProgress({ pct, msg });
+ }, null);
+ const res = await fetchDocuments();
+ setDocs(res.documents || res.source_documents || []);
+ } catch (err) {
+ setModal({ type: 'alert', title: 'Upload Failed', message: err.message, confirmText: 'OK' });
+ } finally {
+ setUploading(false);
+ setProgress(null);
+ e.target.value = null;
+ }
+ };
 
 
-  useEffect(() => {
-    import('./lib/api').then(({ fetchDocuments }) => {
-      fetchDocuments().then(res => {
-        setDocs(res.source_documents || []);
-        setLoading(false);
-      }).catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
-    });
-  }, []);
+ useEffect(() => {
+ import('./lib/api').then(({ fetchDocuments }) => {
+ fetchDocuments().then(res => {
+ setDocs(res.source_documents || []);
+ setLoading(false);
+ }).catch(err => {
+ console.error(err);
+ setLoading(false);
+ });
+ });
+ }, []);
 
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedDocs);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedDocs(next);
-  };
+ const toggleSelect = (id: string) => {
+ const next = new Set(selectedDocs);
+ if (next.has(id)) next.delete(id);
+ else next.add(id);
+ setSelectedDocs(next);
+ };
 
-  const handleBulkDelete = () => {
-    if (selectedDocs.size === 0) return;
-    setModal({
-      type: 'confirm',
-      title: 'Bulk Delete',
-      message: `Delete ${selectedDocs.size} documents?`,
-      confirmText: 'Delete',
-      onConfirm: async () => {
-        const ids = Array.from(selectedDocs);
-        setSelectedDocs(new Set());
-        try {
-          const { bulkDeleteDocuments } = await import('./lib/api');
-          await bulkDeleteDocuments(ids);
-          setDocs(prev => prev.filter(d => !ids.includes(d)));
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    });
-  };
-  const handleDelete = (doc) => {
-    setModal({
-      type: 'confirm',
-      title: 'Delete Document',
-      message: `Delete ${doc}?`,
-      confirmText: 'Delete',
-      onConfirm: async () => {
-        await deleteDocument(doc);
-        const res = await fetchDocuments();
-        setDocs(res.source_documents || []);
-      }
-    });
-  };
+ const handleBulkDelete = () => {
+ if (selectedDocs.size === 0) return;
+ setModal({
+ type: 'confirm',
+ title: 'Bulk Delete',
+ message: `Delete ${selectedDocs.size} documents?`,
+ confirmText: 'Delete',
+ onConfirm: async () => {
+ const ids = Array.from(selectedDocs);
+ setSelectedDocs(new Set());
+ try {
+ const { bulkDeleteDocuments } = await import('./lib/api');
+ await bulkDeleteDocuments(ids);
+ setDocs(prev => prev.filter(d => !ids.includes(d)));
+ } catch (err) {
+ console.error(err);
+ }
+ }
+ });
+ };
+ const handleDelete = (doc) => {
+ setModal({
+ type: 'confirm',
+ title: 'Delete Document',
+ message: `Delete ${doc}?`,
+ confirmText: 'Delete',
+ onConfirm: async () => {
+ await deleteDocument(doc);
+ const res = await fetchDocuments();
+ setDocs(res.source_documents || []);
+ }
+ });
+ };
 
-  return (
-    <div className="flex-1 p-8 flex flex-col overflow-hidden">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Knowledge Base</h2>
-                <div className="relative">
-          {selectedDocs.size > 0 ? (
-            <button onClick={handleBulkDelete} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
-              <Trash2 className="w-4 h-4" /> Delete {selectedDocs.size} Selected
-            </button>
-          ) : (
-            <>
-              <input type="file" multiple onChange={handleUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" disabled={uploading} />
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50" disabled={uploading}>
-                {uploading ? "Uploading..." : "+ Upload File"}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-      
-      {uploading && progress && (
-        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg flex justify-between items-center text-sm text-blue-500">
-          <span>{progress.msg}</span>
-          <span className="font-mono">{progress.pct}</span>
-        </div>
-      )}
+ return (
+ <div className="flex-1 p-8 flex flex-col overflow-hidden">
+ <div className="flex justify-between items-center mb-6">
+ <h2 className="text-xl font-semibold">Knowledge Base</h2>
+ <div className="relative">
+ {selectedDocs.size > 0 ? (
+ <button onClick={handleBulkDelete} className="px-4 py-2 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)] rounded-sm text-sm font-medium transition-colors flex items-center gap-2 ">
+ <Trash2 className="w-4 h-4" /> Delete {selectedDocs.size} Selected
+ </button>
+ ) : (
+ <>
+ <input type="file" multiple onChange={handleUpload} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" disabled={uploading} />
+ <button className="px-4 py-2 border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)] rounded-sm text-sm font-medium transition-colors disabled:opacity-50" disabled={uploading}>
+ {uploading ? "Uploading..." : "+ Upload File"}
+ </button>
+ </>
+ )}
+ </div>
+ </div>
+ 
+ {uploading && progress && (
+ <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-sm flex justify-between items-center text-sm text-blue-500">
+ <span>{progress.msg}</span>
+ <span className="font-mono">{progress.pct}</span>
+ </div>
+ )}
 
-      <div className="flex-1 overflow-auto bg-white dark:bg-[#0A0A0A] rounded-xl border border-gray-200 dark:border-white/10">
-        {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading documents...</div>
-        ) : docs.length === 0 ? (
-          <div className="p-12 text-center text-gray-500 flex flex-col items-center">
-            <Folder className="w-12 h-12 mb-4 opacity-20" />
-            <p>Your knowledge base is empty.</p>
-            <p className="text-sm mt-2 opacity-60">Upload PDFs, Markdown, or text files to begin.</p>
-          </div>
-        ) : (
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs uppercase bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
-                            <tr>
-                <th className="px-6 py-4 w-12 text-center">
-                  <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300 dark:border-gray-600"
-                    checked={docs.length > 0 && selectedDocs.size === docs.length}
-                    onChange={(e) => {
-                      if (e.target.checked) setSelectedDocs(new Set(docs));
-                      else setSelectedDocs(new Set());
-                    }}
-                  />
-                </th>
-                <th className="px-6 py-4 font-medium text-gray-500">Document Name</th>
-                <th className="px-6 py-4 font-medium text-gray-500 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map((doc, i) => (
-                                <tr key={i} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                  <td className="px-6 py-4 w-12 text-center">
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-gray-300 dark:border-gray-600"
-                      checked={selectedDocs.has(doc)}
-                      onChange={() => toggleSelect(doc)}
-                    />
-                  </td>
-                  <td className="px-6 py-4 flex items-center gap-3">
-                    <FileText className="w-4 h-4 text-gray-400" />
-                    {doc}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button onClick={() => handleDelete(doc)} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      <Modal isOpen={!!modal} onClose={() => setModal(null)} {...modal} isAlert={modal?.type === "alert"} />
-    </div>
-  );
+ <div className="flex-1 overflow-auto bg-[var(--color-surface-card)] rounded-sm border border-[var(--color-border)]">
+ {loading ? (
+ <div className="p-8 text-center text-[var(--color-ink-secondary)]">Loading documents...</div>
+ ) : docs.length === 0 ? (
+ <div className="p-12 text-center text-[var(--color-ink-secondary)] flex flex-col items-center">
+ <Folder className="w-12 h-12 mb-4 opacity-20" />
+ <p>Your knowledge base is empty.</p>
+ <p className="text-sm mt-2 opacity-60">Upload PDFs, Markdown, or text files to begin.</p>
+ </div>
+ ) : (
+ <table className="w-full text-sm text-left">
+ <thead className="text-xs uppercase bg-[var(--color-surface-card)] border-b border-[var(--color-border)]">
+ <tr>
+ <th className="px-6 py-4 w-12 text-center">
+ <input 
+ type="checkbox" 
+ className="rounded border-[var(--color-border)]"
+ checked={docs.length > 0 && selectedDocs.size === docs.length}
+ onChange={(e) => {
+ if (e.target.checked) setSelectedDocs(new Set(docs));
+ else setSelectedDocs(new Set());
+ }}
+ />
+ </th>
+ <th className="px-6 py-4 font-medium text-[var(--color-ink-secondary)]">Document Name</th>
+ <th className="px-6 py-4 font-medium text-[var(--color-ink-secondary)] text-right">Actions</th>
+ </tr>
+ </thead>
+ <tbody>
+ {docs.map((doc, i) => (
+ <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors group">
+ <td className="px-6 py-4 w-12 text-center">
+ <input 
+ type="checkbox" 
+ className="rounded border-[var(--color-border)]"
+ checked={selectedDocs.has(doc)}
+ onChange={() => toggleSelect(doc)}
+ />
+ </td>
+ <td className="px-6 py-4 flex items-center gap-3">
+ <FileText className="w-4 h-4 text-[var(--color-ink-muted)]" />
+ {doc}
+ </td>
+ <td className="px-6 py-4 text-right">
+ <button onClick={() => handleDelete(doc)} className="text-[var(--color-ink-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
+ <Trash2 className="w-4 h-4" />
+ </button>
+ </td>
+ </tr>
+ ))}
+ </tbody>
+ </table>
+ )}
+ </div>
+ <Modal isOpen={!!modal} onClose={() => setModal(null)} {...modal} isAlert={modal?.type === "alert"} />
+ </div>
+ );
 }
 
 function HistoryView({ onSelect }) {
-  const [conversations, setConversations] = useState([]);
-  const [loading, setLoading] = useState(true);
+ const [conversations, setConversations] = useState([]);
+ const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    import('./lib/api').then(({ fetchConversations }) => {
-      fetchConversations().then(res => {
-        setConversations(res.conversations || []);
-        setLoading(false);
-      }).catch(() => setLoading(false));
-    });
-  }, []);
+ useEffect(() => {
+ import('./lib/api').then(({ fetchConversations }) => {
+ fetchConversations().then(res => {
+ setConversations(res.conversations || []);
+ setLoading(false);
+ }).catch(() => setLoading(false));
+ });
+ }, []);
 
-  return (
-    <div className="flex-1 p-8 flex flex-col overflow-hidden">
-      <h2 className="text-xl font-semibold mb-6">Conversation History</h2>
-      <div className="flex-1 overflow-auto">
-        {loading ? (
-          <div className="text-gray-500">Loading...</div>
-        ) : conversations.length === 0 ? (
-          <div className="text-gray-500">No history found.</div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {conversations.map(c => (
-              <button 
-                key={c.id} 
-                onClick={() => onSelect(c.id)}
-                className="flex justify-between items-center p-4 bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl hover:border-blue-500 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-              >
-                <span className="font-medium">{c.title}</span>
-                <span className="text-xs text-gray-400">{new Date(c.updated_at * 1000).toLocaleString()}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+ return (
+ <div className="flex-1 p-8 flex flex-col overflow-hidden">
+ <h2 className="text-xl font-semibold mb-6">Conversation History</h2>
+ <div className="flex-1 overflow-auto">
+ {loading ? (
+ <div className="text-[var(--color-ink-secondary)]">Loading...</div>
+ ) : conversations.length === 0 ? (
+ <div className="text-[var(--color-ink-secondary)]">No history found.</div>
+ ) : (
+ <div className="flex flex-col gap-2">
+ {conversations.map(c => (
+ <button 
+ key={c.id} 
+ onClick={() => onSelect(c.id)}
+ className="flex justify-between items-center p-4 bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm hover:border-blue-500 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+ >
+ <span className="font-medium">{c.title}</span>
+ <span className="text-xs text-[var(--color-ink-muted)]">{new Date(c.updated_at * 1000).toLocaleString()}</span>
+ </button>
+ ))}
+ </div>
+ )}
+ </div>
+ </div>
+ );
 }
 
 
 function SettingsView() {
-  const [keys, setKeys] = useState<any[]>([]);
-  const [modal, setModal] = useState<any>(null);
-  
-  useEffect(() => {
-    import('./lib/api').then(({ listApiKeys }) => {
-      listApiKeys().then(res => setKeys(res)).catch(err => console.error(err));
-    });
-  }, []);
+ const [keys, setKeys] = useState<any[]>([]);
+ const [modal, setModal] = useState<any>(null);
+ 
+ useEffect(() => {
+ import('./lib/api').then(({ listApiKeys }) => {
+ listApiKeys().then(res => setKeys(res)).catch(err => console.error(err));
+ });
+ }, []);
 
-  const handleGenerate = async () => {
-    try {
-      const { generateApiKey } = await import('./lib/api');
-      const res = await generateApiKey();
-      if (res.api_key) {
-        setKeys(prev => [res, ...prev]);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+ const handleGenerate = async () => {
+ try {
+ const { generateApiKey } = await import('./lib/api');
+ const res = await generateApiKey();
+ if (res.api_key) {
+ setKeys(prev => [res, ...prev]);
+ }
+ } catch (err) {
+ console.error(err);
+ }
+ };
 
-  const handleRevoke = (keyId: string) => {
-    setModal({
-      type: 'confirm',
-      title: 'Revoke API Key',
-      message: 'Revoke this key immediately?',
-      confirmText: 'Revoke',
-      onConfirm: async () => {
-        try {
-          const { revokeApiKey } = await import('./lib/api');
-          await revokeApiKey(keyId);
-          setKeys(prev => prev.filter(k => k.api_key !== keyId));
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    });
-  };
+ const handleRevoke = (keyId: string) => {
+ setModal({
+ type: 'confirm',
+ title: 'Revoke API Key',
+ message: 'Revoke this key immediately?',
+ confirmText: 'Revoke',
+ onConfirm: async () => {
+ try {
+ const { revokeApiKey } = await import('./lib/api');
+ await revokeApiKey(keyId);
+ setKeys(prev => prev.filter(k => k.api_key !== keyId));
+ } catch (err) {
+ console.error(err);
+ }
+ }
+ });
+ };
 
-  return (
-    <div className="flex-1 p-8 overflow-auto">
-      <h2 className="text-2xl font-semibold mb-8">Settings & API Keys</h2>
-      
-      <div className="max-w-2xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-lg font-medium">API Keys</h3>
-            <p className="text-sm text-gray-500">Manage API keys used for external access</p>
-          </div>
-          <button onClick={handleGenerate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
-            Generate New Key
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          {keys.length === 0 && <div className="text-sm text-gray-500 text-center py-4">No dynamic keys generated yet.</div>}
-          {keys.map(k => (
-            <div key={k.api_key} className="flex justify-between items-center p-4 border border-gray-200 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-white/5">
-              <div>
-                <div className="font-mono text-sm">{k.api_key}</div>
-                <div className="text-xs text-gray-500 mt-1">Created: {new Date(k.created_at * 1000).toLocaleString()}</div>
-              </div>
-              <button onClick={() => handleRevoke(k.api_key)} className="text-red-500 hover:text-red-600 text-sm font-medium">
-                Revoke
-              </button>
-            </div>
-          ))}
-        </div>
-        
-        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-sm rounded-xl border border-blue-100 dark:border-blue-900/50">
-          <strong>Note:</strong> Keys defined in the <code>API_KEYS</code> environment variable act as immutable root keys and are not shown here.
-        </div>
-      </div>
-      <Modal isOpen={!!modal} onClose={() => setModal(null)} {...modal} isAlert={modal?.type === "alert"} />
-    </div>
-  );
+ return (
+ <div className="flex-1 p-8 overflow-auto">
+ <h2 className="text-2xl font-semibold mb-8">Settings & API Keys</h2>
+ 
+ <div className="max-w-2xl bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
+ <div className="flex justify-between items-center mb-6">
+ <div>
+ <h3 className="text-lg font-medium">API Keys</h3>
+ <p className="text-sm text-[var(--color-ink-secondary)]">Manage API keys used for external access</p>
+ </div>
+ <button onClick={handleGenerate} className="border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)] px-4 py-2 rounded-sm text-sm font-medium transition-colors">
+ Generate New Key
+ </button>
+ </div>
+ 
+ <div className="space-y-4">
+ {keys.length === 0 && <div className="py-4 font-serif italic text-[var(--color-ink-muted)]">No dynamic keys generated yet.</div>}
+ {keys.map(k => (
+ <div key={k.api_key} className="flex justify-between items-center p-4 border border-[var(--color-border)] rounded-sm bg-[var(--color-surface-card)]">
+ <div>
+ <div className="font-mono text-sm">{k.api_key}</div>
+ <div className="text-xs text-[var(--color-ink-secondary)] mt-1">Created: {new Date(k.created_at * 1000).toLocaleString()}</div>
+ </div>
+ <button onClick={() => handleRevoke(k.api_key)} className="text-red-500 hover:text-red-600 text-sm font-medium">
+ Revoke
+ </button>
+ </div>
+ ))}
+ </div>
+ 
+ <div className="mt-6 p-4 bg-blue-50 text-blue-800 text-sm rounded-sm border border-blue-100 ">
+ <strong>Note:</strong> Keys defined in the <code>API_KEYS</code> environment variable act as immutable root keys and are not shown here.
+ </div>
+ </div>
+ <Modal isOpen={!!modal} onClose={() => setModal(null)} {...modal} isAlert={modal?.type === "alert"} />
+ </div>
+ );
 }
 
 function InsightsView() {
-  const [metrics, setMetrics] = useState<any>(null);
+ const [metrics, setMetrics] = useState<any>(null);
 
-  useEffect(() => {
-    import('./lib/api').then(({ fetchInsights }) => {
-      fetchInsights().then(res => setMetrics(res)).catch(err => console.error(err));
-    });
-  }, []);
+ useEffect(() => {
+ import('./lib/api').then(({ fetchInsights }) => {
+ fetchInsights().then(res => setMetrics(res)).catch(err => console.error(err));
+ });
+ }, []);
 
-  if (!metrics) return <div className="flex-1 flex items-center justify-center text-gray-500">Loading...</div>;
+ if (!metrics) return <div className="flex-1 flex items-center justify-center text-[var(--color-ink-secondary)]">Loading...</div>;
 
-  const totalFeedback = metrics.thumbs_up + metrics.thumbs_down;
-  const positiveRate = totalFeedback > 0 ? (metrics.thumbs_up / totalFeedback) * 100 : 0;
+ const totalFeedback = metrics.thumbs_up + metrics.thumbs_down;
+ const positiveRate = totalFeedback > 0 ? (metrics.thumbs_up / totalFeedback) * 100 : 0;
 
-  return (
-    <div className="flex-1 p-8 overflow-auto">
-      <h2 className="text-2xl font-semibold mb-8">System Insights</h2>
-      
-      <div className="grid grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-          <div className="text-sm text-gray-500 mb-2">Total Queries Served</div>
-          <div className="text-4xl font-light">{metrics.total_queries}</div>
-        </div>
-        
-        <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-          <div className="text-sm text-gray-500 mb-2">Avg Retrieval Confidence</div>
-          <div className="text-4xl font-light">
-            {(metrics.average_confidence * 100).toFixed(0)}<span className="text-xl text-gray-400">%</span>
-          </div>
-        </div>
+ return (
+ <div className="flex-1 p-8 overflow-auto">
+ <h2 className="text-2xl font-semibold mb-8">System Insights</h2>
+ 
+ <div className="grid grid-cols-3 gap-6 mb-8">
+ <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
+ <div className="text-sm text-[var(--color-ink-secondary)] mb-2">Total Queries Served</div>
+ <div className="text-4xl font-light">{metrics.total_queries}</div>
+ </div>
+ 
+ <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
+ <div className="text-sm text-[var(--color-ink-secondary)] mb-2">Avg Retrieval Confidence</div>
+ <div className="text-4xl font-light">
+ {(metrics.average_confidence * 100).toFixed(0)}<span className="text-xl text-[var(--color-ink-muted)]">%</span>
+ </div>
+ </div>
 
-        <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-          <div className="text-sm text-gray-500 mb-2">Positive Feedback Rate</div>
-          <div className="text-4xl font-light">
-            {totalFeedback > 0 ? positiveRate.toFixed(0) : '--'}<span className="text-xl text-gray-400">%</span>
-          </div>
-          <div className="text-xs text-gray-400 mt-2">{totalFeedback} total ratings</div>
-        </div>
-      </div>
+ <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
+ <div className="text-sm text-[var(--color-ink-secondary)] mb-2">Positive Feedback Rate</div>
+ <div className="text-4xl font-light">
+ {totalFeedback > 0 ? positiveRate.toFixed(0) : '--'}<span className="text-xl text-[var(--color-ink-muted)]">%</span>
+ </div>
+ <div className="text-xs text-[var(--color-ink-muted)] mt-2">{totalFeedback} total ratings</div>
+ </div>
+ </div>
 
-      <div className="bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-        <h3 className="text-lg font-medium mb-6">User Satisfaction</h3>
-        <div className="space-y-4">
-          <div>
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-green-500 flex items-center gap-2"><ThumbsUp className="w-4 h-4" /> Helpful</span>
-              <span>{metrics.thumbs_up}</span>
-            </div>
-            <div className="w-full bg-gray-100 dark:bg-white/5 rounded-full h-2">
-              <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${totalFeedback > 0 ? (metrics.thumbs_up/totalFeedback)*100 : 0}%` }}></div>
-            </div>
-          </div>
-          <div>
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-red-500 flex items-center gap-2"><ThumbsDown className="w-4 h-4" /> Unhelpful</span>
-              <span>{metrics.thumbs_down}</span>
-            </div>
-            <div className="w-full bg-gray-100 dark:bg-white/5 rounded-full h-2">
-              <div className="bg-red-500 h-2 rounded-full transition-all" style={{ width: `${totalFeedback > 0 ? (metrics.thumbs_down/totalFeedback)*100 : 0}%` }}></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+ <div className="bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-6">
+ <h3 className="text-lg font-medium mb-6">User Satisfaction</h3>
+ <div className="space-y-4">
+ <div>
+ <div className="flex justify-between text-sm mb-2">
+ <span className="text-green-500 flex items-center gap-2"><ThumbsUp className="w-4 h-4" /> Helpful</span>
+ <span>{metrics.thumbs_up}</span>
+ </div>
+ <div className="w-full bg-gray-100 rounded-full h-2">
+ <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${totalFeedback > 0 ? (metrics.thumbs_up/totalFeedback)*100 : 0}%` }}></div>
+ </div>
+ </div>
+ <div>
+ <div className="flex justify-between text-sm mb-2">
+ <span className="text-red-500 flex items-center gap-2"><ThumbsDown className="w-4 h-4" /> Unhelpful</span>
+ <span>{metrics.thumbs_down}</span>
+ </div>
+ <div className="w-full bg-gray-100 rounded-full h-2">
+ <div className="bg-red-500 h-2 rounded-full transition-all" style={{ width: `${totalFeedback > 0 ? (metrics.thumbs_down/totalFeedback)*100 : 0}%` }}></div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ );
 }
 
 function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
-  const [query, setQuery] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [sources, setSources] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [activeCitation, setActiveCitation] = useState<number | null>(null);
-  const [confidenceInfo, setConfidenceInfo] = useState<any>(null);
 
-  const [compareDenseOnly, setCompareDenseOnly] = useState(false);
-  const isInitialMount = React.useRef(true);
-  const skipFetch = React.useRef(false);
-
-  useEffect(() => {
-    if (skipFetch.current) {
-       skipFetch.current = false;
-       return;
-    }
-    if (conversationId) {
-      import('./lib/api').then(({ fetchConversation }) => {
-        fetchConversation(conversationId).then(res => {
-          if (res.history) {
-            const mapped = [];
-            res.history.forEach(t => {
-              mapped.push({ role: 'user', content: t.user });
-              mapped.push({ role: 'assistant', content: t.assistant });
-            });
-            setMessages(mapped);
-          }
-        }).catch(err => console.error(err));
-      });
-    } else {
-      setMessages([]);
-      setSources([]);
-      setConfidenceInfo(null);
-    }
-  }, [conversationId]);
-
-  const handleAsk = async () => {
-    if (!query.trim()) return;
-    const q = query;
-    setQuery("");
-    setMessages(prev => [...prev, { role: 'user', content: q }]);
-    setLoading(true);
-    
-    try {
-      const res = await ask({ question: q, conversationId, verifyCitations: true, compareDenseOnly });
-      if (!conversationId) {
-          skipFetch.current = true;
-          setConversationId(res.conversation_id);
+  const renderContentWithCitations = (text: string) => {
+    if (!text) return null;
+    const regex = /([^.!?\n]+[.!?]?\s*)(\[\d+\])/g;
+    let lastIndex = 0;
+    const result = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        result.push(text.substring(lastIndex, match.index));
       }
-      
-      setMessages(prev => [...prev, { role: 'assistant', content: res.answer, markers: res.used_citation_markers }]);
-      setSources(res.sources);
-      setConfidenceInfo({
-        composite: res.composite_confidence,
-        retrieval: res.retrieval_confidence,
-        completeness: res.completeness,
-        coverage: res.citation_coverage
-      });
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
-    } finally {
-      setLoading(false);
+      const phrase = match[1];
+      const citeMatch = match[2].match(/\[(\d+)\]/);
+      const citeNum = citeMatch ? citeMatch[1] : '';
+      result.push(
+        <span key={match.index} className="inline group">
+          <span className="border-b border-dotted border-[var(--color-accent)] cursor-pointer">{phrase}</span>
+          <sup className="text-[var(--color-accent)] font-mono cursor-pointer ml-[2px]">{citeNum}</sup>
+        </span>
+      );
+      lastIndex = regex.lastIndex;
     }
-  };
-
-  const handleFeedback = async (index, isPositive) => {
-    if (!conversationId) return;
-    try {
-      const { submitFeedback } = await import('./lib/api');
-      await submitFeedback(conversationId, index / 2, isPositive);
-      setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, feedback: isPositive } : msg));
-    } catch (err) {
-      console.error("Failed to submit feedback", err);
+    if (lastIndex < text.length) {
+      result.push(text.substring(lastIndex));
     }
+    return result.length > 0 ? result : text;
   };
 
-  
-  const handleExport = () => {
-    if (messages.length === 0) return;
-    let md = `# Conversation
+ const [query, setQuery] = useState("");
+ const [messages, setMessages] = useState([]);
+ const [sources, setSources] = useState([]);
+ const [loading, setLoading] = useState(false);
+ const [activeCitation, setActiveCitation] = useState<number | null>(null);
+ const [confidenceInfo, setConfidenceInfo] = useState<any>(null);
+
+ const [compareDenseOnly, setCompareDenseOnly] = useState(false);
+ const isInitialMount = React.useRef(true);
+ const skipFetch = React.useRef(false);
+
+ useEffect(() => {
+ if (skipFetch.current) {
+ skipFetch.current = false;
+ return;
+ }
+ if (conversationId) {
+ import('./lib/api').then(({ fetchConversation }) => {
+ fetchConversation(conversationId).then(res => {
+ if (res.history) {
+ const mapped = [];
+ res.history.forEach(t => {
+ mapped.push({ role: 'user', content: t.user });
+ mapped.push({ role: 'assistant', content: t.assistant });
+ });
+ setMessages(mapped);
+ }
+ }).catch(err => console.error(err));
+ });
+ } else {
+ setMessages([]);
+ setSources([]);
+ setConfidenceInfo(null);
+ }
+ }, [conversationId]);
+
+ const handleAsk = async () => {
+ if (!query.trim()) return;
+ const q = query;
+ setQuery("");
+ setMessages(prev => [...prev, { role: 'user', content: q }]);
+ setLoading(true);
+ 
+ try {
+ const res = await ask({ question: q, conversationId, verifyCitations: true, compareDenseOnly });
+ if (!conversationId) {
+ skipFetch.current = true;
+ setConversationId(res.conversation_id);
+ }
+ 
+ setMessages(prev => [...prev, { role: 'assistant', content: res.answer, markers: res.used_citation_markers }]);
+ setSources(res.sources);
+ setConfidenceInfo({
+ composite: res.composite_confidence,
+ retrieval: res.retrieval_confidence,
+ completeness: res.completeness,
+ coverage: res.citation_coverage
+ });
+ } catch (err) {
+ setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
+ } finally {
+ setLoading(false);
+ }
+ };
+
+ const handleFeedback = async (index, isPositive) => {
+ if (!conversationId) return;
+ try {
+ const { submitFeedback } = await import('./lib/api');
+ await submitFeedback(conversationId, index / 2, isPositive);
+ setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, feedback: isPositive } : msg));
+ } catch (err) {
+ console.error("Failed to submit feedback", err);
+ }
+ };
+
+ 
+ const handleExport = () => {
+ if (messages.length === 0) return;
+ let md = `# Conversation
 
 `;
-    messages.forEach(m => {
-      md += `**${m.role === 'user' ? 'User' : 'Assistant'}**:
-${m.content}
+ messages.forEach(m => {
+ md += `**${m.role === 'user' ? 'User' : 'Assistant'}**:
+${m.role === 'assistant' ? renderContentWithCitations(m.content) : m.content}
 
 `;
-      if (m.markers && m.markers.length > 0) {
-        md += `*Sources*: ${m.markers.join(', ')}
+ if (m.markers && m.markers.length > 0) {
+ md += `*Sources*: ${m.markers.join(', ')}
 
 `;
-      }
-    });
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `conversation-${conversationId || 'export'}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
+ }
+ });
+ const blob = new Blob([md], { type: 'text/markdown' });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = `conversation-${conversationId || 'export'}.md`;
+ document.body.appendChild(a);
+ a.click();
+ document.body.removeChild(a);
+ };
 
-  const isHighConfidence = confidenceInfo?.composite >= 0.7;
-  const isLowConfidence = confidenceInfo?.composite < 0.4;
+ const isHighConfidence = confidenceInfo?.composite >= 0.7;
+ const isLowConfidence = confidenceInfo?.composite < 0.4;
 
-  return (
-    <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-      {/* Main Chat Thread */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden relative">
-                <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Open menu">
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="text-xs text-gray-500 font-mono">
-              Conversation: {conversationId || "New"}
-            </div>
-          </div>
-                    <div className="flex items-center gap-2">
-            {conversationId && (
-              <button onClick={handleExport} className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white px-3 py-1 border border-gray-200 dark:border-white/10 rounded-lg">
-                Export .md
-              </button>
-            )}
-            {conversationId && (
-              <button onClick={() => setConversationId(null)} className="text-xs text-blue-500 hover:underline" aria-label="Start new chat">
-                Start new chat
-              </button>
-            )}
-          </div>
-        </div>
-        
-        <div className="flex-1 overflow-auto flex flex-col gap-6 pb-20 pr-4" aria-live="polite">
-          {messages.map((m, i) => (
-            <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-              <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-gray-100 dark:bg-white/10' : ''}`}>
-                {m.content}
-              </div>
-              
-              {m.role === 'assistant' && (
-                <div className="flex items-center gap-4 mt-2 px-2 text-gray-400">
-                  <button 
-                    onClick={() => handleFeedback(i, true)}
-                    className={`hover:text-green-500 transition-colors ${m.feedback === true ? 'text-green-500' : ''}`}
-                    title="Helpful"
-                  >
-                    <ThumbsUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button 
-                    onClick={() => handleFeedback(i, false)}
-                    className={`hover:text-red-500 transition-colors ${m.feedback === false ? 'text-red-500' : ''}`}
-                    title="Unhelpful"
-                  >
-                    <ThumbsDown className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-              
-              {m.role === 'assistant' && i === messages.length - 1 && confidenceInfo && (
-                <details className="mt-2 text-xs">
-                  <summary className="flex items-center gap-2 cursor-pointer list-none">
-                    <span className={`px-3 py-1 rounded-full font-medium ${isHighConfidence ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : isLowConfidence ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'}`}>
-                      {isHighConfidence ? 'High confidence' : isLowConfidence ? 'Low confidence' : 'Moderate confidence'}
-                    </span>
-                    <span className="text-gray-400">Show details</span>
-                  </summary>
-                  <div className="mt-2 p-3 bg-gray-50 dark:bg-white/5 rounded-lg flex gap-4 text-gray-500 font-mono">
-                    <span>Retrieval: {confidenceInfo.retrieval?.toFixed(2) || 'N/A'}</span>
-                    <span>Citations: {confidenceInfo.coverage?.toFixed(2) || 'N/A'}</span>
-                    <span>Completeness: {confidenceInfo.completeness?.toFixed(2) || 'N/A'}</span>
-                  </div>
-                </details>
-              )}
-            </div>
-          ))}
-          {loading && (
-             <div className="text-sm text-gray-400 flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                Analyzing corpus...
-             </div>
-          )}
-        </div>
+ return (
+ <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+ {/* Main Chat Thread */}
+ <div className="flex-1 flex flex-col p-6 overflow-hidden relative">
+ <div className="flex justify-between items-center mb-4">
+ <div className="flex items-center gap-3">
+ <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] )]" aria-label="Open menu">
+ <Menu className="w-5 h-5" />
+ </button>
+ <div className="text-xs text-[var(--color-ink-secondary)] font-mono">
+ Conversation: {conversationId || "New"}
+ </div>
+ </div>
+ <div className="flex items-center gap-2">
+ {conversationId && (
+ <button onClick={handleExport} className="text-xs text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] )] px-3 py-1 border border-[var(--color-border)] rounded-sm">
+ Export .md
+ </button>
+ )}
+ {conversationId && (
+ <button onClick={() => setConversationId(null)} className="text-xs text-blue-500 hover:underline" aria-label="Start new chat">
+ Start new chat
+ </button>
+ )}
+ </div>
+ </div>
+ 
+ <div className="flex-1 overflow-auto flex flex-col gap-6 pb-20 pr-4" aria-live="polite">
+ {messages.map((m, i) => (
+ <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+ <div className={`max-w-[85%] py-4 rounded-sm leading-relaxed ${m.role === 'user' ? 'bg-[var(--color-surface-card)] px-4 text-sm' : 'font-serif text-[16px] leading-[1.75]'}`}>
+ {m.role === 'assistant' ? renderContentWithCitations(m.content) : m.content}
+ </div>
+ 
+ {m.role === 'assistant' && (
+ <div className="flex items-center gap-4 mt-2 px-2 text-[var(--color-ink-muted)]">
+ <button 
+ onClick={() => handleFeedback(i, true)}
+ className={`hover:text-green-500 transition-colors ${m.feedback === true ? 'text-green-500' : ''}`}
+ title="Helpful"
+ >
+ <ThumbsUp className="w-3.5 h-3.5" />
+ </button>
+ <button 
+ onClick={() => handleFeedback(i, false)}
+ className={`hover:text-red-500 transition-colors ${m.feedback === false ? 'text-red-500' : ''}`}
+ title="Unhelpful"
+ >
+ <ThumbsDown className="w-3.5 h-3.5" />
+ </button>
+ </div>
+ )}
+ 
+ {m.role === 'assistant' && i === messages.length - 1 && confidenceInfo && (
+ <details className="mt-2 text-xs">
+ <summary className="flex items-center gap-2 cursor-pointer list-none">
+ <span className={`px-3 py-1 rounded-full font-medium ${isHighConfidence ? 'bg-green-100 text-green-700 ' : isLowConfidence ? 'bg-red-100 text-red-700 ' : 'bg-yellow-100 text-yellow-700 '}`}>
+ {isHighConfidence ? 'High confidence' : isLowConfidence ? 'Low confidence' : 'Moderate confidence'}
+ </span>
+ <span className="text-[var(--color-ink-muted)]">Show details</span>
+ </summary>
+ <div className="mt-2 p-3 bg-[var(--color-surface-card)] rounded-sm flex gap-4 text-[var(--color-ink-secondary)] font-mono">
+ <span>Retrieval: {confidenceInfo.retrieval?.toFixed(2) || 'N/A'}</span>
+ <span>Citations: {confidenceInfo.coverage?.toFixed(2) || 'N/A'}</span>
+ <span>Completeness: {confidenceInfo.completeness?.toFixed(2) || 'N/A'}</span>
+ </div>
+ </details>
+ )}
+ </div>
+ ))}
+ {loading && (
+ <div className="text-sm text-[var(--color-ink-muted)] flex items-center gap-2">
+ <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+ Analyzing corpus...
+ </div>
+ )}
+ </div>
 
-        <div className="absolute bottom-6 left-6 right-6 pt-4 bg-gray-50/80 dark:bg-[#141414]/80 backdrop-blur-md">
-                    <div className="flex gap-2 items-center mb-2 px-1">
-            <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-              <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600" />
-              Dense-only mode
-            </label>
-          </div>
-          <div className="flex gap-2 items-center bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/10 rounded-xl p-2 shadow-sm focus-within:border-blue-500 transition-colors">
-            <input 
-              type="text" 
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAsk()}
-              placeholder="Ask a question..."
-              className="flex-1 bg-transparent border-none outline-none px-3 text-sm focus-visible:ring-0"
-            />
-            <button 
-              onClick={handleAsk}
-              aria-label="Send message"  
-              disabled={loading || !query.trim()}
-              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0A0A0A]"
-            >
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+ <div className="absolute bottom-6 left-6 right-6 pt-4 bg-gray-50/80 backdrop-blur-md">
+ <div className="flex gap-2 items-center mb-2 px-1">
+ <label className="flex items-center gap-2 text-xs text-[var(--color-ink-secondary)] cursor-pointer">
+ <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded border-[var(--color-border)]" />
+ Dense-only mode
+ </label>
+ </div>
+ <div className="flex gap-2 items-center bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-2 focus-within:border-blue-500 transition-colors">
+ <input 
+ type="text" 
+ value={query}
+ onChange={e => setQuery(e.target.value)}
+ onKeyDown={e => e.key === 'Enter' && handleAsk()}
+ placeholder="Ask a question..."
+ className="flex-1 bg-transparent border-none outline-none px-3 text-sm focus-visible:ring-0"
+ />
+ <button 
+ onClick={handleAsk}
+ aria-label="Send message" 
+ disabled={loading || !query.trim()}
+ className="p-2 bg-blue-600 text-[var(--color-ink)] rounded-sm hover:bg-blue-700 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white ]"
+ >
+ <ArrowRight className="w-4 h-4" />
+ </button>
+ </div>
+ </div>
+ </div>
 
-      {/* Right Source Panel */}
-      <div className="w-full md:w-[300px] border-t md:border-t-0 md:border-l border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#141414] p-6 flex flex-col md:overflow-hidden min-h-[300px] md:min-h-0">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Sources</h3>
-        <div className="flex-1 overflow-auto flex flex-col gap-4">
-          {sources.length === 0 ? (
-            <div className="text-xs text-gray-400 text-center mt-10">No sources active</div>
-          ) : (
-            sources.map((s, i) => (
-              <div key={i} className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-4 shadow-sm relative group cursor-pointer hover:border-blue-500 transition-colors">
+ {/* Right Source Panel */}
+ <div className="w-full md:w-[300px] border-t md:border-t-0 md:border-l border-[var(--color-border)] bg-[var(--color-surface)] p-6 flex flex-col md:overflow-hidden min-h-[300px] md:min-h-0">
+ <h3 className="text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider mb-4">Sources</h3>
+ <div className="flex-1 overflow-auto flex flex-col gap-4">
+ {sources.length === 0 ? (
+ <div className="text-[13px] font-serif italic text-[var(--color-ink-muted)] mt-10">No active sources.</div>
+ ) : (
+ sources.map((s, i) => (
+ <div key={i} className="bg-[var(--color-surface-card)] border border-[var(--color-border)] border-t-[3px] border-t-[var(--color-accent)] rounded-none p-4 relative group cursor-pointer hover:border-b-[var(--color-accent)] hover:border-l-[var(--color-accent)] hover:border-r-[var(--color-accent)] transition-colors">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs font-medium truncate flex-1">[{s.marker}] {s.source_document}</span>
+                  <span className="text-[11px] font-mono text-[var(--color-ink)] truncate flex-1"><sup className="text-[var(--color-accent)]">{s.marker}</sup> {s.source_document}</span>
                 </div>
-                              <div className="text-[10px] text-gray-400 mb-2 truncate">{s.section_heading}</div>
-                <div className="text-[9px] flex gap-2 font-mono text-gray-500 mb-2">
-                  <span title="Dense Score" className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1 rounded">D: {s.dense_score?.toFixed(2) || '-'}</span>
-                  {!compareDenseOnly && <span title="Sparse Score" className="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 px-1 rounded">S: {s.sparse_score?.toFixed(2) || '-'}</span>}
-                  <span title="Rerank Score" className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1 rounded">R: {s.rerank_score?.toFixed(2) || '-'}</span>
+                {s.section_heading && <div className="text-[11px] font-serif italic text-[var(--color-ink-muted)] mb-2 truncate">{s.section_heading}</div>}
+                <div className="text-[9px] flex gap-2 font-mono text-[var(--color-ink-secondary)] mb-2 tracking-[0.05em] uppercase">
+                  <span title="Dense Score">D:{s.dense_score?.toFixed(2) || '-'}</span>
+                  {!compareDenseOnly && <span title="Sparse Score">S:{s.sparse_score?.toFixed(2) || '-'}</span>}
+                  <span title="Rerank Score">R:{s.rerank_score?.toFixed(2) || '-'}</span>
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-300 font-serif leading-relaxed line-clamp-4">
-                  {s.text}
+                <p className="text-[13px] text-[var(--color-ink)] font-serif leading-[1.75] line-clamp-4">
+                  "{s.text}"
                 </p>
                 <div className="mt-3 inline-block">
-                  <span className="text-[9px] font-medium bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400 px-2 py-1 rounded-full">
+                  <span className="text-[9px] uppercase tracking-[0.05em] font-mono border border-[var(--color-success)] bg-[var(--color-success-tint)] text-[var(--color-success)] px-2 py-1 rounded-none">
                     Supported
                   </span>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
+ ))
+ )}
+ </div>
+ </div>
+ </div>
+ );
 }
