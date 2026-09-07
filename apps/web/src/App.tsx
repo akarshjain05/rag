@@ -513,13 +513,20 @@ function SettingsView() {
 
 function InsightsView() {
  const [metrics, setMetrics] = useState<any>(null);
+ const [error, setError] = useState<string | null>(null);
 
  useEffect(() => {
  import('./lib/api').then(({ fetchInsights }) => {
- fetchInsights().then(res => setMetrics(res)).catch(err => console.error(err));
+ fetchInsights()
+   .then(res => setMetrics(res))
+   .catch(err => {
+      console.error(err);
+      setError("Failed to load insights. Please refresh the page.");
+   });
  });
  }, []);
 
+ if (error) return <div className="flex-1 flex items-center justify-center text-danger">{error}</div>;
  if (!metrics) return <div className="flex-1 flex items-center justify-center text-ink-secondary">Loading...</div>;
 
  const totalFeedback = metrics.thumbs_up + metrics.thumbs_down;
