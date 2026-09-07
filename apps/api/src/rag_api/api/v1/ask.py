@@ -1,7 +1,7 @@
 from fastapi import Request
 from rag_api.main import limiter
 from rag_api.core.logging import log
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, BackgroundTasks
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
 from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings, get_vector_store, get_normalizer_llm_client
 from rag_api.core.settings import Settings
@@ -15,6 +15,7 @@ router = APIRouter(prefix="/ask", tags=["query"])
 async def ask(
     request: Request,
     payload: QueryRequest,
+    background_tasks: BackgroundTasks,
     retriever = Depends(get_retriever),
     generator = Depends(get_generator),
     vector_store = Depends(get_vector_store),
@@ -141,7 +142,7 @@ async def ask(
 
     store.log_query_metrics(float(result.retrieval_confidence) if result.retrieval_confidence is not None else 0.0)
 
-    return QueryResponse(
+    response_obj = QueryResponse(
         conversation_id=cid,
         answer=result.answer,
         mode=result.mode,
@@ -156,3 +157,12 @@ async def ask(
         composite_confidence=result.composite_confidence,
         dense_only_sources=dense_only_sources,
     )
+    
+    # Save to Semantic Cache asynchronously using BackgroundTasks
+    # so the user doesn't wait for the database write
+    if result.mode != "low_confidence":
+        def save_to_cache():
+            vector_store.semantic_cache_set(payload.question, query_vector, response_obj.model_dump(mode="json"))
+        background_tasks.add_task(save_to_cache)
+        
+    return response_obj
