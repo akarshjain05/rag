@@ -171,6 +171,9 @@ def create_app(
         description="Ingests internal documentation, indexes it with dense + sparse hybrid search, and answers questions with grounded, cited responses.",
         lifespan=lifespan
     )
+    
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
