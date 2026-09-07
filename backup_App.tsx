@@ -84,13 +84,13 @@ function AppContent() {
  onLogout={() => { localStorage.removeItem('apiKey'); setApiKey(null); }} 
  />
  
- <div className="flex-1 flex overflow-hidden">
+ <main className="flex-1 flex overflow-hidden">
  {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} setMobileMenuOpen={setMobileMenuOpen} />}
  {currentView === 'knowledge' && <KnowledgeBase />}
  {currentView === 'history' && <HistoryView onSelect={(id) => { setActiveConversationId(id); setCurrentView('chat'); }} />}
  {currentView === 'insights' && <InsightsView />}
  {currentView === 'settings' && <SettingsView />}
- </div>
+ </main>
  </div>
  </div>
  );
@@ -145,53 +145,79 @@ function AuthScreen({ onAuth }) {
 }
 
 function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobileMenuOpen, setMobileMenuOpen }) {
-  const navItems = [
-    { id: 'knowledge', label: 'Knowledge Base' },
-    { id: 'history', label: 'Search History' },
-    { id: 'insights', label: 'Insights' },
-  ];
+ const navItems = [
+ { id: 'chat', label: 'Ask' },
+ { id: 'knowledge', label: 'Knowledge base' },
+ { id: 'history', label: 'History' },
+ { id: 'insights', label: 'Insights' },
+ ];
 
-  return (
-    <>
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
-      )}
-      
-      <aside className={`fixed md:relative z-50 w-64 h-full bg-[var(--color-surface-sunken)] border-r border-[var(--color-border-strong)] flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="p-6 pb-2 border-b border-[var(--color-border)] flex justify-between items-center">
-          <h1 className="font-serif italic font-semibold text-[17px] text-[var(--color-ink)] tracking-wide cursor-pointer" onClick={() => setCurrentView('chat')}>Stacks</h1>
-          <button className="md:hidden text-[var(--color-ink-secondary)]" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <nav className="flex-1 p-6 flex flex-col gap-4 text-[13px]">
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => { setCurrentView(item.id as any); setMobileMenuOpen(false); }}
-              className={`text-left font-sans ${currentView === item.id ? 'text-[var(--color-ink)] border-l-2 border-[var(--color-accent)] pl-3 -ml-[2px]' : 'text-[var(--color-ink-secondary)] pl-3 hover:text-[var(--color-ink)]'}`}
-            >
-              {item.label}
-            </button>
-          ))}
-          <button
-            onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
-            className={`text-left font-sans mt-auto ${currentView === 'settings' ? 'text-[var(--color-ink)] border-l-2 border-[var(--color-accent)] pl-3 -ml-[2px]' : 'text-[var(--color-ink-secondary)] pl-3 hover:text-[var(--color-ink)]'}`}
-          >
-            Settings
-          </button>
-        </nav>
-        
-        <div className="p-6 pt-4 border-t border-[var(--color-border)]">
-          <button onClick={onLogout} className="text-[13px] text-[var(--color-accent)] font-sans hover:underline">
-            Log out
-          </button>
-        </div>
-      </aside>
-    </>
-  );
+ return (
+ <>
+ {/* Mobile Menu Overlay */}
+ {mobileMenuOpen && (
+ <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+ )}
+ 
+ <div className={`fixed md:relative z-50 w-64 h-full bg-[var(--color-surface-sunken)] border-r border-[var(--color-border)] flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+ <div className="p-6 flex justify-between items-center">
+ <div className="flex items-center gap-3">
+ <div className="w-8 h-8 bg-blue-600 rounded-sm flex items-center justify-center text-[var(--color-ink)] font-bold tracking-tighter">
+ NX
+ </div>
+ <span className="font-semibold tracking-wide">Nexus</span>
+ </div>
+ <button className="md:hidden text-[var(--color-ink-secondary)]" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+ <X className="w-5 h-5" />
+ </button>
+ </div>
+
+ <nav className="flex-1 px-4 py-4 flex flex-col gap-2">
+ {navItems.map(item => (
+ <button
+ key={item.id}
+ onClick={() => { setCurrentView(item.id as any); setMobileMenuOpen(false); }}
+ className={`flex items-center gap-3 py-2 rounded-none transition-all ${
+ currentView === item.id 
+ ? 'border-l-2 border-[var(--color-accent)] text-[var(--color-ink)] font-medium pl-[14px]' 
+ : 'text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] focus-visible:outline-none'
+ }`}
+ aria-label={item.label}
+ >
+ 
+ <span className="text-sm">{item.label}</span>
+ </button>
+ ))}
+ </nav>
+
+ <div className="p-4 flex flex-col gap-2">
+ 
+ 
+ <button 
+ onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
+ className={`flex items-center gap-3 py-2 rounded-none transition-all text-sm ${
+ currentView === 'settings' 
+ ? 'border-l-2 border-[var(--color-accent)] text-[var(--color-ink)] font-medium pl-[14px]' 
+ : 'text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] focus-visible:outline-none'
+ }`}
+ aria-label="Settings"
+ >
+ <Settings className="w-4 h-4" />
+ <span>Settings</span>
+ </button>
+ 
+ <button 
+ onClick={onLogout}
+ className="flex items-center gap-3 py-2 rounded-none text-red-500 hover:bg-red-50 transition-all mt-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+ aria-label="Log out"
+ >
+ <LogOut className="w-4 h-4" />
+ <span>Log out</span>
+ </button>
+ </div>
+ </div>
+ </>
+ );
 }
 
 
