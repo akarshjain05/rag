@@ -43,6 +43,13 @@ class VectorStore:
             raise ValueError(f"Unknown VectorStore mode: {mode!r}")
 
         # Ensure collection exists with both dense and sparse configurations
+        if self._client.collection_exists(collection_name=self.collection_name):
+            col_info = self._client.get_collection(self.collection_name)
+            if isinstance(col_info.config.params.vectors, dict) and "dense_jina" in col_info.config.params.vectors:
+                existing_dim = col_info.config.params.vectors["dense_jina"].size
+                if existing_dim != dense_dimension:
+                    raise ValueError(f"Vector dimension mismatch! Existing collection has dimension {existing_dim}, but current EMBEDDING_PROVIDER config requires {dense_dimension}. You must wipe the old Qdrant volume to switch providers.")
+        
         if not self._client.collection_exists(collection_name=self.collection_name):
             self._client.create_collection(
                 collection_name=self.collection_name,

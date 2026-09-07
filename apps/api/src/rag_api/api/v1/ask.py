@@ -37,14 +37,9 @@ async def ask(
     
     # Semantic Cache Check
     import asyncio
-    query_embedding = await asyncio.to_thread(retriever.embedding_client.embed, [search_query])
-    query_vector = query_embedding[0]
     strategy_value = payload.chunking_strategy.value if payload.chunking_strategy else None
-    cached_payload = await asyncio.to_thread(
-        vector_store.semantic_cache_get, 
-        query_vector, 
-        0.95,
-        ttl_seconds=604800,
+    cached_payload = await retriever.semantic_cache_get(
+        query=search_query,
         conversation_id=payload.conversation_id,
         document_filter=payload.document_filter,
         chunking_strategy=strategy_value
@@ -129,7 +124,7 @@ async def ask(
             # here reflects a genuine knowledge/vocabulary gap, not a
             # garbled token comparison -- safe to give a near-zero score the
             # same one-shot expansion attempt as a merely ambiguous one.
-            if should_expand_query(max_score):
+            if should_expand_query(max_score, ceiling=settings.crag_threshold_upper):
                 log.info("crag.expansion_triggered", original_score=max_score, query=search_query, retry=retries+1, max_retries=max_retries)
                 expanded_query = run_or_502(expand_query, search_query, llm_client)
                 crag_chunks = await run_or_502_async(
@@ -159,7 +154,7 @@ async def ask(
     result = run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
     
     cid = payload.conversation_id or store.create_conversation()
-    sources_dicts = [SourceSchema(**s).model_dump(mode="json") for s in result.sources]
+    sources_dicts = result.sources
     confidence_info = {
         "retrieval": float(result.retrieval_confidence) if result.retrieval_confidence is not None else None,
         "citation": float(result.citation_coverage) if result.citation_coverage is not None else None,
@@ -200,15 +195,18 @@ async def ask(
     # Save to Semantic Cache asynchronously using BackgroundTasks
     # so the user doesn't wait for the database write
     if result.mode in ("llm", "extractive"):
-        def save_to_cache():
-            vector_store.semantic_cache_set(
-                payload.question, 
-                query_vector, 
-                response_obj.model_dump(mode="json"),
+        async def save_to_cache():
+            await retriever.semantic_cache_set(
+                query=payload.question, 
+                response=response_obj.model_dump(mode="json"),
                 conversation_id=payload.conversation_id,
                 document_filter=payload.document_filter,
                 chunking_strategy=strategy_value
             )
+        
+        # We must schedule the async coroutine safely
+        # FastAPI BackgroundTasks does not naturally take async lambdas gracefully without run_coroutine_threadsafe if called weirdly
+        # actually background_tasks natively supports async functions in FastAPI!
         background_tasks.add_task(save_to_cache)
         
     return response_obj

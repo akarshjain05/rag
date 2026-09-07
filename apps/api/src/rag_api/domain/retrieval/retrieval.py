@@ -33,6 +33,34 @@ class HybridRetriever:
         self.rerank_candidate_pool = rerank_candidate_pool
 
     import asyncio
+    async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> dict | None:
+        import asyncio
+        query_embedding = await asyncio.to_thread(self.embedding_client.embed, [query])
+        query_vector = query_embedding[0]
+        return await asyncio.to_thread(
+            self.vector_store.semantic_cache_get,
+            query_vector,
+            0.95,
+            ttl_seconds=604800,
+            conversation_id=conversation_id,
+            document_filter=document_filter,
+            chunking_strategy=chunking_strategy
+        )
+
+    async def semantic_cache_set(self, query: str, response: dict, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
+        import asyncio
+        query_embedding = await asyncio.to_thread(self.embedding_client.embed, [query])
+        query_vector = query_embedding[0]
+        await asyncio.to_thread(
+            self.vector_store.semantic_cache_set,
+            query,
+            query_vector,
+            response,
+            conversation_id=conversation_id,
+            document_filter=document_filter,
+            chunking_strategy=chunking_strategy
+        )
+
     async def retrieve_async(
         self,
         query: str,

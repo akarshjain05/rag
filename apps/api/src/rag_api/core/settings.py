@@ -112,7 +112,6 @@ class Settings(BaseSettings):
     query_condensation_enabled: bool = True
     query_normalization_enabled: bool = True
     crag_expansion_enabled: bool = True
-    crag_threshold_lower: float = 0.00
     crag_threshold_upper: float = 0.80
     crag_max_retries: int = 1
     context_pruning_threshold: float = 0.30

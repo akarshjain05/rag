@@ -114,10 +114,9 @@ Design: [`../guides/04-large-file-ingestion.md`](04-large-file-ingestion.md).
 
 ## Current state
 
-**None.** Every route is open — `/v1/ingest`, `/v1/ask`, and
-`DELETE /v1/documents/{source_document}` all accept unauthenticated
-requests, and `cors_origins` defaults to `["*"]`. This is acceptable for
-local development only. See
+**API Key Authentication.** The `/v1/ingest`, `/v1/ask`, and
+`DELETE /v1/documents/{source_document}` routes all require a valid `X-API-Key`
+header matching the backend configuration. `cors_origins` defaults to `[]` (deny-all by default). See
 [`../security/01-current-posture.md`](01-current-posture.md)
 for the full list of what this implies, and
 [`../security/02-authentication-and-access-control.md`](02-authentication-and-access-control.md)
