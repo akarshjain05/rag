@@ -255,3 +255,30 @@ class VectorStore:
                 "similarity": point.score
             })
         return out
+
+    def semantic_cache_get(self, query_vector: list[float], threshold: float = 0.92) -> dict | None:
+        res = self._client.query_points(
+            collection_name=self.cache_collection,
+            query=query_vector,
+            limit=1,
+            score_threshold=threshold,
+        )
+        if res.points:
+            return res.points[0].payload
+        return None
+
+    def semantic_cache_set(self, query_text: str, query_vector: list[float], response: dict) -> None:
+        import uuid
+        self._client.upsert(
+            collection_name=self.cache_collection,
+            points=[
+                models.PointStruct(
+                    id=str(uuid.uuid4()),
+                    vector=query_vector,
+                    payload={
+                        "original_query": query_text,
+                        "response": response
+                    }
+                )
+            ]
+        )

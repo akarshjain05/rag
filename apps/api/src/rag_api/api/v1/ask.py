@@ -17,6 +17,7 @@ async def ask(
     payload: QueryRequest,
     retriever = Depends(get_retriever),
     generator = Depends(get_generator),
+    vector_store = Depends(get_vector_store),
     store = Depends(get_conversation_store),
     llm_client = Depends(get_llm_client),
     settings: Settings = Depends(get_settings)
@@ -28,6 +29,16 @@ async def ask(
         history = store.get_history(payload.conversation_id)
         
     search_query = payload.question
+    
+    # Semantic Cache Check
+    import asyncio
+    query_embedding = await asyncio.to_thread(retriever.embedding_client.embed, [search_query])
+    query_vector = query_embedding[0]
+    cached_payload = await asyncio.to_thread(vector_store.semantic_cache_get, query_vector, 0.92)
+    if cached_payload:
+        print("Semantic Cache Hit! Bypassing pipeline.")
+        return QueryResponse(**cached_payload["response"])
+        
     if llm_client:
         search_query = run_or_502(normalize_query, search_query, llm_client)
 
