@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
 from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings, get_vector_store
 from rag_api.core.settings import Settings
-from rag_api.services.query_condensation import condense_query, normalize_query, expand_query, generate_hyde
+from rag_api.services.query_condensation import condense_query, expand_query, generate_hyde, normalize_query, should_expand_query, expand_query, generate_hyde
 from rag_api.services.conversation import Turn
 from rag_api.domain.generation.generation import build_sources
 
@@ -38,8 +38,14 @@ async def ask(
     if cached_payload:
         print("Semantic Cache Hit! Bypassing pipeline.")
         return QueryResponse(**cached_payload["response"])
-        
-    if llm_client:
+
+    # Step 1 (proactive): fix spelling/typos and expand obvious acronyms
+    # before anything else touches the query. Retrieval, condensation, and
+    # HyDE all then operate on clean text -- a typo would otherwise corrupt
+    # dense embeddings, BM25 tokens, and (most severely) the cross-encoder
+    # reranker's token-level comparison identically.
+    normalize_enabled = payload.query_normalization_enabled if payload.query_normalization_enabled is not None else settings.query_normalization_enabled
+    if llm_client and normalize_enabled:
         search_query = run_or_502(normalize_query, search_query, llm_client)
 
     condense_enabled = payload.query_condensation_enabled if payload.query_condensation_enabled is not None else settings.query_condensation_enabled
@@ -79,7 +85,11 @@ async def ask(
         crag_enabled = payload.crag_expansion_enabled if payload.crag_expansion_enabled is not None else settings.crag_expansion_enabled
         while retries < max_retries and crag_enabled:
             max_score = max([c.rerank_score or 0.0 for c in chunks])
-            if settings.crag_threshold_lower <= max_score < settings.crag_threshold_upper:
+            # The query was already spell-checked in Step 1, so a low score
+            # here reflects a genuine knowledge/vocabulary gap, not a
+            # garbled token comparison -- safe to give a near-zero score the
+            # same one-shot expansion attempt as a merely ambiguous one.
+            if should_expand_query(max_score):
                 log.info("crag.expansion_triggered", original_score=max_score, query=search_query, retry=retries+1, max_retries=max_retries)
                 expanded_query = run_or_502(expand_query, search_query, llm_client)
                 crag_chunks = await run_or_502_async(

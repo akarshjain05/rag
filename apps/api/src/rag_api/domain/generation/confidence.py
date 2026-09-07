@@ -13,25 +13,35 @@ from rag_api.domain.models import ClaimVerification, RetrievedChunk
 
 def compute_retrieval_confidence(chunks: list[RetrievedChunk]) -> float:
     """Calculates calibrated retrieval confidence using exponential decay.
-    Prevents low-scoring tail chunks from dragging down a strong top hit."""
+    Prevents low-scoring tail chunks from dragging down a strong top hit.
+
+    When a reranker is active, its score is blended with (not replacing)
+    dense similarity -- 70% rerank / 30% dense -- rather than letting the
+    reranker have sole veto power. `normalize_query` fixing the query
+    upstream (services/query_condensation.py) is the primary defense
+    against a garbled cross-encoder comparison; this is a secondary
+    safeguard for any other case where one signal disagrees sharply with
+    another."""
     import numpy as np
-    
+
     if not chunks:
         return 0.0
-    
-    # If chunks were reranked, use the rerank score which is mapped to [0,1]
+
+    def _decayed(values: list[float]) -> float:
+        scores = sorted(values, reverse=True)
+        if not scores:
+            return 0.0
+        weights = [0.5 ** i for i in range(len(scores))]
+        return float(np.average(scores, weights=weights))
+
+    dense_score = _decayed([c.dense_similarity if c.dense_similarity is not None else 0.0 for c in chunks])
+
     if any(c.rerank_score is not None for c in chunks):
-        values = [c.rerank_score if c.rerank_score is not None else 0.0 for c in chunks]
+        rerank_score = _decayed([c.rerank_score if c.rerank_score is not None else 0.0 for c in chunks])
+        calibrated_score = 0.7 * rerank_score + 0.3 * dense_score
     else:
-        values = [c.dense_similarity if c.dense_similarity is not None else 0.0 for c in chunks]
-        
-    scores = sorted(values, reverse=True)
-    
-    if not scores:
-        return 0.0
-        
-    weights = [0.5 ** i for i in range(len(scores))]
-    calibrated_score = float(np.average(scores, weights=weights))
+        calibrated_score = dense_score
+
     return float(max(0.0, min(1.0, round(calibrated_score, 4))))
 
 

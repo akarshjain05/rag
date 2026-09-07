@@ -29,6 +29,7 @@ class QueryRequest(BaseModel):
     hyde_enabled: bool | None = None
     query_condensation_enabled: bool | None = None
     crag_expansion_enabled: bool | None = None
+    query_normalization_enabled: bool | None = None
     top_k: int = Field(default=5, ge=1, le=20)
     chunking_strategy: ChunkingStrategy | None = None
     compare_dense_only: bool = Field(

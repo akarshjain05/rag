@@ -1,0 +1,54 @@
+text = """@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-canvas: #F5F0E6;
+  --color-surface: #FBF8F1;
+  --color-surface-sunken: #EFE8D8;
+  --color-surface-card: #FDFBF6;
+
+  --color-ink: #2A2521;
+  --color-ink-secondary: #6B6255;
+  --color-ink-muted: #A69C8C;
+
+  --color-border: #DCD3C4;
+  --color-border-strong: #C7BBA8;
+
+  --color-accent: #A8462B;
+  --color-accent-tint: #F0DCD2;
+
+  --color-success: #3F6B4A;
+  --color-success-tint: #E3EDE1;
+  --color-warning: #A67C1F;
+  --color-warning-tint: #F5ECD3;
+  --color-danger: #8C2F1D;
+  --color-danger-tint: #F5E1DC;
+
+  --font-serif: 'Lora', serif;
+  --font-sans: -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+html, body, #root {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  height: 100%;
+  overflow: hidden;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+@keyframes loading-rule {
+  0% { transform: scaleX(0); opacity: 1; }
+  50% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+"""
+
+with open("apps/web/src/index.css", "w") as f:
+    f.write(text)
