@@ -664,7 +664,8 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
                   retrieval_confidence: lastTurn.confidence_info.retrieval,
                   citation_coverage: lastTurn.confidence_info.citation,
                   completeness: lastTurn.confidence_info.completeness,
-                  composite_confidence: lastTurn.confidence_info.composite
+                  composite_confidence: lastTurn.confidence_info.composite,
+                  mode: res.mode || 'standard'
                 });
               }
             }
@@ -703,7 +704,8 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
         composite: res.composite_confidence,
         retrieval: res.retrieval_confidence,
         completeness: res.completeness,
-        coverage: res.citation_coverage
+        coverage: res.citation_coverage,
+        mode: res.mode || 'standard'
       });
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: "Error: " + err.message }]);
@@ -820,6 +822,11 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
                     <div className={`inline-block px-2 py-0.5 border ${isHighConf ? 'border-success bg-success-tint text-success' : isLowConf ? 'border-danger bg-danger-tint text-danger' : 'border-warning bg-warning-tint text-warning'} font-mono text-[11px] uppercase tracking-widest -rotate-2`}>
                       {isHighConf ? 'Verified · High Confidence' : isLowConf ? 'Needs review · Low confidence' : 'Moderate confidence'}
                     </div>
+                    {confidenceInfo.mode === 'expanded_query' && (
+                       <div className="inline-block px-2 py-0.5 border border-accent bg-accent/10 text-accent font-mono text-[11px] uppercase tracking-widest">
+                         ⚡ CRAG: Low confidence retrieval detected. Query expanded.
+                       </div>
+                    )}
                     <div className="font-mono text-[11px] text-ink-muted uppercase tracking-wider">
                       Composite Score: {confidenceInfo.composite?.toFixed(2) || 'N/A'}
                     </div>
