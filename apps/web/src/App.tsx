@@ -633,249 +633,259 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen }) {
     return result.length > 0 ? result : text;
   };
 
- const [query, setQuery] = useState("");
- const [messages, setMessages] = useState([]);
- const [sources, setSources] = useState([]);
- const [loading, setLoading] = useState(false);
- const [activeCitation, setActiveCitation] = useState<number | null>(null);
- const [confidenceInfo, setConfidenceInfo] = useState<any>(null);
+  const [query, setQuery] = React.useState("");
+  const [messages, setMessages] = React.useState([]);
+  const [sources, setSources] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  const [activeCitation, setActiveCitation] = React.useState<number | null>(null);
+  const [confidenceInfo, setConfidenceInfo] = React.useState<any>(null);
 
- const [compareDenseOnly, setCompareDenseOnly] = useState(false);
- const isInitialMount = React.useRef(true);
- const skipFetch = React.useRef(false);
+  const [compareDenseOnly, setCompareDenseOnly] = React.useState(false);
+  const isInitialMount = React.useRef(true);
+  const skipFetch = React.useRef(false);
 
- useEffect(() => {
- if (skipFetch.current) {
- skipFetch.current = false;
- return;
- }
- if (conversationId) {
- import('./lib/api').then(({ fetchConversation }) => {
- fetchConversation(conversationId).then(res => {
- if (res.history) {
- const mapped = [];
- res.history.forEach(t => {
- mapped.push({ role: 'user', content: t.user });
- mapped.push({ role: 'assistant', content: t.assistant });
- });
- setMessages(mapped);
- }
- }).catch(err => console.error(err));
- });
- } else {
- setMessages([]);
- setSources([]);
- setConfidenceInfo(null);
- }
- }, [conversationId]);
+  React.useEffect(() => {
+    if (skipFetch.current) {
+      skipFetch.current = false;
+      return;
+    }
+    if (conversationId) {
+      import('./lib/api').then(({ fetchConversation }) => {
+        fetchConversation(conversationId).then(res => {
+          if (res.history) {
+            const mapped = [];
+            res.history.forEach(t => {
+              if (t.role === 'user') {
+                mapped.push({ role: 'user', content: t.content });
+              } else if (t.role === 'assistant') {
+                mapped.push({ role: 'assistant', content: t.content, markers: t.markers });
+              }
+            });
+            setMessages(mapped);
+          }
+          if (res.sources) setSources(res.sources);
+          if (res.confidence_info) setConfidenceInfo(res.confidence_info);
+        }).catch(console.error);
+      });
+    } else {
+      setMessages([]);
+      setSources([]);
+      setConfidenceInfo(null);
+    }
+  }, [conversationId]);
 
- const handleAsk = async () => {
- if (!query.trim()) return;
- const q = query;
- setQuery("");
- setMessages(prev => [...prev, { role: 'user', content: q }]);
- setLoading(true);
- 
- try {
- const res = await ask({ question: q, conversationId, verifyCitations: true, compareDenseOnly });
- if (!conversationId) {
- skipFetch.current = true;
- setConversationId(res.conversation_id);
- }
- 
- setMessages(prev => [...prev, { role: 'assistant', content: res.answer, markers: res.used_citation_markers }]);
- setSources(res.sources);
- setConfidenceInfo({
- composite: res.composite_confidence,
- retrieval: res.retrieval_confidence,
- completeness: res.completeness,
- coverage: res.citation_coverage
- });
- } catch (err) {
- setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
- } finally {
- setLoading(false);
- }
- };
+  const handleAsk = async () => {
+    if (!query.trim() || loading) return;
+    const q = query;
+    setQuery("");
+    setMessages(prev => [...prev, { role: 'user', content: q }]);
+    setLoading(true);
+    
+    try {
+      const { askQuestion } = await import('./lib/api');
+      const res = await askQuestion(q, conversationId, compareDenseOnly);
+      
+      if (!conversationId && res.conversation_id) {
+        skipFetch.current = true;
+        setConversationId(res.conversation_id);
+      }
 
- const handleFeedback = async (index, isPositive) => {
- if (!conversationId) return;
- try {
- const { submitFeedback } = await import('./lib/api');
- await submitFeedback(conversationId, index / 2, isPositive);
- setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, feedback: isPositive } : msg));
- } catch (err) {
- console.error("Failed to submit feedback", err);
- }
- };
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: res.answer, markers: res.sources?.map(s => s.marker) || [] }
+      ]);
+      setSources(res.sources || []);
+      setConfidenceInfo(res.confidence_info);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: "Error: " + err.message }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
- 
- const handleExport = () => {
- if (messages.length === 0) return;
- let md = `# Conversation
+  const handleFeedback = async (idx, isHelpful) => {
+    if (!conversationId) return;
+    const { submitFeedback } = await import('./lib/api');
+    await submitFeedback(conversationId, isHelpful);
+    setMessages(prev => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], feedback: isHelpful };
+      return next;
+    });
+  };
 
-`;
- messages.forEach(m => {
- md += `**${m.role === 'user' ? 'User' : 'Assistant'}**:
-${m.role === 'assistant' ? renderContentWithCitations(m.content) : m.content}
+  const handleExport = () => {
+    if (!messages.length) return;
+    let md = `# Conversation\n\n`;
+    messages.forEach(m => {
+      md += `**${m.role === 'user' ? 'User' : 'Assistant'}**:\n${m.content}\n\n`;
+      if (m.markers && m.markers.length > 0) {
+        md += `*Sources*: ${m.markers.join(', ')}\n\n`;
+      }
+    });
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `conversation_${conversationId || 'export'}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-`;
- if (m.markers && m.markers.length > 0) {
- md += `*Sources*: ${m.markers.join(', ')}
+  const compScore = confidenceInfo?.composite || 0;
+  const isHighConf = compScore > 0.8;
+  const isLowConf = compScore < 0.4;
 
-`;
- }
- });
- const blob = new Blob([md], { type: 'text/markdown' });
- const url = URL.createObjectURL(blob);
- const a = document.createElement('a');
- a.href = url;
- a.download = `conversation-${conversationId || 'export'}.md`;
- document.body.appendChild(a);
- a.click();
- document.body.removeChild(a);
- };
+  return (
+    <div className="flex-1 bg-[var(--color-surface)] relative flex flex-col overflow-y-auto">
+      
+      {/* Top Header / Input Area */}
+      <header className="px-6 md:px-12 pt-8 pb-6 max-w-4xl w-full mx-auto shrink-0">
+        <div className="flex justify-between items-center mb-6">
+           <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)]" aria-label="Open menu">
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+           </button>
+           <div className="flex items-center gap-4">
+             {conversationId && (
+               <button onClick={handleExport} className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] border border-[var(--color-border)] px-3 py-1 bg-[var(--color-surface-card)] transition-colors">
+                 Export .md
+               </button>
+             )}
+             {conversationId && (
+               <button onClick={() => setConversationId(null)} className="text-[11px] font-mono uppercase tracking-wider text-[var(--color-accent)] hover:bg-[var(--color-accent-tint)] border border-[var(--color-accent)] px-3 py-1 transition-colors" aria-label="Start new chat">
+                 New Search
+               </button>
+             )}
+           </div>
+        </div>
 
- const isHighConfidence = confidenceInfo?.composite >= 0.7;
- const isLowConfidence = confidenceInfo?.composite < 0.4;
+        <div className="relative border-b border-[var(--color-border-strong)] pb-2 flex items-end">
+          <input 
+            type="text" 
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAsk()}
+            placeholder="Ask the archive..." 
+            className="flex-1 bg-transparent border-none outline-none font-serif italic text-[18px] placeholder:text-[var(--color-ink-muted)] text-[var(--color-ink)] focus-visible:ring-0"
+            disabled={loading}
+          />
+          <button 
+            onClick={handleAsk}
+            disabled={loading || !query.trim()}
+            className="ml-4 px-4 py-1 border border-[var(--color-accent)] text-[var(--color-accent)] font-sans text-[13px] hover:bg-[var(--color-accent-tint)] transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+          >
+            Ask
+          </button>
+        </div>
+        <div className="flex gap-2 items-center mt-3">
+           <label className="flex items-center gap-2 text-[11px] font-mono text-[var(--color-ink-secondary)] cursor-pointer uppercase tracking-wider">
+             <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded-none border-[var(--color-border)] accent-[var(--color-accent)]" />
+             Dense-only mode
+           </label>
+        </div>
+      </header>
 
- return (
- <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
- {/* Main Chat Thread */}
- <div className="flex-1 flex flex-col p-6 overflow-hidden relative">
- <div className="flex justify-between items-center mb-4">
- <div className="flex items-center gap-3">
- <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] )]" aria-label="Open menu">
- <Menu className="w-5 h-5" />
- </button>
- <div className="text-xs text-[var(--color-ink-secondary)] font-mono">
- Conversation: {conversationId || "New"}
- </div>
- </div>
- <div className="flex items-center gap-2">
- {conversationId && (
- <button onClick={handleExport} className="text-xs text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] )] px-3 py-1 border border-[var(--color-border)] rounded-sm">
- Export .md
- </button>
- )}
- {conversationId && (
- <button onClick={() => setConversationId(null)} className="text-xs text-blue-500 hover:underline" aria-label="Start new chat">
- Start new chat
- </button>
- )}
- </div>
- </div>
- 
- <div className="flex-1 overflow-auto flex flex-col gap-6 pb-20 pr-4" aria-live="polite">
- {messages.map((m, i) => (
- <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
- <div className={`max-w-[85%] py-4 rounded-sm leading-relaxed ${m.role === 'user' ? 'bg-[var(--color-surface-card)] px-4 text-sm' : 'font-serif text-[16px] leading-[1.75]'}`}>
- {m.role === 'assistant' ? renderContentWithCitations(m.content) : m.content}
- </div>
- 
- {m.role === 'assistant' && (
- <div className="flex items-center gap-4 mt-2 px-2 text-[var(--color-ink-muted)]">
- <button 
- onClick={() => handleFeedback(i, true)}
- className={`hover:text-green-500 transition-colors ${m.feedback === true ? 'text-green-500' : ''}`}
- title="Helpful"
- >
- <ThumbsUp className="w-3.5 h-3.5" />
- </button>
- <button 
- onClick={() => handleFeedback(i, false)}
- className={`hover:text-red-500 transition-colors ${m.feedback === false ? 'text-red-500' : ''}`}
- title="Unhelpful"
- >
- <ThumbsDown className="w-3.5 h-3.5" />
- </button>
- </div>
- )}
- 
- {m.role === 'assistant' && i === messages.length - 1 && confidenceInfo && (
- <details className="mt-2 text-xs">
- <summary className="flex items-center gap-2 cursor-pointer list-none">
- <span className={`px-3 py-1 rounded-full font-medium ${isHighConfidence ? 'bg-green-100 text-green-700 ' : isLowConfidence ? 'bg-red-100 text-red-700 ' : 'bg-yellow-100 text-yellow-700 '}`}>
- {isHighConfidence ? 'High confidence' : isLowConfidence ? 'Low confidence' : 'Moderate confidence'}
- </span>
- <span className="text-[var(--color-ink-muted)]">Show details</span>
- </summary>
- <div className="mt-2 p-3 bg-[var(--color-surface-card)] rounded-sm flex gap-4 text-[var(--color-ink-secondary)] font-mono">
- <span>Retrieval: {confidenceInfo.retrieval?.toFixed(2) || 'N/A'}</span>
- <span>Citations: {confidenceInfo.coverage?.toFixed(2) || 'N/A'}</span>
- <span>Completeness: {confidenceInfo.completeness?.toFixed(2) || 'N/A'}</span>
- </div>
- </details>
- )}
- </div>
- ))}
- {loading && (
- <div className="text-sm text-[var(--color-ink-muted)] flex items-center gap-2">
- <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
- Analyzing corpus...
- </div>
- )}
- </div>
-
- <div className="absolute bottom-6 left-6 right-6 pt-4 bg-gray-50/80 backdrop-blur-md">
- <div className="flex gap-2 items-center mb-2 px-1">
- <label className="flex items-center gap-2 text-xs text-[var(--color-ink-secondary)] cursor-pointer">
- <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded border-[var(--color-border)]" />
- Dense-only mode
- </label>
- </div>
- <div className="flex gap-2 items-center bg-[var(--color-surface-card)] border border-[var(--color-border)] rounded-sm p-2 focus-within:border-blue-500 transition-colors">
- <input 
- type="text" 
- value={query}
- onChange={e => setQuery(e.target.value)}
- onKeyDown={e => e.key === 'Enter' && handleAsk()}
- placeholder="Ask a question..."
- className="flex-1 bg-transparent border-none outline-none px-3 text-sm focus-visible:ring-0"
- />
- <button 
- onClick={handleAsk}
- aria-label="Send message" 
- disabled={loading || !query.trim()}
- className="p-2 bg-blue-600 text-[var(--color-ink)] rounded-sm hover:bg-blue-700 disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white ]"
- >
- <ArrowRight className="w-4 h-4" />
- </button>
- </div>
- </div>
- </div>
-
- {/* Right Source Panel */}
- <div className="w-full md:w-[300px] border-t md:border-t-0 md:border-l border-[var(--color-border)] bg-[var(--color-surface)] p-6 flex flex-col md:overflow-hidden min-h-[300px] md:min-h-0">
- <h3 className="text-xs font-semibold text-[var(--color-ink-secondary)] uppercase tracking-wider mb-4">Sources</h3>
- <div className="flex-1 overflow-auto flex flex-col gap-4">
- {sources.length === 0 ? (
- <div className="text-[13px] font-serif italic text-[var(--color-ink-muted)] mt-10">No active sources.</div>
- ) : (
- sources.map((s, i) => (
- <div key={i} className="bg-[var(--color-surface-card)] border border-[var(--color-border)] border-t-[3px] border-t-[var(--color-accent)] rounded-none p-4 relative group cursor-pointer hover:border-b-[var(--color-accent)] hover:border-l-[var(--color-accent)] hover:border-r-[var(--color-accent)] transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[11px] font-mono text-[var(--color-ink)] truncate flex-1"><sup className="text-[var(--color-accent)]">{s.marker}</sup> {s.source_document}</span>
-                </div>
-                {s.section_heading && <div className="text-[11px] font-serif italic text-[var(--color-ink-muted)] mb-2 truncate">{s.section_heading}</div>}
-                <div className="text-[9px] flex gap-2 font-mono text-[var(--color-ink-secondary)] mb-2 tracking-[0.05em] uppercase">
-                  <span title="Dense Score">D:{s.dense_score?.toFixed(2) || '-'}</span>
-                  {!compareDenseOnly && <span title="Sparse Score">S:{s.sparse_score?.toFixed(2) || '-'}</span>}
-                  <span title="Rerank Score">R:{s.rerank_score?.toFixed(2) || '-'}</span>
-                </div>
-                <p className="text-[13px] text-[var(--color-ink)] font-serif leading-[1.75] line-clamp-4">
-                  "{s.text}"
-                </p>
-                <div className="mt-3 inline-block">
-                  <span className="text-[9px] uppercase tracking-[0.05em] font-mono border border-[var(--color-success)] bg-[var(--color-success-tint)] text-[var(--color-success)] px-2 py-1 rounded-none">
-                    Supported
-                  </span>
-                </div>
+      {/* Content Region: Answer & Citations */}
+      <div className="flex-1 px-6 md:px-12 pt-0 pb-20 max-w-4xl w-full mx-auto flex flex-col gap-10">
+        
+        {loading && (
+           <div className="mt-4 flex flex-col gap-1 w-32">
+              <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-[var(--color-ink-muted)]">Analyzing...</span>
+              <div className="h-[1px] bg-[var(--color-border)] w-full overflow-hidden">
+                <div className="h-full bg-[var(--color-accent)] animate-[loading-rule_1.5s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
               </div>
- ))
- )}
- </div>
- </div>
- </div>
- );
+           </div>
+        )}
+
+        {messages.map((m, i) => (
+           <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end mb-6' : 'items-start mb-10'}`}>
+              
+              {m.role === 'assistant' && i === messages.length - 1 && confidenceInfo && (
+                <details className="mb-6 group/details">
+                  <summary className="flex items-center gap-4 cursor-pointer list-none">
+                    <div className={`inline-block px-2 py-0.5 border ${isHighConf ? 'border-[var(--color-success)] bg-[var(--color-success-tint)] text-[var(--color-success)]' : isLowConf ? 'border-[var(--color-danger)] bg-[var(--color-danger-tint)] text-[var(--color-danger)]' : 'border-[var(--color-warning)] bg-[var(--color-warning-tint)] text-[var(--color-warning)]'} font-mono text-[11px] uppercase tracking-widest -rotate-2`}>
+                      {isHighConf ? 'Verified · High Confidence' : isLowConf ? 'Needs review · Low confidence' : 'Moderate confidence'}
+                    </div>
+                    <div className="font-mono text-[11px] text-[var(--color-ink-muted)] uppercase tracking-wider">
+                      Composite Score: {confidenceInfo.composite?.toFixed(2) || 'N/A'}
+                    </div>
+                  </summary>
+                  <div className="mt-4 p-4 bg-[var(--color-surface-card)] border border-[var(--color-border)] flex gap-6 text-[var(--color-ink)] font-mono text-[11px]">
+                    <span className="flex flex-col">
+                      <span className="text-[var(--color-ink-muted)] mb-1">RETRIEVAL</span>
+                      <span>{confidenceInfo.retrieval?.toFixed(2) || 'N/A'}</span>
+                    </span>
+                    <span className="flex flex-col">
+                      <span className="text-[var(--color-ink-muted)] mb-1">CITATIONS</span>
+                      <span>{confidenceInfo.coverage?.toFixed(2) || 'N/A'}</span>
+                    </span>
+                    <span className="flex flex-col">
+                      <span className="text-[var(--color-ink-muted)] mb-1">COMPLETENESS</span>
+                      <span>{confidenceInfo.completeness?.toFixed(2) || 'N/A'}</span>
+                    </span>
+                  </div>
+                </details>
+              )}
+
+              <div className={`${m.role === 'user' ? 'bg-[var(--color-surface-card)] border border-[var(--color-border)] px-4 py-3 rounded-none text-[14px] font-sans' : 'font-serif text-[16px] leading-[1.75] text-[var(--color-ink)]'} max-w-full whitespace-pre-wrap`}>
+                 {m.role === 'assistant' ? renderContentWithCitations(m.content) : m.content}
+              </div>
+
+              {m.role === 'assistant' && (
+                <div className="flex items-center gap-4 mt-3 text-[var(--color-ink-muted)]">
+                  <button 
+                    onClick={() => handleFeedback(i, true)}
+                    className={`hover:text-[var(--color-success)] transition-colors ${m.feedback === true ? 'text-[var(--color-success)]' : ''}`}
+                    title="Helpful"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                  </button>
+                  <button 
+                    onClick={() => handleFeedback(i, false)}
+                    className={`hover:text-[var(--color-danger)] transition-colors ${m.feedback === false ? 'text-[var(--color-danger)]' : ''}`}
+                    title="Unhelpful"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+                  </button>
+                </div>
+              )}
+           </div>
+        ))}
+
+        {/* Sources Section */}
+        {sources.length > 0 && (
+           <div className="pt-8 border-t border-[var(--color-border)]">
+             <h3 className="font-sans text-[13px] text-[var(--color-ink-secondary)] mb-4 uppercase tracking-wider">Sources</h3>
+             
+             <div className="flex flex-col gap-4">
+               {sources.map((s, i) => (
+                 <div key={i} className="bg-[var(--color-surface-card)] border border-[var(--color-border)] border-t-[3px] border-t-[var(--color-accent)] p-4 flex flex-col gap-3 transition-colors hover:border-b-[var(--color-accent)] hover:border-l-[var(--color-accent)] hover:border-r-[var(--color-accent)]">
+                    <div className="flex items-baseline justify-between">
+                      <div className="flex items-center gap-3 truncate">
+                        <span className="font-mono text-[12px] text-[var(--color-ink)]"><sup className="text-[var(--color-accent)] mr-0.5">{s.marker}</sup>{s.source_document}</span>
+                        {s.section_heading && <span className="font-serif italic text-[13px] text-[var(--color-ink-muted)] truncate">{s.section_heading}</span>}
+                      </div>
+                      {s.chunk_id && <span className="font-mono text-[11px] text-[var(--color-ink-muted)] shrink-0 ml-4 hidden sm:block">CHUNK ID: {s.chunk_id.substring(0, 12)}</span>}
+                    </div>
+                    <div className="font-serif text-[15px] leading-relaxed text-[var(--color-ink-secondary)] border-l-2 border-[var(--color-border-strong)] pl-4 italic line-clamp-4">
+                      "{s.text}"
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <div className="text-[9px] flex gap-3 font-mono text-[var(--color-ink-secondary)] tracking-[0.05em] uppercase">
+                        <span title="Dense Score">D: {s.dense_score?.toFixed(2) || '-'}</span>
+                        {!compareDenseOnly && <span title="Sparse Score">S: {s.sparse_score?.toFixed(2) || '-'}</span>}
+                        <span title="Rerank Score">R: {s.rerank_score?.toFixed(2) || '-'}</span>
+                      </div>
+                      <span className="inline-block px-2 py-0.5 border border-[var(--color-success)] bg-[var(--color-success-tint)] text-[var(--color-success)] font-mono text-[10px] uppercase tracking-wider">
+                        Supported
+                      </span>
+                    </div>
+                 </div>
+               ))}
+             </div>
+           </div>
+        )}
+      </div>
+    </div>
+  );
 }
