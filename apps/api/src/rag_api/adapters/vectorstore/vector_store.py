@@ -217,6 +217,14 @@ class VectorStore:
         )
         count = self._client.count(collection_name=self.collection_name, count_filter=filter_obj).count
         self._client.delete(collection_name=self.collection_name, points_selector=filter_obj, wait=True)
+        
+        # Also wipe any cached queries that relied on this document
+        try:
+            self.semantic_cache_invalidate(source_document)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to invalidate semantic cache for {source_document}: {e}")
+            
         return count
 
     def sparse_query(self, query_text: str, top_k: int = 10, where: dict | None = None) -> list[dict]:
@@ -277,6 +285,12 @@ class VectorStore:
     def semantic_cache_set(self, query_text: str, query_vector: list[float], response: dict) -> None:
         import uuid
         import time
+        
+        # Extract unique source documents from the response to allow document-level cache invalidation
+        source_docs = []
+        if "sources" in response:
+            source_docs = list(set([s.get("source_document") for s in response["sources"] if s.get("source_document")]))
+            
         self._client.upsert(
             collection_name=self.cache_collection,
             points=[
@@ -286,8 +300,23 @@ class VectorStore:
                     payload={
                         "original_query": query_text,
                         "response": response,
-                        "timestamp": time.time()
+                        "timestamp": time.time(),
+                        "source_documents": source_docs
                     }
                 )
             ]
         )
+
+    def semantic_cache_invalidate(self, source_document: str) -> int:
+        """Wipes all cached queries that relied on the specified source document."""
+        filter_obj = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="source_documents",
+                    match=models.MatchValue(value=source_document)
+                )
+            ]
+        )
+        count = self._client.count(collection_name=self.cache_collection, count_filter=filter_obj).count
+        self._client.delete(collection_name=self.cache_collection, points_selector=filter_obj, wait=True)
+        return count
