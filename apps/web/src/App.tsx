@@ -75,14 +75,17 @@ function AppContent() {
  <div className="min-h-screen bg-surface-card text-ink font-sans flex items-center justify-center p-8">
  <div className="w-full max-w-7xl h-[85vh] bg-surface border border-border rounded-sm flex overflow-hidden ">
  <Sidebar 
- currentView={currentView} 
- setCurrentView={setCurrentView} 
- theme={theme}
- setTheme={setTheme}
- mobileMenuOpen={mobileMenuOpen}
- setMobileMenuOpen={setMobileMenuOpen}
- onLogout={() => { localStorage.removeItem('apiKey'); setApiKey(null); }} 
- />
+          currentView={currentView} 
+          setCurrentView={setCurrentView} 
+          theme={theme}
+          setTheme={setTheme}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+          activeConversationId={activeConversationId}
+          setActiveConversationId={setActiveConversationId}
+          refreshTrigger={refreshTrigger}
+          onLogout={() => { localStorage.removeItem('apiKey'); setApiKey(null); }} 
+        />
  
  <div className="flex-1 flex overflow-hidden">
  {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} setMobileMenuOpen={setMobileMenuOpen} />}
