@@ -52,7 +52,11 @@ async def ask(
         norm_result = run_or_502(normalize_query, search_query, normalizer_llm_client)
         if isinstance(norm_result, dict):
             search_query = norm_result.get("clean_query", search_query)
-            temporal_filter = norm_result.get("temporal_filter")
+            # Support both the old schema and the new target_date schema
+            if "target_date" in norm_result and norm_result["target_date"]:
+                temporal_filter = {"target_date": norm_result["target_date"]}
+            else:
+                temporal_filter = norm_result.get("temporal_filter")
         else:
             search_query = norm_result
 

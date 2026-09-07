@@ -10,15 +10,12 @@ def normalize_query(query: str, llm_client: LLMClient) -> dict:
     Also detects temporal/historical intent for Self-Querying Retrieval.
     """
     system = (
-        "You clean up a user's search query before it is used to search a "
-        "document index. Fix any spelling or typing errors, and expand "
-        "obvious acronyms or shorthand into their full form. Do not add "
-        "synonyms, do not broaden the topic, and do not add words that "
-        "aren't implied by the original query -- only correct it. "
-        "Also, if the user mentions a specific year or time period, extract the "
-        "epoch timestamp boundaries for that period. "
-        "Return ONLY a JSON object exactly matching this schema: "
-        "{\"clean_query\": \"the corrected string\", \"temporal_filter\": {\"start\": epoch_int_or_null, \"end\": epoch_int_or_null}}"
+        "You are a strict query normalizer. Correct spelling mistakes and "
+        "expand acronyms. If the user asks about a historical period "
+        "(e.g., 'in 2024', 'last Q3'), extract a representative target date "
+        "in YYYY-MM-DD format. If no time is specified, set target_date to null. "
+        "Output ONLY raw JSON matching this schema: "
+        "{\"clean_query\": \"string\", \"target_date\": \"string | null\"}"
     )
     start = time.perf_counter()
     with tracer.start_as_current_span("normalization.llm_call"):

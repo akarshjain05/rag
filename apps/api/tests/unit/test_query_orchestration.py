@@ -19,7 +19,7 @@ def test_proactive_normalizer_prompt_construction(mock_llm_client):
     """
     # 1. Setup
     raw_query = "what is wtaermakring?"
-    mock_llm_client.generate.return_value = '{"clean_query": "what is watermarking", "temporal_filter": null}'
+    mock_llm_client.generate.return_value = '{"clean_query": "what is watermarking", "target_date": null}'
 
     # 2. Execute
     result = normalize_query(raw_query, llm_client=mock_llm_client)

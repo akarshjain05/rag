@@ -120,17 +120,40 @@ class VectorStore:
             })
         return out
 
-    def query(self, embedding: list[float], top_k: int = 10, where: dict | None = None) -> list[dict]:
-        # Basic filtering map
-        filter_obj = None
+    def query(self, embedding: list[float], top_k: int = 10, where: dict | None = None, temporal_filter: dict | None = None) -> list[dict]:
+        must_conditions = []
+        should_conditions = []
+        min_should = None
+        
+        if temporal_filter and "target_date" in temporal_filter:
+            from datetime import datetime, timezone
+            try:
+                dt = datetime.strptime(temporal_filter["target_date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                target_ts = int(dt.timestamp())
+                must_conditions.append(models.FieldCondition(key="valid_from", range=models.Range(lte=target_ts)))
+                should_conditions.extend([
+                    models.IsNullCondition(is_null=models.PayloadField(key="valid_to")),
+                    models.FieldCondition(key="valid_to", range=models.Range(gt=target_ts))
+                ])
+                min_should = 1
+            except Exception:
+                must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+        else:
+            must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+
         if where:
-            conditions = []
             for k, v in where.items():
                 if isinstance(v, list):
-                    conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
+                    must_conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
                 else:
-                    conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
-            filter_obj = models.Filter(must=conditions)
+                    must_conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+                    
+        filter_kwargs = {"must": must_conditions}
+        if should_conditions:
+            filter_kwargs["should"] = should_conditions
+            filter_kwargs["min_should"] = min_should
+            
+        filter_obj = models.Filter(**filter_kwargs)
             
         res = self._client.query_points(
             collection_name=self.collection_name,
@@ -150,33 +173,38 @@ class VectorStore:
         return out
         
     def hybrid_search(self, query_text: str, dense_vector: list[float], top_k: int = 25, where: dict | None = None, prefetch_limit: int = 60, temporal_filter: dict | None = None) -> list[dict]:
-        conditions = []
-        if temporal_filter:
-            # E.g. temporal_filter = {"start": 1704067200, "end": 1735689600}
-            range_kwargs = {}
-            if "start" in temporal_filter and temporal_filter["start"]:
-                range_kwargs["gte"] = temporal_filter["start"]
-            if "end" in temporal_filter and temporal_filter["end"]:
-                range_kwargs["lte"] = temporal_filter["end"]
-            
-            if range_kwargs:
-                conditions.append(
-                    models.FieldCondition(
-                        key="valid_from", 
-                        range=models.Range(**range_kwargs)
-                    )
-                )
-            # We don't restrict to IsNull if asking for history, or maybe we still need to make sure they overlap.
-            # But the user said: "drops the default IsNullCondition (which restricts the search to active documents), and injects a specific Qdrant Range filter"
+        must_conditions = []
+        should_conditions = []
+        min_should = None
+        
+        if temporal_filter and "target_date" in temporal_filter:
+            from datetime import datetime, timezone
+            try:
+                dt = datetime.strptime(temporal_filter["target_date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                target_ts = int(dt.timestamp())
+                must_conditions.append(models.FieldCondition(key="valid_from", range=models.Range(lte=target_ts)))
+                should_conditions.extend([
+                    models.IsNullCondition(is_null=models.PayloadField(key="valid_to")),
+                    models.FieldCondition(key="valid_to", range=models.Range(gt=target_ts))
+                ])
+                min_should = 1
+            except Exception:
+                must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
         else:
-            conditions = [models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))]
+            must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
         if where:
             for k, v in where.items():
                 if isinstance(v, list):
-                    conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
+                    must_conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
                 else:
-                    conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
-        filter_obj = models.Filter(must=conditions)
+                    must_conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+                    
+        filter_kwargs = {"must": must_conditions}
+        if should_conditions:
+            filter_kwargs["should"] = should_conditions
+            filter_kwargs["min_should"] = min_should
+            
+        filter_obj = models.Filter(**filter_kwargs)
             
         if not getattr(self, "_sparse_model", None):
             return self.query(dense_vector, top_k=top_k, where=where)
@@ -246,24 +274,39 @@ class VectorStore:
         return count
 
     def sparse_query(self, query_text: str, top_k: int = 10, where: dict | None = None, temporal_filter: dict | None = None) -> list[dict]:
-        conditions = []
-        if temporal_filter:
-            range_kwargs = {}
-            if "start" in temporal_filter and temporal_filter["start"]:
-                range_kwargs["gte"] = temporal_filter["start"]
-            if "end" in temporal_filter and temporal_filter["end"]:
-                range_kwargs["lte"] = temporal_filter["end"]
-            if range_kwargs:
-                conditions.append(models.FieldCondition(key="valid_from", range=models.Range(**range_kwargs)))
+        must_conditions = []
+        should_conditions = []
+        min_should = None
+        
+        if temporal_filter and "target_date" in temporal_filter:
+            from datetime import datetime, timezone
+            try:
+                dt = datetime.strptime(temporal_filter["target_date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                target_ts = int(dt.timestamp())
+                must_conditions.append(models.FieldCondition(key="valid_from", range=models.Range(lte=target_ts)))
+                should_conditions.extend([
+                    models.IsNullCondition(is_null=models.PayloadField(key="valid_to")),
+                    models.FieldCondition(key="valid_to", range=models.Range(gt=target_ts))
+                ])
+                min_should = 1
+            except Exception:
+                must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
         else:
-            conditions = [models.IsNullCondition(is_null=models.PayloadField(key="valid_to"))]
+            must_conditions.append(models.IsNullCondition(is_null=models.PayloadField(key="valid_to")))
+
         if where:
             for k, v in where.items():
                 if isinstance(v, list):
-                    conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
+                    must_conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
                 else:
-                    conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
-        filter_obj = models.Filter(must=conditions)
+                    must_conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+                    
+        filter_kwargs = {"must": must_conditions}
+        if should_conditions:
+            filter_kwargs["should"] = should_conditions
+            filter_kwargs["min_should"] = min_should
+            
+        filter_obj = models.Filter(**filter_kwargs)
             
         if not getattr(self, "_sparse_model", None):
             return []
