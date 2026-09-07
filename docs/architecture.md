@@ -373,12 +373,7 @@ Point IDs are a deterministic UUIDv5 derived from `chunk_id`
 (`uuid.uuid5(uuid.NAMESPACE_DNS, chunk_id)`), so re-upserting the same
 logical chunk overwrites rather than duplicates.
 
-**Known issue:** the dense vector size is hardcoded to `768` ("Jina v2"),
-but neither shipped embedding provider produces 768-dimensional vectors
-(OpenAI `text-embedding-3-small` = 1536, local
-`all-MiniLM-L6-v2` = 384). The collection's dense-vector size must match
-`embedding_client.dimension` at collection-creation time. See
-[`05-known-architecture-gaps.md`](./05-known-architecture-gaps.md).
+
 
 ## API schemas (selected)
 

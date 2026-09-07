@@ -101,7 +101,7 @@ upper-cased (e.g. `embedding_provider` → `EMBEDDING_PROVIDER`).
 |---|---|---|
 | `qdrant_mode` | `embedded` | **naming legacy from the pre-Qdrant migration** — see below |
 | `qdrant_persist_dir` | `./data/qdrant` | used when `qdrant_mode=embedded` |
-| `qdrant_host` / `qdrant_port` | `qdrantdb` / `8000` | used when `qdrant_mode=http`; docker-compose currently sets `QDRANT_HOST`/`QDRANT_PORT` instead, which these fields do **not** read — a known mismatch, see [`../architecture/05-known-architecture-gaps.md`](05-known-architecture-gaps.md) |
+| `qdrant_host` / `qdrant_port` | `qdrantdb` / `8000` | used when `qdrant_mode=http`; used when `qdrant_mode=http` |
 | `collection_name` | `internal_docs` | Qdrant collection name |
 
 ## Chunking

@@ -1,4 +1,7 @@
 import time
+import re
+
+_JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 from rag_api.core.observability import tracer, llm_calls_total, llm_call_seconds
 try:
     from langfuse.decorators import observe
@@ -26,19 +29,16 @@ def normalize_query(query: str, llm_client: LLMClient) -> dict:
     with tracer.start_as_current_span("normalization.llm_call"):
         result_json_str = llm_client.generate(system, query)
         
-    # Strip markdown block if model included it
     import json
-    result_json_str = result_json_str.strip()
-    if result_json_str.startswith("```json"):
-        result_json_str = result_json_str[7:]
-    if result_json_str.endswith("```"):
-        result_json_str = result_json_str[:-3]
-        
-    try:
-        parsed = json.loads(result_json_str.strip())
-    except json.JSONDecodeError:
-        # Fallback if the LLM didn't return JSON
-        parsed = {"clean_query": result_json_str.strip(), "temporal_filter": None}
+    match = _JSON_OBJECT_RE.search(result_json_str)
+    parsed = {"clean_query": result_json_str.strip(), "temporal_filter": None}
+    if match:
+        try:
+            res = json.loads(match.group(0))
+            if isinstance(res, dict) and "clean_query" in res:
+                parsed = res
+        except json.JSONDecodeError:
+            pass
         
     llm_calls_total.labels(stage="normalize", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="normalize").observe(time.perf_counter() - start)

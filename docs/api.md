@@ -94,9 +94,7 @@ Distinct ingested source documents and total chunk count.
 Removes every chunk (across all chunking strategies) belonging to
 `source_document` from the index.
 
-> **Known issue:** the response's `chunks_deleted` count is currently
-> always `1` regardless of how many chunks were actually removed — see
-> [`../architecture/05-known-architecture-gaps.md`](05-known-architecture-gaps.md).
+
 
 ## `GET /v1/images/{image_hash}`
 
@@ -206,8 +204,7 @@ kept separate from the plain-dataclass pipeline models in
 
 ## `DeleteResponse`
 
-`source_document: str`, `chunks_deleted: int` (currently always reports
-`1` — see [`../architecture/05-known-architecture-gaps.md`](05-known-architecture-gaps.md)).
+`source_document: str`, `chunks_deleted: int`.
 
 ## `HealthResponse`
 
