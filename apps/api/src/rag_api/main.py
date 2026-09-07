@@ -8,13 +8,22 @@ from fastapi import FastAPI, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastAPIIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
 
 sentry_dsn = os.getenv("SENTRY_DSN")
+environment = os.getenv("ENVIRONMENT", "local")
+
 if sentry_dsn:
     sentry_sdk.init(
         dsn=sentry_dsn,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
+        environment=environment,
+        traces_sample_rate=1.0 if environment == "local" else 0.1,
+        profiles_sample_rate=1.0 if environment == "local" else 0.1,
+        integrations=[
+            StarletteIntegration(transaction_style="url"),
+            FastAPIIntegration(),
+        ],
     )
 from dotenv import load_dotenv
 from rag_api.api.auth import verify_api_key
@@ -223,6 +232,12 @@ def create_app(
     v1.include_router(documents.router, dependencies=[Depends(verify_api_key)])
     v1.include_router(ask.router, dependencies=[Depends(verify_api_key)])
     v1.include_router(insights.router, dependencies=[Depends(verify_api_key)])
+
+    @v1.get("/sentry-debug")
+    async def trigger_error():
+        division_by_zero = 1 / 0
+        return {"message": "You will never see this"}
+
     app.include_router(v1)
 
     return app

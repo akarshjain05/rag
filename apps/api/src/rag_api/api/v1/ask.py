@@ -50,7 +50,7 @@ async def ask(
     temporal_filter = None
     normalize_enabled = payload.query_normalization_enabled if payload.query_normalization_enabled is not None else settings.query_normalization_enabled
     if normalizer_llm_client and normalize_enabled:
-        with sentry_sdk.start_transaction(op="task", name="normalize_query"):
+        with sentry_sdk.start_span(op="llm_request", description="Proactive Normalizer"):
             norm_result = run_or_502(normalize_query, search_query, normalizer_llm_client)
         if isinstance(norm_result, dict):
             search_query = norm_result.get("clean_query", search_query)
