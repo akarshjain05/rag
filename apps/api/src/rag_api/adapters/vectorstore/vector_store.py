@@ -17,6 +17,7 @@ class VectorStore:
         dense_dimension: int = 768,
     ):
         self.collection_name = collection_name
+        self.cache_collection = f"{collection_name}_cache"
         
         # Initialize fastembed ONNX runtime immediately on the main thread
         # to prevent OpenMP thread-pool conflicts with PyTorch later.
@@ -57,6 +58,15 @@ class VectorStore:
                     )
                 }
             )
+        if not self._client.collection_exists(collection_name=self.cache_collection):
+            self._client.create_collection(
+                collection_name=self.cache_collection,
+                vectors_config=models.VectorParams(
+                    size=dense_dimension,
+                    distance=models.Distance.COSINE
+                )
+            )
+
 
 
     def count(self) -> int:
