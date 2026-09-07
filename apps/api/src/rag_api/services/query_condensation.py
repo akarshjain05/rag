@@ -64,3 +64,17 @@ def generate_hyde(query: str, llm_client: LLMClient) -> str:
     llm_call_seconds.labels(stage="hyde").observe(time.perf_counter() - start)
     print(f"\n=== HyDE DOCUMENT ===\n{hyde_doc}\n")
     return hyde_doc.strip()
+
+def normalize_query(query: str, llm_client: LLMClient) -> str:
+    system = (
+        "You are a search query normalizer. "
+        "Correct any spelling mistakes and clarify the intent of the following search query. "
+        "Output ONLY the corrected query text, with no conversational filler or preamble."
+    )
+    start = time.perf_counter()
+    with tracer.start_as_current_span("normalize.llm_call"):
+        clean_query = llm_client.generate(system, query)
+    llm_calls_total.labels(stage="normalize", provider=llm_client.provider_name).inc()
+    llm_call_seconds.labels(stage="normalize").observe(time.perf_counter() - start)
+    print(f"\n=== NORMALIZED QUERY ===\nOriginal: {query}\nClean: {clean_query}\n")
+    return clean_query.strip()

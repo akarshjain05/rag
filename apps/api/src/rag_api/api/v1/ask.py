@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
 from rag_api.api.deps import get_retriever, get_generator, run_or_502, run_or_502_async, get_conversation_store, get_llm_client, get_settings
 from rag_api.core.settings import Settings
-from rag_api.services.query_condensation import condense_query, expand_query, generate_hyde
+from rag_api.services.query_condensation import condense_query, normalize_query, expand_query, generate_hyde
 from rag_api.services.conversation import Turn
 from rag_api.domain.generation.generation import build_sources
 
@@ -28,9 +28,12 @@ async def ask(
         history = store.get_history(payload.conversation_id)
         
     search_query = payload.question
+    if llm_client:
+        search_query = run_or_502(normalize_query, search_query, llm_client)
+
     condense_enabled = payload.query_condensation_enabled if payload.query_condensation_enabled is not None else settings.query_condensation_enabled
     if history and llm_client and condense_enabled:
-        search_query = run_or_502(condense_query, payload.question, history, llm_client)
+        search_query = run_or_502(condense_query, search_query, history, llm_client)
         
     llm_history = [{"role": "user", "content": t.user} for t in history] + [{"role": "assistant", "content": t.assistant} for t in history]
     # We want user, assistant, user, assistant interleaved!
