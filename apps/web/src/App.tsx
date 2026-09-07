@@ -166,7 +166,7 @@ function Sidebar({ currentView, setCurrentView, onLogout, theme, setTheme, mobil
       
       <aside className={`fixed md:relative z-50 w-64 h-full bg-surface-sunken border-r border-border-strong flex flex-col transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-6 pb-4 border-b border-border flex items-center justify-between">
-          <h1 className="font-serif italic font-semibold text-[17px] text-ink tracking-wide cursor-pointer" onClick={() => { setActiveConversationId(null); setCurrentView('chat'); }}>Stacks</h1>
+          <h1 className="font-serif italic font-semibold text-[17px] text-ink tracking-wide cursor-pointer" onClick={() => { setActiveConversationId(null); setCurrentView('chat'); }}>Vellumiq</h1>
           <button 
             className="md:hidden text-ink-secondary hover:text-ink"
             onClick={() => setMobileMenuOpen(false)}
