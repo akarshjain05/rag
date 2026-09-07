@@ -74,7 +74,6 @@ function AppContent() {
  {currentView === 'knowledge' && <KnowledgeBase />}
  {currentView === 'history' && <HistoryView onSelect={(id) => { setActiveConversationId(id); setCurrentView('chat'); }} />}
  {currentView === 'insights' && <InsightsView />}
- {currentView === 'settings' && <SettingsView />}
  </div>
  </div>
  );
@@ -182,9 +181,7 @@ function Sidebar({ currentView, setCurrentView, theme, setTheme, mobileMenuOpen,
             <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1 hover:text-ink transition-colors" aria-label="Toggle theme">
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button onClick={onLogout} className="text-left text-[13px] text-danger font-sans px-2 hover:underline">
-              Log out
-            </button>
+
         </div>
       </aside>
     </>
@@ -429,84 +426,6 @@ function HistoryView({ onSelect }) {
 }
 
 
-function SettingsView() {
- const [keys, setKeys] = useState<any[]>([]);
- const [modal, setModal] = useState<any>(null);
- 
- useEffect(() => {
- import('./lib/api').then(({ listApiKeys }) => {
- listApiKeys().then(res => setKeys(res)).catch(err => console.error(err));
- });
- }, []);
-
- const handleGenerate = async () => {
- try {
- const { generateApiKey } = await import('./lib/api');
- const res = await generateApiKey();
- if (res.api_key) {
- setKeys(prev => [res, ...prev]);
- }
- } catch (err) {
- console.error(err);
- }
- };
-
- const handleRevoke = (keyId: string) => {
- setModal({
- type: 'confirm',
- title: 'Revoke API Key',
- message: 'Revoke this key immediately?',
- confirmText: 'Revoke',
- onConfirm: async () => {
- try {
- const { revokeApiKey } = await import('./lib/api');
- await revokeApiKey(keyId);
- setKeys(prev => prev.filter(k => k.api_key !== keyId));
- } catch (err) {
- console.error(err);
- }
- }
- });
- };
-
- return (
- <div className="flex-1 p-8 overflow-auto">
- <h2 className="text-2xl font-semibold mb-8">Settings & API Keys</h2>
- 
- <div className="max-w-2xl bg-surface-card border border-border rounded-sm p-6">
- <div className="flex justify-between items-center mb-6">
- <div>
- <h3 className="text-lg font-medium">API Keys</h3>
- <p className="text-sm text-ink-secondary">Manage API keys used for external access</p>
- </div>
- <button onClick={handleGenerate} className="border border-accent text-accent hover:bg-accent-tint px-4 py-2 rounded-sm text-sm font-medium transition-colors">
- Generate New Key
- </button>
- </div>
- 
- <div className="space-y-4">
- {keys.length === 0 && <div className="py-4 font-serif italic text-ink-muted">No dynamic keys generated yet.</div>}
- {keys.map(k => (
- <div key={k.api_key} className="flex justify-between items-center p-4 border border-border rounded-sm bg-surface-card">
- <div>
- <div className="font-mono text-sm">{k.api_key}</div>
- <div className="text-xs text-ink-secondary mt-1">Created: {new Date(k.created_at * 1000).toLocaleString()}</div>
- </div>
- <button onClick={() => handleRevoke(k.api_key)} className="text-red-500 hover:text-red-600 text-sm font-medium">
- Revoke
- </button>
- </div>
- ))}
- </div>
- 
- <div className="mt-6 p-4 bg-blue-50 text-blue-800 text-sm rounded-sm border border-blue-100 ">
- <strong>Note:</strong> Keys defined in the <code>API_KEYS</code> environment variable act as immutable root keys and are not shown here.
- </div>
- </div>
- <Modal isOpen={!!modal} onClose={() => setModal(null)} {...modal} isAlert={modal?.type === "alert"} />
- </div>
- );
-}
 
 function InsightsView() {
  const [metrics, setMetrics] = useState<any>(null);
