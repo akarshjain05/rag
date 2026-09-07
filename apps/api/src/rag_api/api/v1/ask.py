@@ -149,8 +149,12 @@ async def ask(
                 break # Score is either very high (good) or very low (refuse), no need to expand
             retries += 1
 
-    # Note: Dynamic Context Pruning happens inside the generator now!
+    # Check for disconnect BEFORE kicking off expensive LLM generation
+    if await request.is_disconnected():
+        cid = payload.conversation_id or store.create_conversation()
+        return QueryResponse(conversation_id=cid, answer="[Discarded]", mode="no_context", sources=[], used_citation_markers=[], invalid_citation_markers=[], unsupported_citation_markers=[], retrieval_confidence=0, citation_coverage=0, completeness=0, composite_confidence=0, dense_only_sources=None)
 
+    # Note: Dynamic Context Pruning happens inside the generator now!
     result = run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
     
     cid = payload.conversation_id or store.create_conversation()
@@ -162,9 +166,6 @@ async def ask(
         "composite": float(result.composite_confidence) if result.composite_confidence is not None else None
     }
     
-    if await request.is_disconnected():
-        return QueryResponse(conversation_id=cid, answer="[Discarded]", mode="hybrid", sources=[], used_citation_markers=[], invalid_citation_markers=[], unsupported_citation_markers=[], retrieval_confidence=0, citation_coverage=0, completeness=0, composite_confidence=0, dense_only_sources=None)
-        
     store.append_turn(cid, Turn(user=payload.question, assistant=result.answer, sources=sources_dicts, confidence_info=confidence_info))
     
     dense_only_sources = None

@@ -120,12 +120,16 @@ def bulk_delete_documents(
     payload: BulkDeleteRequest,
     vector_store: VectorStore = Depends(get_vector_store),
 ):
+    deleted_count = 0
+    errors = []
     for doc_id in payload.document_ids:
         try:
-            vector_store.delete_source_document(doc_id)
-        except Exception:
-            pass
-    return {"status": "ok"}
+            deleted_count += vector_store.delete_source_document(doc_id)
+        except Exception as e:
+            errors.append(str(e))
+    if errors:
+        return {"status": "error", "chunks_deleted": deleted_count, "errors": errors}
+    return {"status": "ok", "chunks_deleted": deleted_count}
 
 @router.delete("/documents/{source_document}", response_model=DeleteResponse, summary="Remove a document from the index", description="Deletes every chunk (across all chunking strategies) belonging to `source_document` from both the vector store and the sparse index.")
 def delete_document(

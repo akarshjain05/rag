@@ -45,8 +45,8 @@ class VectorStore:
         # Ensure collection exists with both dense and sparse configurations
         if self._client.collection_exists(collection_name=self.collection_name):
             col_info = self._client.get_collection(self.collection_name)
-            if isinstance(col_info.config.params.vectors, dict) and "dense_jina" in col_info.config.params.vectors:
-                existing_dim = col_info.config.params.vectors["dense_jina"].size
+            if isinstance(col_info.config.params.vectors, dict) and "dense" in col_info.config.params.vectors:
+                existing_dim = col_info.config.params.vectors["dense"].size
                 if existing_dim != dense_dimension:
                     raise ValueError(f"Vector dimension mismatch! Existing collection has dimension {existing_dim}, but current EMBEDDING_PROVIDER config requires {dense_dimension}. You must wipe the old Qdrant volume to switch providers.")
         
@@ -54,7 +54,7 @@ class VectorStore:
             self._client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config={
-                    "dense_jina": models.VectorParams(
+                    "dense": models.VectorParams(
                         size=dense_dimension,
                         distance=models.Distance.COSINE
                     )
@@ -101,7 +101,7 @@ class VectorStore:
             meta["text"] = txt
             meta["chunk_id"] = cid
             
-            vector_dict = {"dense_jina": emb}
+            vector_dict = {"dense": emb}
             if sp_emb is not None:
                 vector_dict["sparse_bm25"] = models.SparseVector(
                     indices=sp_emb.indices.tolist(),
@@ -133,7 +133,7 @@ class VectorStore:
         res = self._client.query_points(
             collection_name=self.collection_name,
             query=embedding,
-            using="dense_jina",
+            using="dense",
             limit=top_k,
             query_filter=filter_obj
         ).points
@@ -158,7 +158,7 @@ class VectorStore:
         requests = [
             models.QueryRequest(
                 query=emb,
-                using="dense_jina",
+                using="dense",
                 limit=top_k,
                 filter=filter_obj
             ) for emb in embeddings
@@ -220,7 +220,7 @@ class VectorStore:
         res = self._client.query_points(
             collection_name=self.collection_name,
             query=embedding,
-            using="dense_jina",
+            using="dense",
             query_filter=filter_obj,
             limit=top_k
         ).points
@@ -287,7 +287,7 @@ class VectorStore:
                 ),
                 models.Prefetch(
                     query=dense_vector,
-                    using="dense_jina",
+                    using="dense",
                     limit=prefetch_limit,
                     filter=filter_obj,
                 )

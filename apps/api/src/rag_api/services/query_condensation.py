@@ -31,7 +31,7 @@ def normalize_query(query: str, llm_client: LLMClient) -> dict:
         
     import json
     match = _JSON_OBJECT_RE.search(result_json_str)
-    parsed = {"clean_query": result_json_str.strip(), "temporal_filter": None}
+    parsed = {"clean_query": result_json_str.strip(), "target_date": None}
     if match:
         try:
             res = json.loads(match.group(0))
