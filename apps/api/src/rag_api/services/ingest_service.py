@@ -120,22 +120,22 @@ class IngestionPipeline:
             import time
             current_time = int(time.time())
 
-            if progress_callback: progress_callback(70, "Expiring old document version...")
-            self.vector_store.expire_source_document(source_name, current_time)
-
-            if progress_callback: progress_callback(80, "Checking for duplicates & indexing into Qdrant...")
+            if progress_callback: progress_callback(70, "Checking for duplicates & indexing into Qdrant...")
             inserted_ids = []
             inserted_texts = []
             inserted_metas = []
             inserted_embeddings = []
             
-            # Batch dedup check
-            dedups = check_duplicate_batch(embeddings, self.vector_store, threshold=self.dedup_similarity_threshold, exclude_source_document=source_name)
+            # Batch dedup check AGAINST LIVE DB (no exclude_source_document)
+            dedups = check_duplicate_batch(embeddings, self.vector_store, threshold=self.dedup_similarity_threshold)
+            
+            live_chunk_ids = []
             
             for chunk, embedding, dedup in zip(chunks, embeddings, dedups):
                 if dedup.is_duplicate:
                     report.duplicates_skipped += 1
                     report.duplicate_of.append(dedup.duplicate_of)
+                    live_chunk_ids.append(dedup.duplicate_of)
                     continue
                 
                 meta = chunk.metadata()
@@ -146,10 +146,14 @@ class IngestionPipeline:
                 inserted_texts.append(chunk.text)
                 inserted_metas.append(meta)
                 inserted_embeddings.append(embedding)
+                live_chunk_ids.append(chunk.chunk_id)
                 report.chunks_inserted += 1
                 
             if inserted_ids:
                 self.vector_store.add_many(inserted_ids, inserted_embeddings, inserted_texts, inserted_metas)
+
+            if progress_callback: progress_callback(80, "Expiring old document version...")
+            self.vector_store.expire_source_document(source_name, current_time, exclude_ids=live_chunk_ids)
 
 
 

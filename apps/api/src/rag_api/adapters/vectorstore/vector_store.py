@@ -467,14 +467,17 @@ class VectorStore:
         self._client.delete(collection_name=self.cache_collection, points_selector=filter_obj, wait=True)
         return count
 
-    def expire_source_document(self, source_document: str, current_time: int) -> int:
-        """Updates the valid_to timestamp of all active chunks for a document."""
-        filter_obj = models.Filter(
-            must=[
-                models.FieldCondition(key="source_document", match=models.MatchValue(value=source_document)),
-                models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to"))
-            ]
-        )
+    def expire_source_document(self, source_document: str, current_time: int, exclude_ids: list[str] | None = None) -> int:
+        """Updates the valid_to timestamp of active chunks, optionally preserving specific IDs."""
+        must=[
+            models.FieldCondition(key="source_document", match=models.MatchValue(value=source_document)),
+            models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to"))
+        ]
+        must_not = []
+        if exclude_ids:
+            must_not.append(models.HasIdCondition(has_id=exclude_ids))
+            
+        filter_obj = models.Filter(must=must, must_not=must_not if must_not else None)
         count = self._client.count(collection_name=self.collection_name, count_filter=filter_obj).count
         
         # We only need to set payload if there are points
