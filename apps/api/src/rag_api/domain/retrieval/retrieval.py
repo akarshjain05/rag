@@ -1,6 +1,9 @@
 
 from __future__ import annotations
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+retrieval_executor = ThreadPoolExecutor(max_workers=5, thread_name_prefix="retrieval_worker")
 
 
 from rag_api.adapters.vectorstore.embeddings import EmbeddingClient
