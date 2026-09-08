@@ -26,6 +26,9 @@ class LLMClient(ABC):
     def build_image_content(self, image_url: str) -> dict: ...
 
     @abstractmethod
+    def build_image_content(self, image_url: str) -> dict:
+        return {"type": "image_url", "image_url": {"url": image_url}}
+
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str: ...
 
 
@@ -94,6 +97,9 @@ class AnthropicLLMClient(LLMClient):
     def build_image_content(self, image_url: str) -> dict:
         return {"type": "image_url", "image_url": {"url": image_url}}
 
+    def build_image_content(self, image_url: str) -> dict:
+        return {"type": "image_url", "image_url": {"url": image_url}}
+
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str:
         import base64
         b64_data = base64.b64encode(image_bytes).decode("utf-8")
@@ -136,21 +142,37 @@ class OpenAILLMClient(LLMClient):
         self._max_tokens = max_tokens
 
     def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str:
+        import openai
         if isinstance(system, list):
             system_str = "".join([block.get("text", "") for block in system])
             messages = [{"role": "system", "content": system_str}]
         else:
             messages = [{"role": "system", "content": system}]
-        if history:
-            messages.extend(history)
-        messages.append({"role": "user", "content": user})
-        resp = self._client.chat.completions.create(
-            model=self._model,
-            max_tokens=self._max_tokens,
-            messages=messages,
-        )
-        return resp.choices[0].message.content or ""
+            
+        history_msgs = list(history) if history else []
+        
+        while True:
+            current_messages = messages + history_msgs + [{"role": "user", "content": user}]
+            try:
+                resp = self._client.chat.completions.create(
+                    model=self._model,
+                    max_tokens=self._max_tokens,
+                    messages=current_messages,
+                )
+                return resp.choices[0].message.content or ""
+            except openai.BadRequestError as e:
+                # Handle OpenAI context_length_exceeded
+                if e.code == 'context_length_exceeded' or 'context_length_exceeded' in str(e) or 'maximum context length' in str(e):
+                    if len(history_msgs) > 0:
+                        history_msgs.pop(0)
+                        if history_msgs and history_msgs[0].get("role") == "assistant":
+                            history_msgs.pop(0)
+                        continue
+                raise e
 
+
+    def build_image_content(self, image_url: str) -> dict:
+        return {"type": "image_url", "image_url": {"url": image_url}}
 
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str:
         import base64
