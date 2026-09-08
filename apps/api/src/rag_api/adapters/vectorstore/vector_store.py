@@ -119,7 +119,8 @@ class VectorStore:
         # Add the points with their dense AND sparse vectors in one go!
         self._client.upsert(
             collection_name=self.collection_name,
-            points=points
+            points=points,
+            wait=True
         )
 
     def nearest(self, embedding: list[float], top_k: int = 1, exclude_source_document: str | None = None) -> list[dict]:
@@ -345,10 +346,15 @@ class VectorStore:
         return out
 
     def get_all(self) -> list[dict]:
-        res, _ = self._client.scroll(collection_name=self.collection_name, limit=10000)
         out = []
-        for r in res:
-            out.append({"chunk_id": r.payload["chunk_id"], "text": r.payload["text"], "metadata": r.payload})
+        offset = None
+        while True:
+            res, next_offset = self._client.scroll(collection_name=self.collection_name, limit=10000, offset=offset)
+            for r in res:
+                out.append({"chunk_id": r.payload.get("chunk_id", ""), "text": r.payload.get("text", ""), "metadata": r.payload})
+            if next_offset is None:
+                break
+            offset = next_offset
         return out
 
     def list_source_documents(self) -> list[str]:
@@ -474,6 +480,7 @@ class VectorStore:
             
         self._client.upsert(
             collection_name=self.cache_collection,
+            wait=True,
             points=[
                 models.PointStruct(
                     id=str(uuid.uuid4()),
