@@ -149,11 +149,11 @@ class IngestionPipeline:
                 live_chunk_ids.append(chunk.chunk_id)
                 report.chunks_inserted += 1
                 
-            if inserted_ids:
-                self.vector_store.add_many(inserted_ids, inserted_embeddings, inserted_texts, inserted_metas)
-
             if progress_callback: progress_callback(80, "Expiring old document version...")
             self.vector_store.expire_source_document(source_name, current_time, exclude_ids=live_chunk_ids)
+
+            if inserted_ids:
+                self.vector_store.add_many(inserted_ids, inserted_embeddings, inserted_texts, inserted_metas)
 
 
 
