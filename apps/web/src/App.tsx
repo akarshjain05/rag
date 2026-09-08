@@ -142,7 +142,7 @@ function Sidebar({ currentView, setCurrentView, theme, setTheme, mobileMenuOpen,
           <div className="px-2 py-2 mb-1 text-[10px] font-mono text-ink-muted uppercase tracking-widest">
             History
           </div>
-          {conversations.map(c => (
+          {(conversations || []).map(c => (
             <div key={c.id} className="group relative flex items-center pr-2">
               <button
                 onClick={() => { setActiveConversationId(c.id); setCurrentView('chat'); setMobileMenuOpen(false); }}
@@ -369,7 +369,7 @@ function KnowledgeBase() {
  </tr>
  </thead>
  <tbody>
- {docs.map((doc, i) => (
+ {(docs || []).map((doc, i) => (
  <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors group">
  <td className="px-6 py-4 w-12 text-center">
  <input 
@@ -422,7 +422,7 @@ function HistoryView({ onSelect }) {
  <div className="text-ink-secondary">No history found.</div>
  ) : (
  <div className="flex flex-col gap-2">
- {conversations.map(c => (
+ {(conversations || []).map(c => (
  <button 
  key={c.id} 
  onClick={() => onSelect(c.id)}
@@ -741,7 +741,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
            </div>
         )}
 
-        {messages.map((m, i) => (
+        {(messages || []).map((m, i) => (
            <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end mb-6' : 'items-start mb-10'}`}>
               
               {m.role === 'assistant' && i === messages.length - 1 && confidenceInfo && (
@@ -807,7 +807,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
              <h3 className="font-sans text-[13px] text-ink-secondary mb-4 uppercase tracking-wider">Sources</h3>
              
              <div className="flex flex-col gap-4">
-               {sources.map((s, i) => (
+               {(sources || []).map((s, i) => (
                  <div key={i} className="bg-surface-card border border-border border-t-[3px] border-t-accent p-4 flex flex-col gap-3 transition-colors hover:border-b-accent hover:border-l-accent hover:border-r-accent">
                     <div className="flex items-baseline justify-between">
                       <div className="flex items-center gap-3 truncate">

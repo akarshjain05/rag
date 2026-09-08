@@ -27,7 +27,7 @@ def normalize_query(query: str, llm_client: LLMClient) -> dict:
     )
     start = time.perf_counter()
     with tracer.start_as_current_span("normalization.llm_call"):
-        result_json_str = llm_client.generate(system, query)
+        result_json_str = llm_client.generate(system, f"<query>\n{query}\n</query>")
         
     import json
     match = _JSON_OBJECT_RE.search(result_json_str)
@@ -64,7 +64,7 @@ def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> st
 
     start = time.perf_counter()
     with tracer.start_as_current_span("condensation.llm_call"):
-        standalone_query = llm_client.generate(system, query, history=llm_history)
+        standalone_query = llm_client.generate(system, f"<query>\n{query}\n</query>", history=llm_history)
     llm_calls_total.labels(stage="condense", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="condense").observe(time.perf_counter() - start)
 
@@ -110,7 +110,7 @@ def expand_query(query: str, llm_client: LLMClient) -> str:
     )
     start = time.perf_counter()
     with tracer.start_as_current_span("crag_expansion.llm_call"):
-        expanded_query = llm_client.generate(system, query)
+        expanded_query = llm_client.generate(system, f"<query>\n{query}\n</query>")
     llm_calls_total.labels(stage="expand", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="expand").observe(time.perf_counter() - start)
     return expanded_query.strip()
@@ -126,7 +126,7 @@ def generate_hyde(query: str, llm_client: LLMClient) -> str:
     )
     start = time.perf_counter()
     with tracer.start_as_current_span("hyde.llm_call"):
-        hyde_doc = llm_client.generate(system, query)
+        hyde_doc = llm_client.generate(system, f"<query>\n{query}\n</query>")
     llm_calls_total.labels(stage="hyde", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="hyde").observe(time.perf_counter() - start)
     return hyde_doc.strip()

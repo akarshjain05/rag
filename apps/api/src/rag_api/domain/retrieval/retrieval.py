@@ -33,9 +33,7 @@ class HybridRetriever:
         self.reranker = reranker
         self.rerank_candidate_pool = rerank_candidate_pool
 
-    import asyncio
     async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> QueryResponse | None:
-        import asyncio
         query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
         query_vector = query_embedding[0]
         return await asyncio.get_running_loop().run_in_executor(retrieval_executor, 
@@ -49,7 +47,6 @@ class HybridRetriever:
         )
 
     async def semantic_cache_set(self, query: str, response: QueryResponse, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
-        import asyncio
         query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
         query_vector = query_embedding[0]
         await asyncio.get_running_loop().run_in_executor(retrieval_executor, 
@@ -134,7 +131,6 @@ class HybridRetriever:
         original_query: str | None = None,
     ) -> list[RetrievedChunk]:
         """Synchronous wrapper for eval/script usage ONLY. Never call from FastAPI."""
-        import asyncio
         try:
             asyncio.get_running_loop()
             has_loop = True

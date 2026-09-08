@@ -213,7 +213,7 @@ class AnswerGenerator:
             pruned_chunks = [c for c in chunks if (c.rerank_score is None) or (c.rerank_score >= self.low_confidence_threshold)]
             
         context_block = _build_context_block(pruned_chunks, self.low_confidence_threshold)
-        user_prompt_text = f"Context excerpts:\n\n{context_block}\n\nQuestion: {query}\n\nAnswer:"
+        user_prompt_text = f"Context excerpts:\n\n{context_block}\n\nQuestion: <query>{query}</query>\n\nAnswer:"
         
         if image_url:
             user_prompt = [
