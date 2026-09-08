@@ -1,6 +1,6 @@
 import pytest
 import os
-from rag_api.adapters.llm.openai_client import OpenAIClient
+from rag_api.adapters.llm.llm_client import OpenAILLMClient
 from rag_api.services.query_condensation import normalize_query
 
 # Use a custom marker so this doesn't run during standard `pytest` runs
@@ -14,7 +14,7 @@ def test_live_normalizer_fixes_extreme_typos():
     if not os.getenv("OPENAI_API_KEY"):
         pytest.skip("No OPENAI_API_KEY found, skipping live integration test.")
         
-    real_client = OpenAIClient(api_key=os.getenv("OPENAI_API_KEY"))
+    real_client = OpenAILLMClient(api_key=os.getenv("OPENAI_API_KEY"))
     
     # Provide a severely garbled technical query
     garbage_query = "hw do i rset my datbas passwrod on the prd env?"

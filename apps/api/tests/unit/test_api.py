@@ -9,7 +9,6 @@ from rag_api.main import create_app
 from rag_api.core.settings import Settings
 from rag_api.adapters.vectorstore.embeddings import DeterministicFakeEmbeddingClient
 from rag_api.domain.retrieval.reranker import LLMJudgeReranker
-from rag_api.adapters.vectorstore.sparse_index import SparseIndex
 from rag_api.adapters.vectorstore.vector_store import VectorStore
 
 
@@ -25,8 +24,7 @@ def client(tmp_path):
         embedding_client=DeterministicFakeEmbeddingClient(dimension=128),
         llm_mode="extractive",  # exercises the full pipeline with zero API keys
         vector_store=VectorStore(tmp_path / "chroma", settings.collection_name),
-        sparse_index=SparseIndex(),
-    )
+        )
     return TestClient(app)
 
 
@@ -138,8 +136,7 @@ def test_query_translates_provider_failure_into_clean_502(tmp_path):
         embedding_client=FailingEmbedder(),
         llm_mode="extractive",
         vector_store=VectorStore(tmp_path / "chroma2", settings.collection_name),
-        sparse_index=SparseIndex(),
-    )
+        )
     failing_client = TestClient(app)
 
     resp = failing_client.post("/v1/ask", json={"question": "anything"})
@@ -175,7 +172,6 @@ def test_query_with_reranker_wired_returns_rerank_scores(tmp_path):
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_mode="extractive",
         vector_store=store,
-        sparse_index=SparseIndex(),
         reranker=ReverseOrderReranker(),
     )
     reranked_client = TestClient(app)
@@ -205,8 +201,7 @@ def test_reranker_auto_built_from_settings_when_not_overridden(tmp_path):
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
         vector_store=VectorStore(tmp_path / "chroma4", settings.collection_name),
-        sparse_index=SparseIndex(),
-    )
+        )
 
     assert isinstance(app.state.retriever.reranker, LLMJudgeReranker)
     assert TestClient(app).get("/health").json()["reranker_provider"] == "llm_judge"
@@ -223,8 +218,7 @@ def test_llm_client_auto_built_from_settings_when_nothing_overridden(tmp_path, m
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         vector_store=VectorStore(tmp_path / "chroma5", settings.collection_name),
-        sparse_index=SparseIndex(),
-    )
+        )
 
     assert app.state.generator.mode == "llm"
     assert app.state.generator.llm_client is not None
@@ -248,8 +242,7 @@ def test_citation_verifier_auto_built_when_llm_available_and_enabled(tmp_path):
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
         vector_store=VectorStore(tmp_path / "chroma6", settings.collection_name),
-        sparse_index=SparseIndex(),
-    )
+        )
 
     assert app.state.generator.citation_verifier is not None
     assert TestClient(app).get("/health").json()["citation_verification_enabled"] is True
@@ -264,8 +257,7 @@ def test_citation_verifier_not_built_when_disabled_in_settings(tmp_path):
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
         vector_store=VectorStore(tmp_path / "chroma7", settings.collection_name),
-        sparse_index=SparseIndex(),
-    )
+        )
 
     assert app.state.generator.citation_verifier is None
     assert TestClient(app).get("/health").json()["citation_verification_enabled"] is False
@@ -281,8 +273,7 @@ def test_citation_verifier_not_built_in_extractive_mode_even_if_enabled(tmp_path
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_mode="extractive",
         vector_store=VectorStore(tmp_path / "chroma8", settings.collection_name),
-        sparse_index=SparseIndex(),
-    )
+        )
 
     assert app.state.generator.citation_verifier is None
 
@@ -295,8 +286,7 @@ def test_query_low_confidence_response_over_http(tmp_path):
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_mode="extractive",
         vector_store=store,
-        sparse_index=SparseIndex(),
-    )
+        )
     low_conf_client = TestClient(app)
     low_conf_client.post("/v1/ingest", files=[("files", ("handbook.md", MD_CONTENT, "text/markdown"))])
 
@@ -383,8 +373,7 @@ def test_typo_query_recovers_via_normalization(tmp_path):
     from rag_api.main import create_app
     from fastapi.testclient import TestClient
     from rag_api.adapters.vectorstore.vector_store import VectorStore
-    from rag_api.adapters.sparse.sparse_index import SparseIndex
-    
+        
     class DeterministicFakeEmbeddingClient:
         def embed(self, texts):
             return [[0.1] * 768 for _ in texts]
@@ -410,7 +399,7 @@ def test_typo_query_recovers_via_normalization(tmp_path):
     app = create_app(
         settings, embedding_client=DeterministicFakeEmbeddingClient(), llm_client=fake_llm,
         vector_store=VectorStore(tmp_path / "chroma", settings.collection_name),
-        sparse_index=SparseIndex(), reranker=ScoreByQueryReranker(),
+        reranker=ScoreByQueryReranker(),
     )
     client = TestClient(app)
     client.post("/v1/ingest", files=[("files", ("wm.md", b"# Watermarking\n\nWatermarking embeds a hidden identifier in digital content.", "text/markdown"))])
