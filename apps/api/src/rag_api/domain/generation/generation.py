@@ -51,6 +51,7 @@ Rules:
 - Answer using only information present in the context excerpts below.
 - Every factual claim must be followed by a citation marker, e.g. [1] or [2][3], \
 referencing the excerpt(s) it came from.
+- CRITICAL DEDUPLICATION: Do NOT list the same entity, project, or concept multiple times. If an entity has a long title or subtitle, treat it as ONE entity. Do NOT split a single project's title and its description into separate list items. Combine all details about a single unique project into exactly one bullet point. Listing the same project twice is a failure.
 - Never invent a citation number that is not listed below.
 - If the excerpts don't contain enough information to answer, say so plainly \
 instead of guessing."""
