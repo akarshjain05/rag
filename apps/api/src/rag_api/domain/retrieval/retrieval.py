@@ -5,6 +5,7 @@ import asyncio
 
 from rag_api.adapters.vectorstore.embeddings import EmbeddingClient
 from rag_api.domain.models import RetrievedChunk
+from rag_api.schemas.schemas import QueryResponse
 from rag_api.domain.retrieval.reranker import Reranker
 from rag_api.adapters.vectorstore.vector_store import VectorStore
 
@@ -33,7 +34,7 @@ class HybridRetriever:
         self.rerank_candidate_pool = rerank_candidate_pool
 
     import asyncio
-    async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> dict | None:
+    async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> QueryResponse | None:
         import asyncio
         query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
         query_vector = query_embedding[0]
@@ -47,7 +48,7 @@ class HybridRetriever:
             chunking_strategy=chunking_strategy
         )
 
-    async def semantic_cache_set(self, query: str, response: dict, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
+    async def semantic_cache_set(self, query: str, response: QueryResponse, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
         import asyncio
         query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
         query_vector = query_embedding[0]
@@ -55,7 +56,7 @@ class HybridRetriever:
             self.vector_store.semantic_cache_set,
             query,
             query_vector,
-            response,
+            response.model_dump(mode="json"),
             conversation_id=conversation_id,
             document_filter=document_filter,
             chunking_strategy=chunking_strategy

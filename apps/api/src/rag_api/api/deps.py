@@ -55,3 +55,15 @@ def get_object_store(request: Request):
         settings.object_store_secret_key,
         settings.object_store_bucket
     )
+
+def get_orchestrator(request: Request) -> "QueryOrchestrationService":
+    from rag_api.services.query_orchestration import QueryOrchestrationService
+    return QueryOrchestrationService(
+        retriever=request.app.state.retriever,
+        llm_client=request.app.state.llm_client,
+        generator=request.app.state.generator,
+        conversation_store=request.app.state.conversation_store,
+        settings=request.app.state.settings,
+        normalizer_llm_client=getattr(request.app.state, "normalizer_llm_client", request.app.state.llm_client),
+        background_tasks=None # Will be injected by the route
+    )

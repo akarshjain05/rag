@@ -44,15 +44,29 @@ class AnthropicLLMClient(LLMClient):
         self._max_tokens = max_tokens
 
     def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str:
+        import anthropic
         messages = list(history) if history else []
         messages.append({"role": "user", "content": user})
-        resp = self._client.messages.create(
-            model=self._model,
-            max_tokens=self._max_tokens,
-            system=system,
-            messages=messages,
-        )
-        return "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
+        
+        while True:
+            try:
+                resp = self._client.messages.create(
+                    model=self._model,
+                    max_tokens=self._max_tokens,
+                    system=system,
+                    messages=messages,
+                )
+                return "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
+            except anthropic.BadRequestError as e:
+                err_msg = str(e).lower()
+                if "too long" in err_msg or "context length" in err_msg or "exceed" in err_msg:
+                    # Try to drop the oldest turn (which might be two messages if it's a history turn)
+                    if len(messages) > 1:
+                        messages.pop(0)
+                        if messages and messages[0].get("role") == "assistant":
+                            messages.pop(0)
+                        continue
+                raise e
 
 
     def build_image_content(self, image_url: str) -> dict:
