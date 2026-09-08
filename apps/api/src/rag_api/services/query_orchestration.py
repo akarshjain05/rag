@@ -1,15 +1,13 @@
 from fastapi import Request
 from typing import List, Dict, Optional, Any
 import sentry_sdk
-import logging
+from rag_api.core.logging import log
 from rag_api.api.deps import run_or_502, run_or_502_async
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema, NormalizedQuery
 from rag_api.domain.models import ChunkingStrategy
 from rag_api.services.conversation import Turn
 from rag_api.services.query_condensation import normalize_query, condense_query, generate_hyde, expand_query, should_expand_query
 from rag_api.domain.generation.generation import build_sources
-
-log = logging.getLogger("rag_api")
 
 class QueryOrchestrationService:
     def __init__(self, retriever, llm_client, generator, conversation_store, settings, normalizer_llm_client, background_tasks):

@@ -50,7 +50,8 @@ class HybridRetriever:
             document_filter=document_filter,
             chunking_strategy=chunking_strategy
         )
-        return await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
+        res = await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
+        return QueryResponse(**res) if res else None
 
     async def semantic_cache_set(self, query: str, response: QueryResponse, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
         query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])

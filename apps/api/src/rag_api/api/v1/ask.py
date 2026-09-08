@@ -1,11 +1,9 @@
-import logging
 from fastapi import APIRouter, Request, Depends, BackgroundTasks
 
 from rag_api.schemas.schemas import QueryRequest, QueryResponse
 from rag_api.api.deps import get_orchestrator
 from rag_api.api.auth import verify_api_key
-
-log = logging.getLogger("rag_api")
+from rag_api.core.logging import log
 
 router = APIRouter(prefix="", tags=["ask"], dependencies=[Depends(verify_api_key)])
 
