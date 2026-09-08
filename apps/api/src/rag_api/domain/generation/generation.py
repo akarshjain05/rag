@@ -215,7 +215,7 @@ class AnswerGenerator:
         if image_url:
             user_prompt = [
                 {"type": "text", "text": user_prompt_text},
-                {"type": "image_url", "image_url": {"url": image_url}},
+                self.llm_client.build_image_content(image_url),
             ]
         else:
             user_prompt = user_prompt_text

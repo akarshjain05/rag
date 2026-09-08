@@ -23,6 +23,9 @@ class LLMClient(ABC):
     def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str: ...
 
     @abstractmethod
+    def build_image_content(self, image_url: str) -> dict: ...
+
+    @abstractmethod
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str: ...
 
 
@@ -51,6 +54,31 @@ class AnthropicLLMClient(LLMClient):
         )
         return "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
 
+
+    def build_image_content(self, image_url: str) -> dict:
+        import urllib.request
+        import base64
+        import mimetypes
+        try:
+            req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                image_bytes = response.read()
+                content_type = response.headers.get_content_type()
+        except Exception:
+            image_bytes = b""
+            content_type = "image/jpeg"
+        b64_data = base64.b64encode(image_bytes).decode("utf-8")
+        return {
+            "type": "image", 
+            "source": {
+                "type": "base64", 
+                "media_type": content_type, 
+                "data": b64_data
+            }
+        }
+
+    def build_image_content(self, image_url: str) -> dict:
+        return {"type": "image_url", "image_url": {"url": image_url}}
 
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str:
         import base64
