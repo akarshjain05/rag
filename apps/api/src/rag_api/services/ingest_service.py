@@ -159,6 +159,8 @@ class IngestionPipeline:
 
             return report
         except Exception as exc:
+            import traceback
+            log.error("ingest.file_failed", source=source_name, error=str(exc), traceback=traceback.format_exc())
             return IngestReport(source_file=source_name, chunking_strategy=strategy.value, error=f"Ingestion failed: {str(exc)}")
 
 

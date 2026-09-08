@@ -165,7 +165,8 @@ class VectorStore:
                 query=emb,
                 using="dense",
                 limit=top_k,
-                filter=filter_obj
+                filter=filter_obj,
+                with_payload=True
             ) for emb in embeddings
         ]
         
