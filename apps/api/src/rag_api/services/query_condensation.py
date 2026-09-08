@@ -10,10 +10,11 @@ except ImportError:
 from rag_api.core.logging import log
 from rag_api.adapters.llm.llm_client import LLMClient
 from rag_api.services.conversation import Turn
+from rag_api.schemas.schemas import NormalizedQuery
 
 
 @observe(as_type="generation", name="normalize_query")
-def normalize_query(query: str, llm_client: LLMClient) -> dict:
+def normalize_query(query: str, llm_client: LLMClient) -> NormalizedQuery | str:
     """Step 1, proactive: fix spelling/typing errors and expand obvious acronyms.
     Also detects temporal/historical intent for Self-Querying Retrieval.
     """

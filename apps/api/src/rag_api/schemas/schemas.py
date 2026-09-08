@@ -49,6 +49,11 @@ class SourceSchema(BaseModel):
     rerank_score: float | None = None
 
 
+
+class NormalizedQuery(BaseModel):
+    clean_query: str
+    target_date: str | None = None
+
 class QueryResponse(BaseModel):
     conversation_id: str | None = None
     answer: str

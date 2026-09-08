@@ -3,7 +3,7 @@ from typing import List, Dict, Optional, Any
 import sentry_sdk
 import logging
 from rag_api.api.deps import run_or_502, run_or_502_async
-from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema
+from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema, NormalizedQuery
 from rag_api.domain.models import ChunkingStrategy
 from rag_api.services.conversation import Turn
 from rag_api.services.query_condensation import normalize_query, condense_query, generate_hyde, expand_query, should_expand_query
@@ -62,10 +62,10 @@ class QueryOrchestrationService:
         if normalizer_llm_client and normalize_enabled:
             with sentry_sdk.start_span(op="llm_request", description="Proactive Normalizer"):
                 norm_result = await run_or_502(normalize_query, search_query, normalizer_llm_client)
-            if isinstance(norm_result, dict):
-                search_query = norm_result.get("clean_query", search_query)
-                if norm_result.get("target_date"):
-                    temporal_filter = {"target_date": norm_result["target_date"]}
+            if isinstance(norm_result, NormalizedQuery):
+                search_query = norm_result.clean_query or search_query
+                if norm_result.target_date:
+                    temporal_filter = {"target_date": norm_result.target_date}
             else:
                 search_query = norm_result
 
