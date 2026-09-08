@@ -245,9 +245,15 @@ function KnowledgeBase() {
  setProgress({ pct: 0, msg: "Starting upload..." });
  try {
  const { ingest, fetchDocuments } = await import('./lib/api');
- await ingest(e.target.files, (pct, msg) => {
+ const uploadRes = await ingest(e.target.files, (pct, msg) => {
  setProgress({ pct, msg });
  }, null);
+ 
+ if (uploadRes && uploadRes.reports) {
+    const failed = uploadRes.reports.find(r => r.error);
+    if (failed) throw new Error(failed.error);
+ }
+ 
  const res = await fetchDocuments();
  setDocs(res.documents || res.source_documents || []);
  } catch (err) {

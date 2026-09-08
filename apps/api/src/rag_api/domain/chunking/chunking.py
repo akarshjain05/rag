@@ -76,10 +76,11 @@ def chunk_document(
     chunks: list[Chunk] = []
     skipped_low_quality = 0
     idx = 0
+    last_offset = 0
     img_map = {img.image_hash: img for img in getattr(doc, 'images', [])}
 
     def process_text_segment(text: str, page_number: int | None, extraction_method: str = "native"):
-        nonlocal idx, skipped_low_quality
+        nonlocal idx, skipped_low_quality, last_offset
         # Pre-split on image sentinels
         # Format: <!--IMG:{image_hash}-->\n\n{derived_text}\n\n<!--/IMG-->
         
