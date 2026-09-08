@@ -109,7 +109,8 @@ async def ask(
             top_k=payload.top_k, 
             chunking_strategy=strategy_value,
             original_query=search_query,
-            document_filter=payload.document_filter
+            document_filter=payload.document_filter,
+            temporal_filter=temporal_filter
         )
     ); import logging; logging.warning('RETRIEVE ASYNC DONE')
     
