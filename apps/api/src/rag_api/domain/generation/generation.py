@@ -165,6 +165,9 @@ class AnswerGenerator:
         self.low_confidence_threshold = low_confidence_threshold
 
     def generate(self, query: str, chunks: list[RetrievedChunk], image_url: str | None = None, history: list[dict] | None = None, verify_citations: bool | None = None) -> GenerationResult:
+        # Enforce sliding window on conversation history to prevent context overflow (keep last 5 turns = 10 messages)
+        if history and len(history) > 10:
+            history = history[-10:]
         if not chunks:
             return GenerationResult(
                 answer="No relevant context was found in the indexed documents for this question.",
@@ -220,7 +223,6 @@ class AnswerGenerator:
         else:
             user_prompt = user_prompt_text
 
-        print(f"\n=== GENERATOR PROMPT ===\n{user_prompt}\n=== HISTORY ===\n{history}\n")
         start = time.perf_counter()
         with tracer.start_as_current_span("generation.llm_call"):
             raw_answer = self.llm_client.generate(SYSTEM_PROMPT, user_prompt, history=history)  # type: ignore[union-attr]

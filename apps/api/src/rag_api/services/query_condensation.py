@@ -42,7 +42,6 @@ def normalize_query(query: str, llm_client: LLMClient) -> dict:
         
     llm_calls_total.labels(stage="normalize", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="normalize").observe(time.perf_counter() - start)
-    print(f"\n=== NORMALIZED QUERY ===\nOriginal: {query}\nNormalized: {parsed}\n")
 
     return parsed
 
@@ -68,7 +67,6 @@ def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> st
         standalone_query = llm_client.generate(system, query, history=llm_history)
     llm_calls_total.labels(stage="condense", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="condense").observe(time.perf_counter() - start)
-    print(f"\n=== CONDENSED QUERY ===\n{standalone_query}\n")
 
     return standalone_query.strip()
 
@@ -115,7 +113,6 @@ def expand_query(query: str, llm_client: LLMClient) -> str:
         expanded_query = llm_client.generate(system, query)
     llm_calls_total.labels(stage="expand", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="expand").observe(time.perf_counter() - start)
-    print(f"\n=== CRAG EXPANDED QUERY ===\nOriginal: {query}\nExpanded: {expanded_query}\n")
     return expanded_query.strip()
 
 
@@ -132,5 +129,4 @@ def generate_hyde(query: str, llm_client: LLMClient) -> str:
         hyde_doc = llm_client.generate(system, query)
     llm_calls_total.labels(stage="hyde", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="hyde").observe(time.perf_counter() - start)
-    print(f"\n=== HyDE DOCUMENT ===\n{hyde_doc}\n")
     return hyde_doc.strip()

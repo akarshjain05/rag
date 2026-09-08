@@ -182,6 +182,44 @@ class VectorStore:
             out_batch.append(out)
         return out_batch
 
+    def _build_filter(self, where: dict | None, temporal_filter: dict | None) -> models.Filter | None:
+        must_conditions = []
+        should_conditions = []
+        min_should = None
+        
+        if temporal_filter and "target_date" in temporal_filter and temporal_filter["target_date"]:
+            from datetime import datetime, timezone
+            try:
+                dt = datetime.strptime(temporal_filter["target_date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                target_ts = int(dt.timestamp())
+                must_conditions.append(models.FieldCondition(key="valid_from", range=models.Range(lte=target_ts)))
+                should_conditions.extend([
+                    models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")),
+                    models.FieldCondition(key="valid_to", range=models.Range(gt=target_ts))
+                ])
+                min_should = 1
+            except ValueError:
+                # Log explicitly here rather than silently swallow
+                import logging
+                logging.getLogger("rag_api").warning(f"Malformed temporal_filter target_date: {temporal_filter['target_date']}")
+                must_conditions.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")))
+        else:
+            must_conditions.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to")))
+
+        if where:
+            for k, v in where.items():
+                if isinstance(v, list):
+                    must_conditions.append(models.FieldCondition(key=k, match=models.MatchAny(any=v)))
+                else:
+                    must_conditions.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+                    
+        filter_kwargs = {"must": must_conditions}
+        if should_conditions:
+            filter_kwargs["should"] = should_conditions
+            filter_kwargs["min_should"] = min_should
+            
+        return models.Filter(**filter_kwargs) if must_conditions else None
+
     def query(self, embedding: list[float], top_k: int = 10, where: dict | None = None, temporal_filter: dict | None = None) -> list[dict]:
         must_conditions = []
         should_conditions = []

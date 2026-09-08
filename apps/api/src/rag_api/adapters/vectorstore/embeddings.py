@@ -40,12 +40,13 @@ class OpenAIEmbeddingClient(EmbeddingClient):
         "text-embedding-ada-002": 1536,
     }
 
-    def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None, base_url: str | None = None):
+    def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None, base_url: str | None = None, timeout: float = 30.0):
         from openai import OpenAI  # local import: don't require the SDK unless used
 
         if not api_key:
             raise ValueError("OPENAI_API_KEY is required for EMBEDDING_PROVIDER=openai")
-        self._client = OpenAI(api_key=api_key, base_url=base_url)
+        import httpx
+        self._client = OpenAI(api_key=api_key, base_url=base_url, timeout=httpx.Timeout(timeout))
         self._model = model
         self._dimension = self._DIMENSIONS.get(model, 1536)
 

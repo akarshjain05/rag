@@ -76,8 +76,7 @@ class Chunk:
         self.chunk_id = f"{safe_source}::{self.chunking_strategy}::{self.chunk_index}"
 
     def metadata(self) -> dict:
-        """Chroma/BM25 metadata dict. No `None`s — Chroma metadata values
-        must be str/int/float/bool, so absent fields get sentinel defaults."""
+        """Qdrant/BM25 metadata dict. Can contain `None` values natively., so absent fields get sentinel defaults."""
         return {
             "source_document": self.source_document,
             "chunk_index": self.chunk_index,

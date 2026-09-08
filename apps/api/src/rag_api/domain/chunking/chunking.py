@@ -102,7 +102,14 @@ def chunk_document(
                         skipped_low_quality += 1
                         continue
                     raw_clean = sub_text.strip()
-                    char_start = doc.text.find(raw_clean)
+                    # Use a sliding window to prevent repeated substrings from causing char_start to snap backward
+                    char_start = doc.text.find(raw_clean, last_offset)
+                    if char_start == -1:
+                        char_start = doc.text.find(raw_clean) # fallback
+                    
+                    if char_start != -1:
+                        last_offset = char_start + len(raw_clean)
+                    
                     char_end = char_start + len(raw_clean) if char_start != -1 else None
                     char_start = char_start if char_start != -1 else None
                     

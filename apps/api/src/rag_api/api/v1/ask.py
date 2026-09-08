@@ -45,7 +45,7 @@ async def ask(
         chunking_strategy=strategy_value
     ))
     if cached_payload:
-        print("Semantic Cache Hit! Bypassing pipeline.")
+        log.info("semantic_cache.hit", query=search_query)
         # Reconstruct sources list for the conversation store
         cached_sources = cached_payload.get("sources", [])
         cid = payload.conversation_id or store.create_conversation()
@@ -75,11 +75,8 @@ async def ask(
             norm_result = await run_or_502(normalize_query, search_query, normalizer_llm_client)
         if isinstance(norm_result, dict):
             search_query = norm_result.get("clean_query", search_query)
-            # Support both the old schema and the new target_date schema
-            if "target_date" in norm_result and norm_result["target_date"]:
+            if norm_result.get("target_date"):
                 temporal_filter = {"target_date": norm_result["target_date"]}
-            else:
-                temporal_filter = norm_result.get("temporal_filter")
         else:
             search_query = norm_result
 
@@ -103,7 +100,7 @@ async def ask(
     
     hyde_search_query = f"{search_query}\n\n{hyde_doc}" if hyde_doc else search_query
 
-    import logging; logging.warning('STARTING RETRIEVE ASYNC...'); chunks = await run_or_502_async(
+    chunks = await run_or_502_async(
         retriever.retrieve_async(
             hyde_search_query, 
             top_k=payload.top_k, 
@@ -112,10 +109,10 @@ async def ask(
             document_filter=payload.document_filter,
             temporal_filter=temporal_filter
         )
-    ); import logging; logging.warning('RETRIEVE ASYNC DONE')
+    )
     
     # 1. Corrective RAG (CRAG) Routing
-    if retriever.reranker and chunks and llm_client:
+    if retriever.reranker and llm_client:
         max_retries = settings.crag_max_retries
         retries = 0
         crag_enabled = settings.crag_expansion_enabled
