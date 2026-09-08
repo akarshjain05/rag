@@ -117,7 +117,8 @@ async def ask(
         retries = 0
         crag_enabled = settings.crag_expansion_enabled
         while retries < max_retries and crag_enabled:
-            max_score = max([c.rerank_score or 0.0 for c in chunks])
+            retries += 1
+            max_score = max([c.rerank_score or 0.0 for c in chunks]) if chunks else 0.0
             # The query was already spell-checked in Step 1, so a low score
             # here reflects a genuine knowledge/vocabulary gap, not a
             # garbled token comparison -- safe to give a near-zero score the
