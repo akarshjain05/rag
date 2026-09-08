@@ -410,3 +410,29 @@ def test_typo_query_recovers_via_normalization(tmp_path):
     body = resp.json()
     assert body["mode"] != "low_confidence"
     assert body["retrieval_confidence"] > 0.3
+
+def test_retrieve_async_primary_call_receives_temporal_filter(client, monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    retrieve_mock = AsyncMock(return_value=[])
+    monkeypatch.setattr(client.app.state.retriever, "retrieve_async", retrieve_mock)
+    
+    client.app.state.settings.query_normalization_enabled = True
+    fake_llm = MagicMock()
+    fake_llm.provider_name = "fake"
+    fake_llm.generate.return_value = '{"clean_query": "test query", "target_date": "2024-01-01"}'
+    
+    # Must also mock LLM client to skip actual generation
+    client.app.state.generator.llm_client = fake_llm
+    client.app.state.normalizer_llm_client = fake_llm
+    
+    # Needs to mock semantic cache to force retrieval
+    cache_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(client.app.state.retriever, "semantic_cache_get", cache_mock)
+    
+    resp = client.post("/v1/ask", json={"question": "what happened?"})
+    
+    assert retrieve_mock.call_count >= 1
+    call_kwargs = retrieve_mock.call_args_list[0][1]
+    assert "temporal_filter" in call_kwargs
+    assert call_kwargs["temporal_filter"] == {"target_date": "2024-01-01"}
+

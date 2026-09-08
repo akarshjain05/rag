@@ -16,6 +16,7 @@ class ErrorBoundary extends React.Component<any, any> {
  componentDidCatch(error, info) {
  this.setState({ info });
  console.error("ErrorBoundary caught an error", error, info);
+ if ((window as any).Sentry) { (window as any).Sentry.captureException(error, { extra: info }); }
  }
  render() {
  if (this.state.hasError) {

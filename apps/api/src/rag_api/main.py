@@ -50,6 +50,10 @@ def create_app(
     from rag_api.core.logging import configure_logging
     configure_logging(json_logs=True)
 
+    if "sk-default-test-key" in (settings.api_keys or []):
+        import logging
+        logging.getLogger("rag_api").warning("CRITICAL: Application is running with the hardcoded 'sk-default-test-key' API credential. This is insecure and should never be used in production.")
+
 
     embedding_client = embedding_client or build_embedding_client(
         settings.embedding_provider,

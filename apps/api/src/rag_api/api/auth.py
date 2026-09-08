@@ -11,7 +11,9 @@ async def verify_api_key(
     if x_api_key is None:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
     
-    if x_api_key in settings.api_keys:
-        return
+    import secrets
+    for key in settings.api_keys:
+        if secrets.compare_digest(x_api_key, key):
+            return
 
     raise HTTPException(status_code=401, detail="Invalid or missing API key")

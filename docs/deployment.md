@@ -164,7 +164,7 @@ upper-cased (e.g. `embedding_provider` → `EMBEDDING_PROVIDER`).
 | Field | Default | Notes |
 |---|---|---|
 | `api_port` | `8000` | — |
-| `cors_origins` | `["*"]` | **must be scoped before any non-local deployment** — see [`../security/01-current-posture.md`](01-current-posture.md) |
+| `cors_origins` | `[]` (deny-all) | **must be scoped before any non-local deployment** — see [`../security/01-current-posture.md`](01-current-posture.md) |
 
 ## A note on the `qdrant_*` naming
 
