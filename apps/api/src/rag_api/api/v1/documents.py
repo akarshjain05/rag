@@ -5,6 +5,11 @@ import asyncio
 import json
 import concurrent.futures
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+
+# Isolate heavy synchronous CPU tasks (like chunking and ONNX embeddings) from the default asyncio thread pool
+ingest_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="ingest_worker")
+
 from fastapi import APIRouter, Depends, File, Query, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from rag_api.schemas.schemas import IngestResponse, IngestReportSchema, DocumentsResponse, DeleteResponse
@@ -58,7 +63,7 @@ async def ingest_documents(
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    asyncio.get_running_loop().run_in_executor(None, worker)
+    asyncio.get_running_loop().run_in_executor(ingest_executor, worker)
 
     async def sse_generator():
         yield f"data: {json.dumps({'progress': 0, 'message': 'Processing started...'})}\n\n"
