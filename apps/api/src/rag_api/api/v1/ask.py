@@ -38,12 +38,12 @@ async def ask(
     # Semantic Cache Check
     import asyncio
     strategy_value = payload.chunking_strategy.value if payload.chunking_strategy else None
-    cached_payload = await retriever.semantic_cache_get(
+    cached_payload = await run_or_502_async(retriever.semantic_cache_get(
         query=search_query,
         conversation_id=payload.conversation_id,
         document_filter=payload.document_filter,
         chunking_strategy=strategy_value
-    )
+    ))
     if cached_payload:
         print("Semantic Cache Hit! Bypassing pipeline.")
         # Reconstruct sources list for the conversation store

@@ -119,7 +119,7 @@ class Settings(BaseSettings):
 
 
     # Celery & Object Store
-    redis_url: str | None = "redis://redis:6379/2"
+    redis_url: str | None = None
     celery_broker_url: str = "redis://redis:6379/0"
     celery_result_backend: str = "redis://redis:6379/1"
     object_store_endpoint: str | None = None

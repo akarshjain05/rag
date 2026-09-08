@@ -44,6 +44,7 @@ def create_app(
     vector_store: VectorStore | None = None,
     reranker: Reranker | None = _UNSET,
     citation_verifier: CitationVerifier | None = _UNSET,
+    conversation_store: ConversationStore | None = _UNSET,
 ) -> FastAPI:
     settings = settings or get_settings()
     from rag_api.core.logging import configure_logging
@@ -184,7 +185,10 @@ def create_app(
     app.state.generator = generator
     app.state.vector_store = vector_store
     from rag_api.services.redis_conversation import RedisConversationStore
-    app.state.conversation_store = RedisConversationStore(settings.redis_url) if settings.redis_url else ConversationStore()
+    if conversation_store is not _UNSET:
+        app.state.conversation_store = conversation_store
+    else:
+        app.state.conversation_store = RedisConversationStore(settings.redis_url) if settings.redis_url else ConversationStore()
     app.state.llm_client = llm_client
     
     normalizer_llm = llm_client
