@@ -44,7 +44,8 @@ def normalize_query(query: str, llm_client: LLMClient) -> NormalizedQuery | str:
     llm_calls_total.labels(stage="normalize", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="normalize").observe(time.perf_counter() - start)
 
-    return parsed
+    from rag_api.schemas.schemas import NormalizedQuery
+    return NormalizedQuery(**parsed)
 
 
 def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> str:

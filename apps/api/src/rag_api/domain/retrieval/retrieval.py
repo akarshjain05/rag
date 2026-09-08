@@ -39,7 +39,9 @@ class HybridRetriever:
     async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> QueryResponse | None:
         query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
         query_vector = query_embedding[0]
-        return await asyncio.get_running_loop().run_in_executor(retrieval_executor, 
+        
+        from functools import partial
+        func = partial(
             self.vector_store.semantic_cache_get,
             query_vector,
             0.95,
@@ -48,11 +50,14 @@ class HybridRetriever:
             document_filter=document_filter,
             chunking_strategy=chunking_strategy
         )
+        return await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
 
     async def semantic_cache_set(self, query: str, response: QueryResponse, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
         query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
         query_vector = query_embedding[0]
-        await asyncio.get_running_loop().run_in_executor(retrieval_executor, 
+        
+        from functools import partial
+        func = partial(
             self.vector_store.semantic_cache_set,
             query,
             query_vector,
@@ -61,6 +66,7 @@ class HybridRetriever:
             document_filter=document_filter,
             chunking_strategy=chunking_strategy
         )
+        await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
 
     async def retrieve_async(
         self,
@@ -81,8 +87,10 @@ class HybridRetriever:
             where = where or {}
             where["source_document"] = document_filter
 
+        from functools import partial
         if dense_only:
-            dense = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.vector_store.query, query_embedding, top_k=self.dense_top_k, where=where, temporal_filter=temporal_filter)
+            func = partial(self.vector_store.query, query_embedding, top_k=self.dense_top_k, where=where, temporal_filter=temporal_filter)
+            dense = await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
             return [
                 RetrievedChunk(
                     chunk_id=r["chunk_id"],
@@ -98,7 +106,7 @@ class HybridRetriever:
         fusion_pool_size = max(self.rerank_candidate_pool, top_k) if self.reranker else top_k
         
         # Native Qdrant Hybrid Search!
-        fused_dicts = await asyncio.get_running_loop().run_in_executor(retrieval_executor, 
+        func = partial(
             self.vector_store.hybrid_search,
             query_text=query, 
             dense_vector=query_embedding, 
@@ -106,6 +114,7 @@ class HybridRetriever:
             where=where,
             temporal_filter=temporal_filter
         )
+        fused_dicts = await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
         
         fused = [
             RetrievedChunk(
