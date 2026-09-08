@@ -72,7 +72,7 @@ async def ask(
     normalize_enabled = settings.query_normalization_enabled
     if normalizer_llm_client and normalize_enabled:
         with sentry_sdk.start_span(op="llm_request", description="Proactive Normalizer"):
-            norm_result = run_or_502(normalize_query, search_query, normalizer_llm_client)
+            norm_result = await run_or_502(normalize_query, search_query, normalizer_llm_client)
         if isinstance(norm_result, dict):
             search_query = norm_result.get("clean_query", search_query)
             # Support both the old schema and the new target_date schema
@@ -85,7 +85,7 @@ async def ask(
 
     condense_enabled = settings.query_condensation_enabled
     if history and llm_client and condense_enabled:
-        search_query = run_or_502(condense_query, search_query, history, llm_client)
+        search_query = await run_or_502(condense_query, search_query, history, llm_client)
         
     llm_history = [{"role": "user", "content": t.user} for t in history] + [{"role": "assistant", "content": t.assistant} for t in history]
     # We want user, assistant, user, assistant interleaved!
@@ -99,7 +99,7 @@ async def ask(
     hyde_doc = ""
     hyde_enabled = settings.hyde_enabled
     if llm_client and hyde_enabled:
-        hyde_doc = run_or_502(generate_hyde, search_query, llm_client)
+        hyde_doc = await run_or_502(generate_hyde, search_query, llm_client)
     
     hyde_search_query = f"{search_query}\n\n{hyde_doc}" if hyde_doc else search_query
 
@@ -126,7 +126,7 @@ async def ask(
             # same one-shot expansion attempt as a merely ambiguous one.
             if should_expand_query(max_score, ceiling=settings.crag_threshold_upper):
                 log.info("crag.expansion_triggered", original_score=max_score, query=search_query, retry=retries+1, max_retries=max_retries)
-                expanded_query = run_or_502(expand_query, search_query, llm_client)
+                expanded_query = await run_or_502(expand_query, search_query, llm_client)
                 crag_chunks = await run_or_502_async(
                     retriever.retrieve_async(
                         expanded_query, 
@@ -155,7 +155,7 @@ async def ask(
         return QueryResponse(conversation_id=cid, answer="[Discarded]", mode="no_context", sources=[], used_citation_markers=[], invalid_citation_markers=[], unsupported_citation_markers=[], retrieval_confidence=0, citation_coverage=0, completeness=0, composite_confidence=0, dense_only_sources=None)
 
     # Note: Dynamic Context Pruning happens inside the generator now!
-    result = run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
+    result = await run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
     
     cid = payload.conversation_id or store.create_conversation()
     sources_dicts = result.sources

@@ -17,12 +17,14 @@ def get_vector_store(request: Request):
     return request.app.state.vector_store
 
 
-def run_or_502(fn, *args, **kwargs):
+async def run_or_502(fn, *args, **kwargs):
+    import asyncio
     from fastapi import HTTPException
     from openai import OpenAIError
     from anthropic import AnthropicError
     try:
-        return fn(*args, **kwargs)
+        # Offload synchronous network I/O calls to a threadpool to prevent blocking the FastAPI event loop
+        return await asyncio.to_thread(fn, *args, **kwargs)
     except (OpenAIError, AnthropicError) as exc:
         raise HTTPException(status_code=502, detail=f"Upstream AI provider error: {exc}") from exc
 
