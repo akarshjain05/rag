@@ -49,6 +49,10 @@ class VectorStore:
                 existing_dim = col_info.config.params.vectors["dense"].size
                 if existing_dim != dense_dimension:
                     raise ValueError(f"Vector dimension mismatch! Existing collection has dimension {existing_dim}, but current EMBEDDING_PROVIDER config requires {dense_dimension}. You must wipe the old Qdrant volume to switch providers.")
+            else:
+                import logging
+                logging.warning("Found old Qdrant collection without named vectors. Recreating it...")
+                self._client.delete_collection(self.collection_name)
         
         if not self._client.collection_exists(collection_name=self.collection_name):
             self._client.create_collection(
@@ -514,13 +518,16 @@ class VectorStore:
 
     def expire_source_document(self, source_document: str, current_time: int, exclude_ids: list[str] | None = None) -> int:
         """Updates the valid_to timestamp of active chunks, optionally preserving specific IDs."""
+        import uuid as _uuid
         must=[
             models.FieldCondition(key="source_document", match=models.MatchValue(value=source_document)),
             models.IsEmptyCondition(is_empty=models.PayloadField(key="valid_to"))
         ]
         must_not = []
         if exclude_ids:
-            must_not.append(models.HasIdCondition(has_id=exclude_ids))
+            # Convert raw chunk_id strings to UUID5 hashes to match add_many's point IDs
+            uuid_ids = [str(_uuid.uuid5(_uuid.NAMESPACE_DNS, cid)) for cid in exclude_ids]
+            must_not.append(models.HasIdCondition(has_id=uuid_ids))
             
         filter_obj = models.Filter(must=must, must_not=must_not if must_not else None)
         count = self._client.count(collection_name=self.collection_name, count_filter=filter_obj).count
