@@ -79,7 +79,7 @@ graph TD
 
 ## 📸 Interface & Citations
 
-![Vellumiq Interface showing VERIFIED badge and chunk IDs](https://via.placeholder.com/800x450.png?text=Vellumiq+Dashboard+-+Add+Screenshot+Here)
+![Vellumiq Interface showing VERIFIED badge and chunk IDs](https://placehold.co/800x450/1e1e1e/ffffff.png?text=Vellumiq+Dashboard+%7C+Add+Screenshot+Here)
 
 The frontend strictly renders citations mapping directly to the deterministic `chunk_id` stored in the Qdrant payload, ensuring zero hallucinated sources.
 
