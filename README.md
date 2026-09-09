@@ -63,9 +63,13 @@ graph TD
     end
 ```
 
-**Edge Semantic Caching (Qdrant)**: Intercepts repeat queries using dense vector similarity to return answers in < 100ms at zero LLM cost.
+**Edge Semantic Caching (Qdrant)**: Intercepts repeat queries using dense vector similarity to return answers in < 100ms at zero LLM cost. The cache is built with production resilience:
+- **Negative Cache Prevention:** The system strictly refuses to cache low-confidence or "I don't know" answers, ensuring failures are never permanently lodged in the cache.
+- **Fail-Open Timeouts:** Strict 250ms timeouts ensure that vector database hangs gracefully degrade to a cache miss, never stalling user requests.
+- **Global Context Sharing:** Standalone (first-turn) queries utilize a globally shared cache namespace, while follow-up queries uniquely isolate against conversation history.
+- **Aggressive Invalidation:** The entire semantic cache is flushed upon new document ingestion to ensure real-time accuracy.
 
-**Proactive Normalizer (Tier 3 LLM)**: A fast, cheap LLM (GPT-4o-mini / Haiku) rewrites user queries to fix typos and extracts temporal metadata (e.g., "in 2024") into a strict JSON schema.
+**Query Normalization & Condensation**: A fast, cheap LLM rewrites user queries to fix typos, extracts temporal metadata, and resolves conversational follow-ups into standalone queries. To protect dense vector search integrity, the LLM is strictly constrained via Pydantic/JSON schemas to prevent "conversational filler" (e.g., *"Here is the rewritten query:"*) from polluting the mathematical embedding.
 
 **Temporal Hybrid Search (Qdrant)**: Combines BM25 keyword matching with dense vectors, dynamically applying `valid_from` and `valid_to` metadata constraints to strictly enforce point-in-time accuracy.
 

@@ -249,13 +249,19 @@ straight to the final `top_k`.
 
 1. **Query condensation** (`query_condensation.py::condense_query`) —
    only runs if the request carries a `conversation_id` with prior
-   history; rewrites a follow-up question into a standalone query.
+   history; rewrites a follow-up question into a standalone query. To protect
+   vector integrity, the LLM is constrained to strict JSON outputs, preventing
+   conversational filler from polluting dense embeddings.
 2. **HyDE** (`generate_hyde`) — generates a hypothetical answer passage
    and appends it to the search query to improve vector-space overlap
    with the real answer.
 3. **Semantic Caching** — instantly returns previously generated answers
-   if the exact intent (Cosine Similarity > 0.95) was recently asked,
-   enforcing a configurable TTL expiration.
+   if the exact intent (Cosine Similarity > 0.95) was recently asked. Includes
+   production-grade resilience mechanisms:
+   - **Negative Cache Prevention:** Refuses to cache low-confidence or "I don't know" answers.
+   - **Fail-Open Timeouts:** 250ms strict timeouts gracefully bypass the cache if the vector DB hangs.
+   - **Global Context Sharing:** Standalone (first-turn) queries utilize a globally shared cache namespace.
+   - **Aggressive Invalidation:** Fully flushed upon new document ingest to prevent stale answers.
 4. **Proactive Normalization** — unconditionally intercepts every query
    before retrieval and routes it to `NORMALIZER_MODEL` (e.g. Haiku) to
    fix spelling and syntax, neutralizing Cross-Encoder brittleness.
