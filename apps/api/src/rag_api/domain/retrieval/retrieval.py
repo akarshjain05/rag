@@ -37,37 +37,52 @@ class HybridRetriever:
         self.rerank_candidate_pool = rerank_candidate_pool
 
     async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> QueryResponse | None:
-        query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
-        query_vector = query_embedding[0]
-        
-        from functools import partial
-        func = partial(
-            self.vector_store.semantic_cache_get,
-            query_vector,
-            0.95,
-            ttl_seconds=604800,
-            conversation_id=conversation_id,
-            document_filter=document_filter,
-            chunking_strategy=chunking_strategy
-        )
-        res = await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
-        return QueryResponse(**res) if res else None
+        try:
+            query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
+            query_vector = query_embedding[0]
+            
+            from functools import partial
+            func = partial(
+                self.vector_store.semantic_cache_get,
+                query_vector,
+                0.95,
+                ttl_seconds=604800,
+                conversation_id=conversation_id,
+                document_filter=document_filter,
+                chunking_strategy=chunking_strategy
+            )
+            # Enforce a strict timeout; if vector store hangs, bypass cache immediately
+            future = asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
+            res = await asyncio.wait_for(future, timeout=0.25)
+            return QueryResponse(**res) if res else None
+        except asyncio.TimeoutError:
+            import logging
+            logging.getLogger(__name__).warning("Semantic cache GET timed out (degrading to cache miss)")
+            return None
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Semantic cache GET failed (degrading to cache miss): {e}")
+            return None
 
     async def semantic_cache_set(self, query: str, response: QueryResponse, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
-        query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
-        query_vector = query_embedding[0]
-        
-        from functools import partial
-        func = partial(
-            self.vector_store.semantic_cache_set,
-            query,
-            query_vector,
-            response.model_dump(mode="json"),
+        try:
+            query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
+            query_vector = query_embedding[0]
+            
+            from functools import partial
+            func = partial(
+                self.vector_store.semantic_cache_set,
+                query,
+                query_vector,
+                response.model_dump(mode="json"),
             conversation_id=conversation_id,
             document_filter=document_filter,
             chunking_strategy=chunking_strategy
         )
         await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Semantic cache SET failed: {e}")
 
     async def retrieve_async(
         self,

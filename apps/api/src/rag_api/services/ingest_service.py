@@ -154,7 +154,7 @@ class IngestionPipeline:
 
             if inserted_ids:
                 self.vector_store.add_many(inserted_ids, inserted_embeddings, inserted_texts, inserted_metas)
-
+                self.vector_store.semantic_cache_clear()
 
 
             return report

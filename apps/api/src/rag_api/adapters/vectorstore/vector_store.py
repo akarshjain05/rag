@@ -517,6 +517,19 @@ class VectorStore:
         self._client.delete(collection_name=self.cache_collection, points_selector=filter_obj, wait=True)
         return count
 
+    def semantic_cache_clear(self) -> None:
+        """Fully flushes the semantic cache. Required when new documents are added, as prior cache entries might have returned 'No context found' for queries that this new document now answers."""
+        try:
+            from qdrant_client.http import models
+            self._client.delete(
+                collection_name=self.cache_collection,
+                points_selector=models.Filter(),
+                wait=True
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to clear semantic cache: {e}")
+
     def expire_source_document(self, source_document: str, current_time: int, exclude_ids: list[str] | None = None) -> int:
         """Updates the valid_to timestamp of active chunks, optionally preserving specific IDs."""
         import uuid as _uuid

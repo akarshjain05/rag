@@ -56,7 +56,9 @@ def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> st
         "Given the following conversation history and the user's latest follow-up question, "
         "rewrite the follow-up question to be a standalone query that can be understood "
         "without the conversation history. Do not answer the question, just rewrite it. "
-        "If it is already standalone, return it exactly as is."
+        "If it is already standalone, return it exactly as is.\n\n"
+        "Output ONLY raw JSON matching this schema: "
+        "{\"standalone_query\": \"string\"}"
     )
 
     llm_history = []
@@ -66,11 +68,21 @@ def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> st
 
     start = time.perf_counter()
     with tracer.start_as_current_span("condensation.llm_call"):
-        standalone_query = llm_client.generate(system, f"<query>\n{query}\n</query>", history=llm_history)
+        result_json_str = llm_client.generate(system, f"<query>\n{query}\n</query>", history=llm_history)
     llm_calls_total.labels(stage="condense", provider=llm_client.provider_name).inc()
     llm_call_seconds.labels(stage="condense").observe(time.perf_counter() - start)
 
-    return standalone_query.strip()
+    import json
+    match = _JSON_OBJECT_RE.search(result_json_str)
+    if match:
+        try:
+            res = json.loads(match.group(0))
+            if isinstance(res, dict) and "standalone_query" in res:
+                return res["standalone_query"].strip()
+        except json.JSONDecodeError:
+            pass
+
+    return result_json_str.strip()
 
 
 def should_expand_query(max_rerank_score: float, ceiling: float = 0.80) -> bool:

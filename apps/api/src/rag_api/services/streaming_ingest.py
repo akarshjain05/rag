@@ -83,4 +83,6 @@ def embed_and_index_stream(
             batch = []
     if batch:
         flush(batch)
+    
+    vector_store.semantic_cache_clear()
     return report

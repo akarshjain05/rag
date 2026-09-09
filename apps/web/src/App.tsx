@@ -674,6 +674,13 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
     } catch (err) {
       if (err.name === 'AbortError') {
         setMessages(prev => [...prev, { role: 'assistant', content: "[Discarded]" }]);
+        if (messages.length === 0) {
+          // This was the first turn of a new conversation and nothing was
+          // ever persisted server-side -- don't leave the UI pointed at a
+          // conversation_id that has no real history behind it.
+          skipFetch.current = true;
+          setConversationId(null);
+        }
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: "Error: " + err.message }]);
       }

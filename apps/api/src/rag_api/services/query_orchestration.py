@@ -28,12 +28,19 @@ class QueryOrchestrationService:
         normalizer_llm_client = self.normalizer_llm_client
         
         search_query = payload.question
+
+        history = []
+        if payload.conversation_id:
+            history = store.get_history(payload.conversation_id)
+
+        # Isolated cache key only needed if there's actually history to condense against
+        cache_conversation_id = payload.conversation_id if history else None
         
         # Semantic Cache Check
         strategy_value = payload.chunking_strategy.value if payload.chunking_strategy else None
         cached_payload = await run_or_502_async(retriever.semantic_cache_get(
             query=search_query,
-            conversation_id=payload.conversation_id,
+            conversation_id=cache_conversation_id,
             document_filter=payload.document_filter,
             chunking_strategy=strategy_value
         ))
@@ -66,10 +73,6 @@ class QueryOrchestrationService:
                     temporal_filter = {"target_date": norm_result.target_date}
             else:
                 search_query = norm_result
-
-        history = []
-        if payload.conversation_id:
-            history = store.get_history(payload.conversation_id)
 
         condense_enabled = settings.query_condensation_enabled
         if history and llm_client and condense_enabled:
@@ -135,8 +138,21 @@ class QueryOrchestrationService:
         
         while not gen_task.done():
             if await request.is_disconnected():
+                # Don't write "[Discarded]" into history as if it were a real
+                # answer -- condense_query() on the *next* turn treats prior
+                # history as ground truth, and a fake assistant reply here
+                # collapses "continue" into an empty standalone query, which
+                # is what produced the "no question provided" response.
                 cid = payload.conversation_id or store.create_conversation()
-                store.append_turn(cid, Turn(user=payload.question, assistant="[Discarded]", sources=[], confidence_info=None))
+
+                def _log_discarded_result(task: "asyncio.Task") -> None:
+                    if task.cancelled():
+                        return
+                    exc = task.exception()
+                    if exc:
+                        log.warning("query.discarded_task_failed", error=str(exc))
+
+                gen_task.add_done_callback(_log_discarded_result)
                 return QueryResponse(conversation_id=cid, answer="[Discarded]", mode="no_context", sources=[], used_citation_markers=[], invalid_citation_markers=[], unsupported_citation_markers=[], retrieval_confidence=0, citation_coverage=0, completeness=0, composite_confidence=0, dense_only_sources=None)
             await asyncio.sleep(0.5)
             
@@ -178,12 +194,14 @@ class QueryOrchestrationService:
             dense_only_sources=dense_only_sources,
         )
         
-        if result.mode in ("llm", "extractive"):
+        # Conditional Cache Write: Only cache if the system found context and generated a confident answer
+        is_confident = result.composite_confidence is not None and result.composite_confidence >= 0.7
+        if result.mode in ("llm", "extractive") and is_confident:
             async def save_to_cache():
                 await retriever.semantic_cache_set(
                     query=payload.question, 
                     response=response_obj,
-                    conversation_id=payload.conversation_id,
+                    conversation_id=cache_conversation_id,
                     document_filter=payload.document_filter,
                     chunking_strategy=strategy_value
                 )
