@@ -147,7 +147,12 @@ class HybridRetriever:
             return fused[:top_k]
             
         rerank_query = original_query if original_query else query
-        return await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.reranker.rerank, rerank_query, fused, top_k)
+        reranked_chunks = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.reranker.rerank, rerank_query, fused, top_k)
+        
+        # Hard Cutoff Threshold: Drop chunks that the reranker identified as mathematically irrelevant.
+        # A score below 0.3 means the chunk is highly unlikely to answer the user's query.
+        # This saves tokens, reduces UI clutter, and prevents hallucination noise.
+        return [chunk for chunk in reranked_chunks if chunk.rerank_score is not None and chunk.rerank_score >= 0.3]
 
     def retrieve(
         self,
