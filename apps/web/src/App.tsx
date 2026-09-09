@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 
 import React, { useState, useEffect } from 'react';
 import { fetchConversations, fetchDocuments, deleteDocument, ingest, ask } from './lib/api';
-import { MessageCircle, Folder, Clock, BarChart, Settings, FileText, ArrowRight, X, Trash2, Check, ThumbsUp, ThumbsDown, LogOut, Moon, Sun, Menu, MoreHorizontal } from 'lucide-react';
+import { MessageCircle, Folder, Clock, BarChart, Settings, FileText, ArrowRight, X, Trash2, Check, ThumbsUp, ThumbsDown, LogOut, Moon, Sun, Menu, MoreHorizontal, Copy } from 'lucide-react';
 
 
 class ErrorBoundary extends React.Component<any, any> {
@@ -539,7 +539,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
       result.push(
         <span key={match.index} className="inline group">
           {phrase}
-          <span className="border-b border-dotted border-accent cursor-pointer">
+          <span>
             <sup className="text-accent font-mono ml-[2px]">{citeNum}</sup>
           </span>
         </span>
@@ -560,6 +560,13 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
   const [confidenceInfo, setConfidenceInfo] = React.useState<any>(null);
 
   const [compareDenseOnly, setCompareDenseOnly] = React.useState(false);
+  const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
+
+  const handleCopy = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
   const abortControllerRef = React.useRef<AbortController | null>(null);
   
   const handleStop = () => {
@@ -591,19 +598,32 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
               const lastTurn = res.history[res.history.length - 1];
               if (lastTurn.sources) {
                 setSources(lastTurn.sources);
+              } else {
+                setSources([]);
               }
               if (lastTurn.confidence_info) {
                 setConfidenceInfo({
-                  retrieval_confidence: lastTurn.confidence_info.retrieval,
-                  citation_coverage: lastTurn.confidence_info.citation,
+                  retrieval: lastTurn.confidence_info.retrieval,
+                  coverage: lastTurn.confidence_info.citation,
                   completeness: lastTurn.confidence_info.completeness,
-                  composite_confidence: lastTurn.confidence_info.composite,
+                  composite: lastTurn.confidence_info.composite,
                   mode: res.mode || 'standard'
                 });
+              } else {
+                setConfidenceInfo(null);
               }
+            } else {
+              // If history is empty, clear stale state
+              setSources([]);
+              setConfidenceInfo(null);
             }
           }
-        }).catch(console.error);
+        }).catch(err => {
+          console.error(err);
+          setMessages([{ role: 'assistant', content: 'Error loading conversation history.' }]);
+          setSources([]);
+          setConfidenceInfo(null);
+        });
       });
     } else {
       setMessages([]);
@@ -619,14 +639,24 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
     setMessages(prev => [...prev, { role: 'user', content: q }]);
     setLoading(true);
     
+    let cid = conversationId;
+    if (!cid) {
+      cid = crypto.randomUUID();
+      skipFetch.current = true;
+      setConversationId(cid);
+    }
+    
     try {
+      abortControllerRef.current = new AbortController();
       const { ask } = await import('./lib/api');
-      const res = await ask({ question: q, conversationId, verifyCitations: true, compareDenseOnly });
+      const res = await ask({ 
+        signal: abortControllerRef.current.signal,
+        question: q, 
+        conversationId: cid, 
+        verifyCitations: true, 
+        compareDenseOnly 
+      });
       
-      if (!conversationId && res.conversation_id) {
-        skipFetch.current = true;
-        setConversationId(res.conversation_id);
-      }
       if (onNewMessage) onNewMessage();
 
       setMessages(prev => [
@@ -642,9 +672,14 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
         mode: res.mode || 'standard'
       });
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Error: " + err.message }]);
+      if (err.name === 'AbortError') {
+        setMessages(prev => [...prev, { role: 'assistant', content: "[Discarded]" }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: "Error: " + err.message }]);
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -753,7 +788,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
               {m.role === 'assistant' && i === messages.length - 1 && confidenceInfo && (
                 <details className="mb-6 group/details">
                   <summary className="flex items-center gap-4 cursor-pointer list-none">
-                    <div className={`inline-block px-2 py-0.5 border ${isHighConf ? 'border-success bg-success-tint text-success' : isLowConf ? 'border-danger bg-danger-tint text-danger' : 'border-warning bg-warning-tint text-warning'} font-mono text-[11px] uppercase tracking-widest -rotate-2`}>
+                    <div className={`inline-block px-2 py-0.5 border ${isHighConf ? 'border-success bg-success-tint text-success' : isLowConf ? 'border-danger bg-danger-tint text-danger' : 'border-warning bg-warning-tint text-warning'} font-mono text-[11px] uppercase tracking-widest`}>
                       {isHighConf ? 'Verified · High Confidence' : isLowConf ? 'Needs review · Low confidence' : 'Moderate confidence'}
                     </div>
                     {confidenceInfo.mode === 'expanded_query' && (
@@ -782,12 +817,32 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
                 </details>
               )}
 
-              <div className={`${m.role === 'user' ? 'bg-surface-card border border-border px-4 py-3 rounded-none text-[14px] font-sans' : 'font-serif text-[16px] leading-[1.75] text-ink'} max-w-full whitespace-pre-wrap`}>
-                 {m.role === 'assistant' ? renderContentWithCitations(m.content) : m.content}
+              <div className="relative group/message">
+                <div className={`${m.role === 'user' ? 'bg-surface-card border border-border px-4 py-3 rounded-none text-[14px] font-sans' : 'font-serif text-[16px] leading-[1.75] text-ink'} max-w-full whitespace-pre-wrap`}>
+                   {m.role === 'assistant' ? renderContentWithCitations(m.content) : m.content}
+                </div>
+                {m.role === 'user' && (
+                  <div className="flex justify-end mt-2 text-ink-muted opacity-0 group-hover/message:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => handleCopy(m.content, i)}
+                      className="hover:text-ink transition-colors cursor-default"
+                      title="Copy text"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {m.role === 'assistant' && (
                 <div className="flex items-center gap-4 mt-3 text-ink-muted">
+                  <button 
+                    onClick={() => handleCopy(m.content, i)}
+                    className="hover:text-ink transition-colors"
+                    title="Copy text"
+                  >
+                    <Copy size={14} />
+                  </button>
                   <button 
                     onClick={() => handleFeedback(i, true)}
                     className={`hover:text-success transition-colors ${m.feedback === true ? 'text-success' : ''}`}
@@ -809,8 +864,11 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
 
         {/* Sources Section */}
         {sources.length > 0 && (
-           <div className="pt-8 border-t border-border">
-             <h3 className="font-sans text-[13px] text-ink-secondary mb-4 uppercase tracking-wider">Sources</h3>
+           <details className="pt-8 border-t border-border group/sources">
+             <summary className="font-sans text-[13px] text-ink-secondary mb-4 uppercase tracking-wider cursor-pointer list-none flex items-center gap-2 hover:text-ink transition-colors">
+               <span>Sources ({sources.length})</span>
+               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-open/sources:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+             </summary>
              
              <div className="flex flex-col gap-4">
                {(sources || []).map((s, i) => (
@@ -838,7 +896,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
                  </div>
                ))}
              </div>
-           </div>
+           </details>
         )}
       </div>
     </div>

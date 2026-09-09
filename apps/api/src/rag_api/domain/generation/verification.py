@@ -85,7 +85,9 @@ class CitationVerifier:
         system = (
             'Rate each claim: "full" (excerpt fully supports it, including caveats), "partial" (excerpt supports '
             'the core claim but the claim omits a minor caveat/condition present in the excerpt), or "none" '
-            '(unsupported or contradicted). Respond with ONLY a JSON object: '
+            '(unsupported or contradicted). '
+            'Also rate how completely the answer addresses every part of the question, 0.0-1.0. '
+            'Respond with ONLY a JSON object: '
             '{"claims": {"1": "full", "2": "partial"}, "completeness": 0.8} '
             'A claim that states the correct core fact but omits a secondary exception or edge case is still well-supported.'
         )
@@ -96,6 +98,7 @@ class CitationVerifier:
             raw = self.llm_client.generate(system, user, history)
         llm_calls_total.labels(stage="verification_claims", provider=self.llm_client.provider_name).inc()
         llm_call_seconds.labels(stage="verification_claims").observe(time.perf_counter() - start)
+        print(f"DEBUG VERIFICATION LLM OUTPUT:\n{raw}\n---")
         supported_map, completeness = self._parse_response(raw, len(cited_claims))
 
         for i, claim in enumerate(cited_claims, start=1):

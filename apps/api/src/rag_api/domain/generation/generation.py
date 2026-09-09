@@ -141,7 +141,7 @@ def build_sources(chunks: list[RetrievedChunk]) -> list[dict]:
                 "image_url": f"/v1/images/{img_ref}" if img_ref else None,
                 "dense_rank": c.dense_rank,
                 "sparse_rank": c.sparse_rank,
-                "rerank_score": c.rerank_score,
+                "rerank_score": float(c.rerank_score) if c.rerank_score is not None else None,
             }
         )
     return sources

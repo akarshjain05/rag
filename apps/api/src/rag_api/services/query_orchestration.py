@@ -128,11 +128,19 @@ class QueryOrchestrationService:
                 else:
                     break 
 
-        if await request.is_disconnected():
-            cid = payload.conversation_id or store.create_conversation()
-            return QueryResponse(conversation_id=cid, answer="[Discarded]", mode="no_context", sources=[], used_citation_markers=[], invalid_citation_markers=[], unsupported_citation_markers=[], retrieval_confidence=0, citation_coverage=0, completeness=0, composite_confidence=0, dense_only_sources=None)
-
-        result = await run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
+        import asyncio
+        gen_task = asyncio.create_task(
+            run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
+        )
+        
+        while not gen_task.done():
+            if await request.is_disconnected():
+                cid = payload.conversation_id or store.create_conversation()
+                store.append_turn(cid, Turn(user=payload.question, assistant="[Discarded]", sources=[], confidence_info=None))
+                return QueryResponse(conversation_id=cid, answer="[Discarded]", mode="no_context", sources=[], used_citation_markers=[], invalid_citation_markers=[], unsupported_citation_markers=[], retrieval_confidence=0, citation_coverage=0, completeness=0, composite_confidence=0, dense_only_sources=None)
+            await asyncio.sleep(0.5)
+            
+        result = gen_task.result()
         
         cid = payload.conversation_id or store.create_conversation()
         sources_dicts = result.sources

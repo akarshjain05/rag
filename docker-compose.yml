@@ -44,6 +44,8 @@ services:
       DEFAULT_CHUNKING_STRATEGY: ${DEFAULT_CHUNKING_STRATEGY:-structure_aware}
       RERANKER_PROVIDER: ${RERANKER_PROVIDER:-cross_encoder}
       RERANKER_MODEL: ${RERANKER_MODEL:-BAAI/bge-reranker-v2-m3}
+      # Added REDIS_URL so the API uses RedisConversationStore instead of the volatile in-memory ConversationStore
+      REDIS_URL: redis://redis:6379/0
       CITATION_VERIFICATION_ENABLED: ${CITATION_VERIFICATION_ENABLED:-true}
       LOW_CONFIDENCE_THRESHOLD: ${LOW_CONFIDENCE_THRESHOLD:-0.3}
       SENTRY_DSN: ${SENTRY_DSN}
