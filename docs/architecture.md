@@ -86,9 +86,7 @@ User question
 Depending on which optional stages are active, a single `/v1/ask` call can
 issue up to four sequential LLM round trips (condensation, HyDE, CRAG
 expansion, generation) plus a fifth for citation verification. See
-[`05-known-architecture-gaps.md`](./05-known-architecture-gaps.md) and
-[`../operations/04-known-issues-and-roadmap.md`](04-known-issues-and-roadmap.md)
-for the plan to make each of these independently measurable and toggleable.
+`README.md` for the plan to make each of these independently measurable and toggleable.
 
 ## Deployment shape
 
@@ -99,10 +97,10 @@ healthy, and `frontend` (nginx serving the built React app, proxying
 
 ## Related documents
 
-- [Ingestion pipeline](./02-ingestion-pipeline.md)
-- [Retrieval and generation](./03-retrieval-and-generation.md)
-- [Data model](./04-data-model.md)
-- [Known architecture gaps](./05-known-architecture-gaps.md)
+- [API Reference](./api.md)
+- [Deployment Guide](./deployment.md)
+- [Evaluation Framework](./evaluation.md)
+- [System Flow](./flow.md)
 # Ingestion Pipeline
 
 Source: `apps/api/src/rag_api/adapters/storage/loaders.py`,
@@ -181,7 +179,7 @@ time.
 **This does not scale to very large documents** — a multi-hundred-page or
 gigabyte-scale source document sent as a system prompt will exceed every
 provider's context window. See
-[`../guides/04-large-file-ingestion.md`](04-large-file-ingestion.md):
+[`api.md`](./api.md):
 the large-file ingestion path deliberately skips this stage.
 
 ## 4. Deduplication
@@ -197,7 +195,7 @@ recorded in `IngestReport.duplicates_skipped` / `duplicate_of`.
 Surviving chunks are upserted into Qdrant via `VectorStore.add_many()`,
 which writes the dense vector and lets Qdrant's FastEmbed integration
 compute and store the sparse BM25 vector from the chunk text in the same
-call. See [`04-data-model.md`](./04-data-model.md) for the collection
+call. See [Data Model](#data-model) for the collection
 schema.
 
 ## Large-file ingestion (planned)
@@ -208,7 +206,7 @@ file to object storage and enqueues a background job; a worker streams
 the file in bounded blocks (never materializing the whole file in
 memory), chunks with `RecursiveCharacterTextSplitter`, and embeds/upserts
 in small batches. Full design in
-[`../guides/04-large-file-ingestion.md`](04-large-file-ingestion.md).
+[`api.md`](./api.md).
 # Retrieval & Generation Pipeline
 
 Source: `rag_api/domain/retrieval/retrieval.py`, `reranker.py`,
@@ -233,8 +231,7 @@ the dashboard's hybrid-vs-dense-only comparison toggle
 The synchronous `HybridRetriever.retrieve()` wrapper exists for
 call sites that are not `async` (e.g. the eval CLIs); the async FastAPI
 endpoint should call `retrieve_async()` directly rather than going through
-this wrapper — see
-[`05-known-architecture-gaps.md`](./05-known-architecture-gaps.md).
+this wrapper .
 
 ## Reranking (optional)
 
@@ -273,8 +270,7 @@ straight to the final `top_k`.
 Each of these is a separate LLM call. Chained together with generation
 and citation verification, a single request can issue **up to five**
 sequential LLM calls. See the cost-governance plan in
-[`../operations/04-known-issues-and-roadmap.md`](04-known-issues-and-roadmap.md)
-(milestone M5) for making each one independently toggleable and
+main `README.md` for making each one independently toggleable and
 measured.
 
 ## Generation
@@ -331,9 +327,9 @@ cross-system probability.
 
 ## Related documents
 
-- [Data model](./04-data-model.md)
-- [Tuning retrieval and reranking](05-tuning-retrieval-and-reranking.md)
-- [Metrics reference](03-metrics-reference.md)
+- [API Reference](./api.md)
+- [Evaluation Framework](./evaluation.md)
+- [Production Flow](./flow.md)
 # Data Model
 
 Source: `rag_api/domain/models.py`, `rag_api/adapters/vectorstore/vector_store.py`,
@@ -396,4 +392,4 @@ QueryResponse: answer, mode, sources[], used_citation_markers,
                dense_only_sources?
 ```
 
-Full field-level reference: [`../api/03-request-response-schemas.md`](03-request-response-schemas.md).
+Full field-level reference: [`api.md`](./api.md).
