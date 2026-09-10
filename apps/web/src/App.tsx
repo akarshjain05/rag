@@ -72,7 +72,7 @@ function AppContent() {
            
         />
  
- <div className="flex-1 flex overflow-hidden">
+ <div className="flex-1 flex flex-col overflow-hidden">
  {currentView === 'chat' && <ChatView conversationId={activeConversationId} setConversationId={setActiveConversationId} setMobileMenuOpen={setMobileMenuOpen} onNewMessage={() => setRefreshTrigger(prev => prev + 1)} />}
  {currentView === 'knowledge' && <KnowledgeBase />}
  {currentView === 'history' && <HistoryView onSelect={(id) => { setActiveConversationId(id); setCurrentView('chat'); }} />}
@@ -740,10 +740,10 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
   const isLowConf = compScore < 0.4;
 
   return (
-    <div className="flex-1 bg-surface relative flex flex-col h-full overflow-hidden">
+    <div className="flex-1 bg-surface relative flex flex-col overflow-hidden min-h-0">
       
       {/* Content Region: Answer & Citations */}
-      <div className="flex-1 overflow-y-auto px-6 md:px-12 pt-8 pb-6 w-full flex flex-col gap-10">
+      <div className="flex-1 overflow-y-auto px-6 md:px-12 pt-8 pb-6 w-full flex flex-col gap-10 min-h-0">
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-10">
         
         {loading && (
@@ -892,7 +892,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
       </div>
 
       {/* Bottom Header / Input Area */}
-      <footer className="px-6 md:px-12 py-6 max-w-4xl w-full mx-auto shrink-0 bg-surface">
+      <footer className="mt-auto px-6 md:px-12 py-6 max-w-4xl w-full mx-auto shrink-0 bg-surface">
         <div className="relative border-b border-border-strong pb-2 flex items-end">
           <input 
             type="text" 
