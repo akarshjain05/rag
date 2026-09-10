@@ -740,40 +740,11 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
   const isLowConf = compScore < 0.4;
 
   return (
-    <div className="flex-1 bg-surface relative flex flex-col overflow-y-auto">
+    <div className="flex-1 bg-surface relative flex flex-col h-full overflow-hidden">
       
-      {/* Top Header / Input Area */}
-      <header className="px-6 md:px-12 pt-8 pb-6 max-w-4xl w-full mx-auto shrink-0">
-
-
-        <div className="relative border-b border-border-strong pb-2 flex items-end">
-          <input 
-            type="text" 
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAsk()}
-            placeholder="Ask the archive..." 
-            className="flex-1 bg-transparent border-none outline-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink focus-visible:ring-0"
-            disabled={loading}
-          />
-          <button 
-            onClick={handleAsk}
-            disabled={loading || !query.trim()}
-            className="ml-4 px-4 py-1 border border-accent text-accent font-sans text-[13px] hover:bg-accent-tint transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
-          >
-            Ask
-          </button>
-        </div>
-        <div className="flex gap-2 items-center mt-3">
-           <label className="flex items-center gap-2 text-[11px] font-mono text-ink-secondary cursor-pointer uppercase tracking-wider">
-             <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded-none border-border accent-accent" />
-             Dense-only mode
-           </label>
-        </div>
-      </header>
-
       {/* Content Region: Answer & Citations */}
-      <div className="flex-1 px-6 md:px-12 pt-0 pb-20 max-w-4xl w-full mx-auto flex flex-col gap-10">
+      <div className="flex-1 overflow-y-auto px-6 md:px-12 pt-8 pb-6 w-full flex flex-col gap-10">
+        <div className="max-w-4xl w-full mx-auto flex flex-col gap-10">
         
         {loading && (
            <div className="mt-4 flex items-center gap-4">
@@ -917,7 +888,36 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
              </div>
            </details>
         )}
+        </div>
       </div>
+
+      {/* Bottom Header / Input Area */}
+      <footer className="px-6 md:px-12 py-6 max-w-4xl w-full mx-auto shrink-0 bg-surface">
+        <div className="relative border-b border-border-strong pb-2 flex items-end">
+          <input 
+            type="text" 
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAsk()}
+            placeholder="Ask the archive..." 
+            className="flex-1 bg-transparent border-none outline-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink focus-visible:ring-0"
+            disabled={loading}
+          />
+          <button 
+            onClick={handleAsk}
+            disabled={loading || !query.trim()}
+            className="ml-4 px-4 py-1 border border-accent text-accent font-sans text-[13px] hover:bg-accent-tint transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+          >
+            Ask
+          </button>
+        </div>
+        <div className="flex gap-2 items-center mt-3">
+           <label className="flex items-center gap-2 text-[11px] font-mono text-ink-secondary cursor-pointer uppercase tracking-wider">
+             <input type="checkbox" checked={compareDenseOnly} onChange={e => setCompareDenseOnly(e.target.checked)} className="rounded-none border-border accent-accent" />
+             Dense-only mode
+           </label>
+        </div>
+      </footer>
     </div>
   );
 }
