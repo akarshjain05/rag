@@ -95,9 +95,9 @@ class QueryOrchestrationService:
                 hyde_search_query, 
                 top_k=payload.top_k, 
                 chunking_strategy=strategy_value,
-                original_query=search_query,
+                original_query=payload.question,
                 document_filter=payload.document_filter,
-                temporal_filter=temporal_filter
+                # Option B: Removed hard temporal_filter to prevent Qdrant from outright dropping valid historical chunks
             )
         )
         
@@ -116,9 +116,8 @@ class QueryOrchestrationService:
                             expanded_query, 
                             top_k=payload.top_k, 
                             chunking_strategy=strategy_value,
-                            original_query=search_query,
+                            original_query=payload.question,
                             document_filter=payload.document_filter,
-                            temporal_filter=temporal_filter
                         )
                     )
                     new_max_score = max([c.rerank_score or 0.0 for c in crag_chunks]) if crag_chunks else 0.0
@@ -132,8 +131,14 @@ class QueryOrchestrationService:
                     break 
 
         import asyncio
+        
+        # Pass the extracted temporal context explicitly to the generator
+        final_query = search_query
+        if temporal_filter and "target_date" in temporal_filter:
+            final_query = f"[Time Context: The user is asking about the time period around {temporal_filter['target_date']}] {search_query}"
+            
         gen_task = asyncio.create_task(
-            run_or_502(generator.generate, search_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
+            run_or_502(generator.generate, final_query, chunks, image_url=payload.image_url, history=llm_history, verify_citations=payload.verify_citations)
         )
         
         while not gen_task.done():

@@ -51,6 +51,8 @@ export function fetchDocuments() {
 }
 
 export function ask({ signal, question, conversationId = null, verifyCitations = null, topK = 5, chunkingStrategy = null, compareDenseOnly = false, imageUrl = null, documentFilter = null }) {
+  // Fail fast: do not retry /v1/ask requests. If the upstream LLM provider is down,
+  // retrying 3 times will hang the UI for 10 minutes. Let the user see the 502 error immediately.
   return request("/v1/ask", {
     method: "POST",
     signal,
@@ -64,7 +66,7 @@ export function ask({ signal, question, conversationId = null, verifyCitations =
       image_url: imageUrl || undefined,
       document_filter: documentFilter?.length ? documentFilter : undefined,
     }),
-  });
+  }, 1);
 }
 
 

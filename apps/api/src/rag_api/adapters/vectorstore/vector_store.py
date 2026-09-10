@@ -308,7 +308,8 @@ class VectorStore:
         filter_kwargs = {"must": must_conditions}
         if should_conditions:
             filter_kwargs["should"] = should_conditions
-            filter_kwargs["min_should"] = min_should
+            if min_should is not None:
+                filter_kwargs["min_should"] = models.MinShould(conditions=should_conditions, min_count=min_should)
             
         filter_obj = models.Filter(**filter_kwargs)
             

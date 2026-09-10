@@ -137,8 +137,14 @@ class OpenAILLMClient(LLMClient):
 
         if not api_key:
             raise ValueError("OPENAI_API_KEY is required for LLM_PROVIDER=openai")
-        self._client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
+        # Fail fast: if the upstream API (like NVIDIA NIM) goes down and returns 500s,
+        # we do not want to silently hang for 5 minutes retrying dead endpoints.
+        self._client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout, max_retries=0)
         self._model = model
+        
+        if "kimi-k3" in self._model:
+            max_tokens = 16384
+            
         self._max_tokens = max_tokens
 
     def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str:
@@ -154,11 +160,19 @@ class OpenAILLMClient(LLMClient):
         while True:
             current_messages = messages + history_msgs + [{"role": "user", "content": user}]
             try:
-                resp = self._client.chat.completions.create(
-                    model=self._model,
-                    max_tokens=self._max_tokens,
-                    messages=current_messages,
-                )
+                kwargs = {
+                    "model": self._model,
+                    "max_tokens": self._max_tokens,
+                    "messages": current_messages,
+                }
+                
+                # Apply specific parameters requested for moonshotai/kimi-k3
+                if "kimi-k3" in self._model:
+                    kwargs["temperature"] = 1
+                    kwargs["seed"] = 0
+                    kwargs["extra_body"] = {"reasoning_effort": "max"}
+                    
+                resp = self._client.chat.completions.create(**kwargs)
                 return resp.choices[0].message.content or ""
             except openai.BadRequestError as e:
                 # Handle OpenAI context_length_exceeded

@@ -183,6 +183,11 @@ def _structure_aware_split(
     semantic_max_chunk_chars: int = 1500,
     semantic_min_chunk_chars: int = 200,
 ) -> list[tuple[str, str | None]]:
+    # Normalize plain "Section N:" lines into markdown headings so the
+    # MarkdownHeaderTextSplitter can split on them. Without this, documents
+    # using "Section 1: ..." instead of "# Section 1: ..." end up as one
+    # giant chunk that overflows the cross-encoder's 512-token window.
+    text = re.sub(r"(?im)^(section\s*\d+\s*:.*)$", r"# \1", text)
     if not re.search(r"(?m)^#{1,6}\s", text):
         # No headings in this text (e.g. a plain PDF page) -> fall back to semantic or recursive.
         from rag_api.core.settings import get_settings

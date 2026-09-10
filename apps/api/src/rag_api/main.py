@@ -139,6 +139,7 @@ def create_app(
         sparse_weight=settings.rrf_sparse_weight,
         reranker=reranker,
         rerank_candidate_pool=settings.rerank_candidate_pool,
+        context_pruning_threshold=settings.context_pruning_threshold,
     )
     generator = AnswerGenerator(
         llm_client,

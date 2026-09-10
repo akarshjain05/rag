@@ -25,6 +25,7 @@ class HybridRetriever:
         sparse_weight: float = 1.0,
         reranker: Reranker | None = None,
         rerank_candidate_pool: int = 20,
+        context_pruning_threshold: float = 0.30,
     ):
         self.embedding_client = embedding_client
         self.vector_store = vector_store
@@ -35,6 +36,7 @@ class HybridRetriever:
         self.sparse_weight = sparse_weight
         self.reranker = reranker
         self.rerank_candidate_pool = rerank_candidate_pool
+        self.context_pruning_threshold = context_pruning_threshold
 
     async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> QueryResponse | None:
         try:
@@ -75,14 +77,14 @@ class HybridRetriever:
                 query,
                 query_vector,
                 response.model_dump(mode="json"),
-            conversation_id=conversation_id,
-            document_filter=document_filter,
-            chunking_strategy=chunking_strategy
-        )
-        await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Semantic cache SET failed: {e}")
+                conversation_id=conversation_id,
+                document_filter=document_filter,
+                chunking_strategy=chunking_strategy
+            )
+            await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Semantic cache SET failed: {e}")
 
     async def retrieve_async(
         self,
@@ -150,9 +152,8 @@ class HybridRetriever:
         reranked_chunks = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.reranker.rerank, rerank_query, fused, top_k)
         
         # Hard Cutoff Threshold: Drop chunks that the reranker identified as mathematically irrelevant.
-        # A score below 0.3 means the chunk is highly unlikely to answer the user's query.
         # This saves tokens, reduces UI clutter, and prevents hallucination noise.
-        return [chunk for chunk in reranked_chunks if chunk.rerank_score is not None and chunk.rerank_score >= 0.3]
+        return [chunk for chunk in reranked_chunks if chunk.rerank_score is not None and chunk.rerank_score >= self.context_pruning_threshold]
 
     def retrieve(
         self,
