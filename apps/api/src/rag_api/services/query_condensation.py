@@ -53,12 +53,13 @@ def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> st
         return query
 
     system = (
-        "Given the following conversation history and the user's latest follow-up question, "
-        "rewrite the follow-up question to be a standalone query that can be understood "
-        "without the conversation history. Do not answer the question, just rewrite it. "
-        "If it is already standalone, return it exactly as is.\n\n"
+        "You are a strict query resolution AI. You are given a conversation history and a new user query.\n"
+        "Your ONLY job is to determine if the new query is a follow-up that relies on context from the history "
+        "(e.g., uses pronouns like 'it', 'they', or refers implicitly to previous topics). "
+        "If the query is completely standalone and makes sense on its own, set \"is_followup\" to false and leave \"standalone_query\" empty.\n"
+        "If it IS a follow-up, set \"is_followup\" to true and provide the fully resolved \"standalone_query\".\n\n"
         "Output ONLY raw JSON matching this schema: "
-        "{\"standalone_query\": \"string\"}"
+        "{\"is_followup\": boolean, \"standalone_query\": \"string\"}"
     )
 
     llm_history = []
@@ -77,12 +78,15 @@ def condense_query(query: str, history: list[Turn], llm_client: LLMClient) -> st
     if match:
         try:
             res = json.loads(match.group(0))
-            if isinstance(res, dict) and "standalone_query" in res:
-                return res["standalone_query"].strip()
+            if isinstance(res, dict):
+                if res.get("is_followup") and res.get("standalone_query"):
+                    return res["standalone_query"].strip()
+                else:
+                    return query
         except json.JSONDecodeError:
             pass
 
-    return result_json_str.strip()
+    return query
 
 
 def should_expand_query(max_rerank_score: float, ceiling: float = 0.80) -> bool:
