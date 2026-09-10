@@ -561,6 +561,16 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
   const [activeCitation, setActiveCitation] = React.useState<number | null>(null);
   const [confidenceInfo, setConfidenceInfo] = React.useState<any>(null);
 
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  React.useEffect(() => {
+    scrollToBottom();
+  }, [messages, sources, loading]);
+
   const [compareDenseOnly, setCompareDenseOnly] = React.useState(false);
   const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
 
@@ -888,6 +898,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
              </div>
            </details>
         )}
+        <div ref={messagesEndRef} />
         </div>
       </div>
 
