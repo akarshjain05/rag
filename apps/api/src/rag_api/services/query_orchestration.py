@@ -95,7 +95,7 @@ class QueryOrchestrationService:
                 hyde_search_query, 
                 top_k=payload.top_k, 
                 chunking_strategy=strategy_value,
-                original_query=payload.question,
+                original_query=search_query,
                 document_filter=payload.document_filter,
                 # Option B: Removed hard temporal_filter to prevent Qdrant from outright dropping valid historical chunks
             )
@@ -116,7 +116,7 @@ class QueryOrchestrationService:
                             expanded_query, 
                             top_k=payload.top_k, 
                             chunking_strategy=strategy_value,
-                            original_query=payload.question,
+                            original_query=search_query,
                             document_filter=payload.document_filter,
                         )
                     )
