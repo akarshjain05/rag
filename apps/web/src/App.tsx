@@ -649,6 +649,13 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
     const q = query;
     setQuery("");
     setMessages(prev => [...prev, { role: 'user', content: q }]);
+    
+    // Clear previous interaction metadata
+    setSources([]);
+    setUsedMarkers([]);
+    setUnsupportedMarkers([]);
+    setConfidenceInfo(null);
+    
     setLoading(true);
     
     let cid = conversationId;
