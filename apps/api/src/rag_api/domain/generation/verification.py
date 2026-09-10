@@ -26,7 +26,7 @@ from rag_api.adapters.llm.llm_client import LLMClient
 from rag_api.domain.models import ClaimVerification, RetrievedChunk
 from rag_api.domain.chunking.text_utils import split_sentences
 
-_CITATION_RE = re.compile(r"\[(\d+)\]")
+_CITATION_RE = re.compile(r"[\[【](\d+)[\]】]")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 

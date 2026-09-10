@@ -555,6 +555,8 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
   const [query, setQuery] = React.useState("");
   const [messages, setMessages] = React.useState([]);
   const [sources, setSources] = React.useState([]);
+  const [usedMarkers, setUsedMarkers] = React.useState<number[]>([]);
+  const [unsupportedMarkers, setUnsupportedMarkers] = React.useState<number[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [activeCitation, setActiveCitation] = React.useState<number | null>(null);
   const [confidenceInfo, setConfidenceInfo] = React.useState<any>(null);
@@ -664,6 +666,8 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
         { role: 'assistant', content: res.answer, markers: res.used_citation_markers || [] }
       ]);
       setSources(res.sources || []);
+      setUsedMarkers(res.used_citation_markers || []);
+      setUnsupportedMarkers(res.unsupported_citation_markers || []);
       setConfidenceInfo({
         composite: res.composite_confidence,
         retrieval: res.retrieval_confidence,
@@ -896,9 +900,17 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
                         {!compareDenseOnly && <span title="Sparse Score">S: {s.sparse_score?.toFixed(2) || '-'}</span>}
                         <span title="Rerank Score">R: {s.rerank_score?.toFixed(2) || '-'}</span>
                       </div>
-                      <span className="inline-block px-2 py-0.5 border border-success bg-success-tint text-success font-mono text-[10px] uppercase tracking-wider">
-                        Supported
-                      </span>
+                      {usedMarkers.includes(s.marker) ? (
+                        unsupportedMarkers.includes(s.marker) ? (
+                          <span className="inline-block px-2 py-0.5 border border-danger bg-danger-tint text-danger font-mono text-[10px] uppercase tracking-wider">
+                            Unsupported
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-0.5 border border-success bg-success-tint text-success font-mono text-[10px] uppercase tracking-wider">
+                            Supported
+                          </span>
+                        )
+                      ) : null}
                     </div>
                  </div>
                ))}
