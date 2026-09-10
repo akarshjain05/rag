@@ -755,24 +755,6 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
       {/* Content Region: Answer & Citations */}
       <div className="flex-1 overflow-y-auto px-6 md:px-12 pt-8 pb-6 w-full flex flex-col gap-10 min-h-0">
         <div className="max-w-4xl w-full mx-auto flex flex-col gap-10">
-        
-        {loading && (
-           <div className="mt-4 flex items-center gap-4">
-             <div className="flex flex-col gap-1 w-32">
-                <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-ink-muted">Analyzing...</span>
-                <div className="h-[1px] bg-border w-full overflow-hidden">
-                  <div className="h-full bg-accent animate-[loading-rule_1.5s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
-                </div>
-             </div>
-             <button 
-               onClick={handleStop} 
-               className="text-[10px] uppercase font-mono tracking-widest text-ink-muted hover:text-danger flex items-center gap-1 px-2 py-1 transition-colors"
-             >
-               <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
-               Stop
-             </button>
-           </div>
-        )}
 
         {(messages || []).map((m, i) => (
            <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end mb-6' : 'items-start mb-10'}`}>
@@ -853,6 +835,24 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
               )}
            </div>
         ))}
+
+        {loading && (
+           <div className="mt-4 flex items-center gap-4">
+             <div className="flex flex-col gap-1 w-32">
+                <span className="text-[11px] font-mono uppercase tracking-[0.05em] text-ink-muted">Analyzing...</span>
+                <div className="h-[1px] bg-border w-full overflow-hidden">
+                  <div className="h-full bg-accent animate-[loading-rule_1.5s_ease-in-out_infinite]" style={{ transformOrigin: 'left' }}></div>
+                </div>
+             </div>
+             <button 
+               onClick={handleStop} 
+               className="text-[10px] uppercase font-mono tracking-widest text-ink-muted hover:text-danger flex items-center gap-1 px-2 py-1 transition-colors"
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+               Stop
+             </button>
+           </div>
+        )}
 
         {/* Sources Section */}
         {sources.length > 0 && (
