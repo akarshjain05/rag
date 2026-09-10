@@ -740,7 +740,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
   const isLowConf = compScore < 0.4;
 
   return (
-    <div className="flex-1 bg-surface relative flex flex-col overflow-hidden min-h-0">
+    <div className="flex-1 bg-surface relative flex flex-col justify-between h-full overflow-hidden min-h-0">
       
       {/* Content Region: Answer & Citations */}
       <div className="flex-1 overflow-y-auto px-6 md:px-12 pt-8 pb-6 w-full flex flex-col gap-10 min-h-0">
