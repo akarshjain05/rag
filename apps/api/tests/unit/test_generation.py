@@ -236,3 +236,54 @@ def test_llm_mode_composite_confidence_averages_the_three_subscores():
     assert result.retrieval_confidence == 0.9
     assert result.citation_coverage == 1.0
     assert result.composite_confidence == 0.87
+
+def test_ambiguity_signal_fires_when_query_shares_root_with_two_defined_terms():
+    fake_llm = MagicMock()
+    fake_llm.generate.return_value = "Both apply [1]."
+    chunks = [make_chunk("a", "The plan targets a Recovery Time Objective (RTO) of 4 hours and a Recovery Point Objective (RPO) of 1 hour.")]
+    generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
+
+    generator.generate("How long does recovery take?", chunks)
+
+    _, user_arg = fake_llm.generate.call_args[0]
+    assert "<ambiguity_signal>" in user_arg
+
+
+def test_ambiguity_signal_not_added_when_query_names_the_specific_acronym():
+    fake_llm = MagicMock()
+    fake_llm.generate.return_value = "1 hour [1]."
+    chunks = [make_chunk("a", "The plan targets a Recovery Time Objective (RTO) of 4 hours and a Recovery Point Objective (RPO) of 1 hour.")]
+    generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
+
+    generator.generate("What is the disaster recovery RPO?", chunks)
+
+    _, user_arg = fake_llm.generate.call_args[0]
+    assert "<ambiguity_signal>" not in user_arg
+
+
+def test_ambiguity_signal_not_added_for_unrelated_specific_question_over_the_same_chunk():
+    """A question about a different fact in the same information-dense
+    chunk must not be flagged just because that chunk also defines
+    RTO/RPO-style terms elsewhere -- this is the exact false-positive the
+    broader "just count numbers" version of this heuristic produced."""
+    fake_llm = MagicMock()
+    fake_llm.generate.return_value = "30 days [1]."
+    chunks = [make_chunk("a", "Daily backups are retained for 30 days. The plan also targets a Recovery Time Objective (RTO) of 4 hours and a Recovery Point Objective (RPO) of 1 hour.")]
+    generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
+
+    generator.generate("How long are daily backups retained?", chunks)
+
+    _, user_arg = fake_llm.generate.call_args[0]
+    assert "<ambiguity_signal>" not in user_arg
+
+
+def test_ambiguity_signal_not_added_when_chunk_has_no_defined_terms():
+    fake_llm = MagicMock()
+    fake_llm.generate.return_value = "99.9% [1]."
+    chunks = [make_chunk("a", "Aurora commits to 99.9% monthly uptime.")]
+    generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
+
+    generator.generate("What's the uptime?", chunks)
+
+    _, user_arg = fake_llm.generate.call_args[0]
+    assert "<ambiguity_signal>" not in user_arg

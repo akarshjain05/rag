@@ -165,6 +165,53 @@ def _build_low_confidence_answer(chunks: list[RetrievedChunk], retrieval_confide
     )
 
 
+_DEFINED_TERM_RE = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*\(([A-Z]{2,6})\)")
+
+_AMBIGUITY_STOPWORDS = {
+    "a", "an", "the", "is", "are", "was", "were", "do", "does", "did",
+    "what", "when", "where", "how", "why", "who", "which", "long", "take",
+    "takes", "for", "of", "to", "in", "on", "at", "and", "or", "it", "its",
+}
+
+
+def _extract_defined_terms(text: str) -> list[tuple[str, str]]:
+    """(full label, acronym) pairs, e.g. ("Recovery Time Objective", "RTO")."""
+    return _DEFINED_TERM_RE.findall(text)
+
+
+def _looks_ambiguous(query: str, chunks: list[RetrievedChunk]) -> bool:
+    """Narrow, conservative signal for one specific ambiguity shape: the
+    excerpt defines two or more multi-word terms sharing a common root
+    (e.g. two different "Recovery ___ Objective (R_O)" definitions), and
+    the query uses that root without naming a specific acronym. If the
+    query already names one of the acronyms, it's already disambiguated.
+
+    Deliberately NOT a general ambiguity detector -- an earlier version of
+    this checked "does the excerpt contain 2+ numbers and is the query
+    short", which sounds more general but false-fires on ordinary lookup
+    questions whose answer chunk happens to also mention unrelated figures
+    nearby (e.g. "how long are backups retained" over a chunk that also
+    states RTO/RPO). This version only fires on the specific, narrower
+    condition that actually caused a real failure."""
+    terms: list[tuple[str, str]] = []
+    for c in chunks:
+        terms.extend(_extract_defined_terms(c.text))
+    if len(terms) < 2:
+        return False
+
+    query_lower = query.lower()
+    acronyms = {acr.lower() for _, acr in terms}
+    if any(re.search(rf"\b{re.escape(acr)}\b", query_lower) for acr in acronyms):
+        return False  # query already names a specific one -- disambiguated
+
+    query_words = {w.strip("?.,!'\"") for w in query_lower.split()} - _AMBIGUITY_STOPWORDS
+    for word in query_words:
+        matching_labels = {label for label, _ in terms if re.search(rf"\b{re.escape(word)}", label.lower())}
+        if len(matching_labels) >= 2:
+            return True
+    return False
+
+
 class AnswerGenerator:
     def __init__(
         self,
@@ -243,6 +290,13 @@ class AnswerGenerator:
             
         context_block = _build_context_block(pruned_chunks, self.low_confidence_threshold)
         user_prompt_text = f"<excerpts>\n{context_block}\n</excerpts>\n\n<question>{query}</question>"
+
+        if _looks_ambiguous(query, pruned_chunks):
+            user_prompt_text += (
+                "\n\n<ambiguity_signal>The excerpts define more than one distinct term sharing "
+                "the same root word as this question. Per the ambiguity_rules, address the "
+                "applicable readings rather than silently picking one.</ambiguity_signal>"
+            )
         
         if image_url:
             user_prompt = [
