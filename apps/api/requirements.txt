@@ -552,3 +552,4 @@ yarl==1.24.5
     # via aiohttp
 zstandard==0.25.0
     # via langsmith
+locust>=2.29.0
