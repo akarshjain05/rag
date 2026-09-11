@@ -7,19 +7,36 @@ from rag_api.domain.models import RetrievedChunk
 
 
 def compute_retrieval_relevance(retrieved_chunks: list[RetrievedChunk], expected_source_documents: list[str]) -> float | None:
-    """Fraction of `expected_source_documents` that appear among the
-    retrieved chunks' source documents -- recall of the documents that
-    should have been found. Returns None (not just 0.0) when
-    `expected_source_documents` is empty: that's the "unanswerable"
-    category, where there's nothing correct to retrieve, so "were the
-    right chunks retrieved" isn't a meaningful question to score -- forcing
-    a number there would silently corrupt the average for every other
-    question that does have a real answer to be found."""
     if not expected_source_documents:
         return None
     retrieved_docs = {c.metadata.get("source_document") for c in retrieved_chunks}
     found = sum(1 for doc in expected_source_documents if doc in retrieved_docs)
     return found / len(expected_source_documents)
+
+
+def compute_recall_at_k(relevant_chunks: list[bool], k: int) -> float | None:
+    if not relevant_chunks:
+        return None
+    return 1.0 if any(relevant_chunks[:k]) else 0.0
+
+
+def compute_ndcg_at_k(relevant_chunks: list[bool], k: int) -> float | None:
+    import math
+    if not relevant_chunks:
+        return None
+    
+    dcg = 0.0
+    for i, is_relevant in enumerate(relevant_chunks[:k]):
+        if is_relevant:
+            dcg += 1.0 / math.log2(i + 2)
+            
+    # Ideal DCG: best case is all 1s at the top, up to the number of actual relevant chunks in the whole list
+    num_relevant = sum(relevant_chunks)
+    idcg = 0.0
+    for i in range(min(k, num_relevant)):
+        idcg += 1.0 / math.log2(i + 2)
+        
+    return dcg / idcg if idcg > 0.0 else 0.0
 
 
 @dataclass
@@ -34,6 +51,8 @@ class EvalCaseResult:
     correctness_reasoning: str | None
     faithfulness: float | None
     retrieval_relevance: float | None
+    recall_at_5: float | None
+    ndcg_at_10: float | None
     answer_relevance: float | None
     citation_accuracy: float | None
     citation_coverage: float | None
@@ -63,6 +82,8 @@ def _summarize_group(results: list[EvalCaseResult]) -> dict:
         "answer_correctness": _correctness_mean(results),
         "faithfulness": _mean([r.faithfulness for r in results]),
         "retrieval_relevance": _mean([r.retrieval_relevance for r in results]),
+        "recall_at_5": _mean([r.recall_at_5 for r in results]),
+        "ndcg_at_10": _mean([r.ndcg_at_10 for r in results]),
         "answer_relevance": _mean([r.answer_relevance for r in results]),
         "citation_accuracy": _mean([r.citation_accuracy for r in results]),
         "citation_coverage": _mean([r.citation_coverage for r in results]),

@@ -205,3 +205,46 @@ class CitationAccuracyJudge:
             accuracy=correct_count / len(citations_correct),
             reasoning=parsed.get("reasoning")
         )
+
+@dataclass
+class ContextRelevanceResult:
+    relevant_chunks: list[bool]
+    reasoning: str | None = None
+
+class ContextRelevanceJudge:
+    def __init__(self, llm_client: LLMClient):
+        self.llm_client = llm_client
+
+    def judge(self, question: str, retrieved_chunks: list[RetrievedChunk]) -> ContextRelevanceResult:
+        if not retrieved_chunks:
+            return ContextRelevanceResult(relevant_chunks=[])
+
+        context = join_chunk_texts(retrieved_chunks)
+        system = (
+            "You are evaluating the Context Relevance of retrieved search results for a user's question.\n"
+            "For each retrieved chunk, determine if it contains sufficient information to directly answer the question (or a substantial part of it).\n"
+            "Use Chain-of-Thought reasoning to evaluate each chunk.\n"
+            'Output a JSON object with a boolean for each chunk index (1 to N):\n'
+            '{\n'
+            '  "reasoning": "Chunk 1 contains the exact answer. Chunk 2 is unrelated.",\n'
+            '  "chunk_relevance": {"1": true, "2": false}\n'
+            '}'
+        )
+        user = f"Question: {question}\n\nRetrieved Chunks:\n\n{context}"
+
+        raw = self.llm_client.generate(system, user)
+        parsed = _parse_json_object(raw)
+        
+        if parsed is None or not isinstance(parsed.get("chunk_relevance"), dict):
+            return ContextRelevanceResult(relevant_chunks=[False] * len(retrieved_chunks))
+
+        chunk_relevance = parsed.get("chunk_relevance", {})
+        relevant_chunks = []
+        for i in range(1, len(retrieved_chunks) + 1):
+            val = chunk_relevance.get(str(i), False)
+            relevant_chunks.append(bool(val))
+
+        return ContextRelevanceResult(
+            relevant_chunks=relevant_chunks,
+            reasoning=parsed.get("reasoning")
+        )
