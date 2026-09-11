@@ -43,6 +43,15 @@ def ingest_large_file_task(self, object_key: str, source_filename: str):
     is_text = local_path.suffix.lower() in (".txt", ".md", ".markdown", ".csv", ".json")
     
     if not is_text:
+        from rag_api.adapters.storage.image_store import build_image_store
+        image_store = build_image_store(
+            s.image_store_backend, 
+            base_dir=s.image_store_path,
+            bucket=s.object_store_bucket,
+            endpoint_url=s.object_store_endpoint,
+            access_key=s.object_store_access_key,
+            secret_key=s.object_store_secret_key
+        )
         llm_client = build_llm_client(
             provider=s.llm_provider,
             model=s.anthropic_model if s.llm_provider == "anthropic" else s.openai_llm_model,
@@ -52,7 +61,7 @@ def ingest_large_file_task(self, object_key: str, source_filename: str):
         )
         pipeline = IngestionPipeline(
             embedding_client=embedding_client, vector_store=vector_store,
-            llm_client=llm_client, image_store=store,
+            llm_client=llm_client, image_store=image_store,
             fixed_chunk_size=s.fixed_chunk_size, fixed_chunk_overlap=s.fixed_chunk_overlap,
             semantic_similarity_threshold=s.semantic_similarity_threshold,
             semantic_max_chunk_chars=s.semantic_max_chunk_chars,

@@ -23,7 +23,8 @@ def test_live_normalizer_fixes_extreme_typos():
     clean_query = normalize_query(garbage_query, llm_client=real_client)
     
     # Assertions evaluating the AI's actual intelligence
-    clean_lower = clean_query.lower()
+    clean_text = clean_query.query if hasattr(clean_query, "query") else clean_query
+    clean_lower = clean_text.lower()
     
     # 1. Did it fix the spelling?
     assert "database" in clean_lower

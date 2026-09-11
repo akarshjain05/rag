@@ -94,12 +94,6 @@ class AnthropicLLMClient(LLMClient):
             }
         }
 
-    def build_image_content(self, image_url: str) -> dict:
-        return {"type": "image_url", "image_url": {"url": image_url}}
-
-    def build_image_content(self, image_url: str) -> dict:
-        return {"type": "image_url", "image_url": {"url": image_url}}
-
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str:
         import base64
         b64_data = base64.b64encode(image_bytes).decode("utf-8")

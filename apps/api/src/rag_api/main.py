@@ -26,7 +26,7 @@ from rag_api.domain.generation.verification import CitationVerifier
 from rag_api.services.ingest_service import IngestionPipeline
 from rag_api.services.conversation import ConversationStore
 
-from rag_api.api.v1 import documents, ask, auth, conversations, insights
+from rag_api.api.v1 import documents, ask, auth, conversations, insights, images
 from rag_api.schemas.schemas import HealthResponse
 
 _UNSET = object()
@@ -227,6 +227,8 @@ def create_app(
     v1.include_router(documents.router)
     v1.include_router(ask.router)
     v1.include_router(insights.router)
+    v1.include_router(auth.router)
+    v1.include_router(images.router)
 
     @v1.get("/sentry-debug")
     async def trigger_error():
