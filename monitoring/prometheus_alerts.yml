@@ -18,3 +18,14 @@ groups:
         annotations:
           summary: "High p95 latency for /v1/ask"
           description: "The end-to-end p95 latency for /v1/ask has exceeded 8.0 seconds over the last 5 minutes."
+
+  - name: rag_business_metrics
+    rules:
+      - alert: SystemicKnowledgeGapDetected
+        expr: histogram_quantile(0.50, sum(rate(rag_retrieval_confidence_bucket[15m])) by (le)) < 0.80
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Knowledge Gap: Low median retrieval confidence"
+          description: "The 50th percentile of retrieval confidence has remained below 0.80 for over an hour. This indicates a sustained influx of user queries that the current Qdrant database cannot answer well, implying missing or outdated documentation."
