@@ -202,7 +202,7 @@ class AnswerGenerator:
                 answer="No relevant context was found in the indexed documents for this question.",
                 mode="no_context",
                 retrieval_confidence=0.0,
-                composite_confidence=compute_composite_confidence(0.0, None, None),
+                composite_confidence=0.0,
             )
 
         retrieval_confidence = compute_retrieval_confidence(chunks)
@@ -215,7 +215,7 @@ class AnswerGenerator:
                 sources=sources,
                 mode="low_confidence",
                 retrieval_confidence=retrieval_confidence,
-                composite_confidence=compute_composite_confidence(retrieval_confidence, None, None),
+                composite_confidence=retrieval_confidence,
             )
 
         if self.mode == "extractive":

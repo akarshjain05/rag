@@ -54,7 +54,17 @@ def test_no_chunks_returns_no_context_result():
     assert result.mode == "no_context"
     assert result.sources == []
     assert result.retrieval_confidence == 0.0
-    assert result.composite_confidence == 0.5
+    assert result.composite_confidence == 0.0
+
+
+def test_low_confidence_composite_equals_retrieval_confidence_not_padded():
+    weak_chunks = [make_chunk("a", "text", dense_similarity=0.1)]
+    generator = AnswerGenerator(llm_client=None, mode="extractive", low_confidence_threshold=0.3)
+
+    result = generator.generate("question", weak_chunks)
+
+    assert result.mode == "low_confidence"
+    assert result.composite_confidence == result.retrieval_confidence
 
 
 def test_low_confidence_chunks_skip_generation_entirely():
