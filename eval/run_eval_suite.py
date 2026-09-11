@@ -28,7 +28,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # allow `python eval/run_eval_suite.py`
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "apps" / "api" / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from rag_api.core.settings import get_settings  # noqa: E402
 from rag_api.adapters.vectorstore.embeddings import build_embedding_client  # noqa: E402
@@ -124,8 +125,10 @@ def main() -> None:
                 examples, retriever, generator, correctness_judge, faithfulness_judge,
                 chunking_strategy=args.chunking_strategy, top_k=args.top_k,
             )
-            print()
-            print(json.dumps(summarize_results(results), indent=2))
+            summary = summarize_results(results)
+            print(json.dumps(summary, indent=2))
+            with open("eval/aurora_baseline.json", "w") as f:
+                json.dump(summary, f, indent=2)
 
 
 if __name__ == "__main__":

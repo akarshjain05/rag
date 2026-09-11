@@ -24,10 +24,31 @@ def run_eval_suite(
     results = []
     for example in examples:
         chunks = retriever.retrieve(example.question, top_k=top_k, chunking_strategy=chunking_strategy)
-        gen_result = generator.generate(example.question, chunks)
+        import time
+        import openai
+        
+        while True:
+            try:
+                gen_result = generator.generate(example.question, chunks)
+                break
+            except openai.RateLimitError:
+                print("Rate limit reached. Sleeping 5 seconds...")
+                time.sleep(5)
 
-        correctness = correctness_judge.judge(example, gen_result.answer, gen_result.mode)
-        faithfulness = faithfulness_judge.judge(gen_result.answer, chunks)
+        while True:
+            try:
+                correctness = correctness_judge.judge(example, gen_result.answer, gen_result.mode)
+                break
+            except openai.RateLimitError:
+                print("Rate limit reached. Sleeping 5 seconds...")
+                time.sleep(5)
+        while True:
+            try:
+                faithfulness = faithfulness_judge.judge(gen_result.answer, chunks)
+                break
+            except openai.RateLimitError:
+                print("Rate limit reached. Sleeping 5 seconds...")
+                time.sleep(5)
         relevance = compute_retrieval_relevance(chunks, example.expected_source_documents)
 
         results.append(
@@ -44,6 +65,9 @@ def run_eval_suite(
                 retrieval_relevance=relevance,
                 citation_accuracy=gen_result.citation_coverage,
                 citation_coverage_basis=gen_result.citation_coverage_basis,
+                retrieval_confidence=gen_result.retrieval_confidence,
+                used_citation_markers_count=len(gen_result.used_citation_markers),
+                retrieved_chunks_count=len(chunks),
             )
         )
     return results

@@ -36,6 +36,9 @@ class EvalCaseResult:
     retrieval_relevance: float | None
     citation_accuracy: float | None
     citation_coverage_basis: str | None
+    retrieval_confidence: float | None
+    used_citation_markers_count: int
+    retrieved_chunks_count: int
 
 
 def _mean(values: list[float | None]) -> float | None:
@@ -48,12 +51,18 @@ def _correctness_mean(results: list[EvalCaseResult]) -> float | None:
 
 
 def _summarize_group(results: list[EvalCaseResult]) -> dict:
+    source_panel_precisions = [
+        (r.used_citation_markers_count / r.retrieved_chunks_count)
+        for r in results if r.retrieved_chunks_count > 0
+    ]
+    
     return {
         "n": len(results),
         "answer_correctness": _correctness_mean(results),
         "faithfulness": _mean([r.faithfulness for r in results]),
         "retrieval_relevance": _mean([r.retrieval_relevance for r in results]),
         "citation_accuracy": _mean([r.citation_accuracy for r in results]),
+        "source_panel_precision": _mean(source_panel_precisions),
     }
 
 
@@ -68,4 +77,27 @@ def summarize_results(results: list[EvalCaseResult]) -> dict:
         category: _summarize_group([r for r in results if r.category == category])
         for category in sorted({r.category for r in results})
     }
-    return {"overall": _summarize_group(results), "by_category": by_category}
+    
+    # Confidence Calibration Buckets
+    buckets = {"0.0-0.3": [], "0.3-0.6": [], "0.6-0.8": [], "0.8-1.0": []}
+    for r in results:
+        conf = r.retrieval_confidence
+        if conf is not None:
+            if conf <= 0.3: buckets["0.0-0.3"].append(r)
+            elif conf <= 0.6: buckets["0.3-0.6"].append(r)
+            elif conf <= 0.8: buckets["0.6-0.8"].append(r)
+            else: buckets["0.8-1.0"].append(r)
+            
+    calibration = {
+        label: {
+            "n": len(b),
+            "answer_correctness": _correctness_mean(b) if b else None
+        }
+        for label, b in buckets.items()
+    }
+    
+    return {
+        "overall": _summarize_group(results),
+        "by_category": by_category,
+        "confidence_calibration": calibration
+    }

@@ -1,0 +1,20 @@
+groups:
+  - name: llm_latency_slo
+    rules:
+      - alert: LLMStageLatencyTooHigh
+        expr: histogram_quantile(0.95, sum(rate(llm_call_seconds_bucket[5m])) by (le, stage)) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency for LLM stage: {{ $labels.stage }}"
+          description: "The p95 latency for the {{ $labels.stage }} LLM call has exceeded 2.0 seconds over the last 5 minutes."
+
+      - alert: EndToEndAskLatencyTooHigh
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{handler="/v1/ask"}[5m])) by (le)) > 8.0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High p95 latency for /v1/ask"
+          description: "The end-to-end p95 latency for /v1/ask has exceeded 8.0 seconds over the last 5 minutes."

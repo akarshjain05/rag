@@ -1,0 +1,146 @@
+[
+  {
+    "id": "L01",
+    "question": "What is Aurora's monthly uptime commitment?",
+    "golden_answer": "99.9% monthly uptime for the core API and dashboard.",
+    "category": "lookup",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "L02",
+    "question": "What is the critical-severity response time for Platinum tier?",
+    "golden_answer": "15 minutes.",
+    "category": "lookup",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "L03",
+    "question": "How long are daily backups retained?",
+    "golden_answer": "30 days, after which they are permanently deleted.",
+    "category": "lookup",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "L04",
+    "question": "What is the disaster recovery RPO?",
+    "golden_answer": "1 hour (Recovery Point Objective).",
+    "category": "lookup",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "L05",
+    "question": "What is the disaster recovery RTO?",
+    "golden_answer": "4 hours (Recovery Time Objective).",
+    "category": "lookup",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "L06",
+    "question": "wut is the utpime commitmnet for auorra",
+    "golden_answer": "99.9% monthly uptime.",
+    "category": "lookup",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": "Deliberately misspelled -- regression test for the proactive query normalizer. If this starts failing with mode=no_context, check whether the normalized query is actually reaching the reranker (original_query wiring in query_orchestration.py)."
+  },
+  {
+    "id": "L07",
+    "question": "how log r bakups retaned",
+    "golden_answer": "30 days.",
+    "category": "lookup",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": "Deliberately misspelled -- same normalization regression check as L06."
+  },
+  {
+    "id": "M01",
+    "question": "Does scheduled maintenance count against the uptime commitment, and does that affect whether an SLA credit gets issued?",
+    "golden_answer": "No -- scheduled maintenance windows are excluded from the uptime calculation entirely, and since credits are only calculated against unscheduled downtime, time spent in an announced maintenance window never generates a credit.",
+    "category": "multi_hop",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "M02",
+    "question": "Is the 72-hour security breach notification tied to the same clock as support ticket response times?",
+    "golden_answer": "No -- the 72-hour breach notification window is independent of support-ticket response times. It is initiated proactively by Aurora's security team, not issued in response to a customer-submitted ticket.",
+    "category": "multi_hop",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "M03",
+    "question": "If a Gold-tier ticket gets escalated, how many steps happen before it reaches Platform Engineering, and does the response-time target change at each step?",
+    "golden_answer": "Two intermediate steps: Tier 1 Support, then Tier 2 Support (specialist engineer), before reaching Platform Engineering on-call. The acknowledgment requirement stays flat at 30 minutes at every step regardless of the customer's tier, so the response-time target does not change as the ticket escalates.",
+    "category": "multi_hop",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "M04",
+    "question": "Are Bronze-tier customers eligible for phone support if they escalate a critical ticket?",
+    "golden_answer": "No -- phone support is only available to Gold and Platinum tier customers. Escalation changes who handles the ticket internally, not which contact channels the customer is entitled to use.",
+    "category": "multi_hop",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "M05",
+    "question": "If Aurora misses its uptime commitment because of an emergency security patch outside the normal maintenance window, does the customer still get an SLA credit?",
+    "golden_answer": "No -- emergency maintenance to address an active security vulnerability is explicitly excluded from the uptime calculation, the same as scheduled maintenance, so it does not trigger an SLA credit.",
+    "category": "multi_hop",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "U01",
+    "question": "Does Aurora offer a referral bonus program?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "U02",
+    "question": "Can support tickets be submitted via SMS?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "U03",
+    "question": "Is there a HIPAA compliance guarantee?",
+    "golden_answer": "NOT_IN_CORPUS",
+    "category": "unanswerable",
+    "expected_source_documents": [],
+    "notes": ""
+  },
+  {
+    "id": "A01",
+    "question": "What's the response time?",
+    "golden_answer": "Underspecified -- response time varies by support tier (Bronze/Silver/Gold/Platinum) and by severity (critical vs. normal), an 8-way matrix. A good answer surfaces the tiers/severities rather than guessing one.",
+    "category": "ambiguous",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": ""
+  },
+  {
+    "id": "A02",
+    "question": "How long does recovery take?",
+    "golden_answer": "Ambiguous between the Recovery Time Objective (4 hours, how long until service is restored) and the Recovery Point Objective (1 hour, how much recent data could be lost) -- these are two different numbers answering two different questions, both named 'recovery'.",
+    "category": "ambiguous",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": "This is the case that previously failed silently (answered RTO only, at 0.97 confidence, no acknowledgment of RPO). Treat any regression here as high priority -- it's evidence the ambiguity signal in generation.py stopped firing."
+  },
+  {
+    "id": "A03",
+    "question": "How long until a ticket is escalated?",
+    "golden_answer": "Ambiguous -- could mean how long a ticket sits before the tier-based response window triggers automatic escalation (15 minutes to 24 hours depending on tier and severity), or how long each escalation step itself takes to acknowledge once triggered (a flat 30 minutes regardless of tier). These are different numbers for different questions.",
+    "category": "ambiguous",
+    "expected_source_documents": ["aurora_sla_support_policy.pdf"],
+    "notes": "Deliberately does NOT match the RTO/RPO-style '<Label> (<ACRONYM>)' pattern the ambiguity heuristic in generation.py detects -- this one has to be caught by the general <ambiguity_rules> prompt instruction alone. Failing here (while A02 passes) would show the structural heuristic is carrying weight the prompt alone can't."
+  }
+]
