@@ -1,15 +1,36 @@
-FROM python:3.12-slim
+# Build Stage
+FROM python:3.12-slim AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /build
 
 COPY requirements.txt .
 COPY requirements-local.txt .
-RUN pip install --no-cache-dir --default-timeout=1000 -r requirements-local.txt
+
+# Install dependencies into a virtual environment or wheel directory
+# Using wheels to keep final image clean
+RUN pip wheel --no-cache-dir --wheel-dir /build/wheels -r requirements-local.txt
+
+# Final Stage
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /build/wheels /wheels
+COPY requirements-local.txt requirements.txt ./
+
+# Install wheels without index
+# Explicitly use the extra-index-url here too just in case pip looks for it for dependency resolution
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements-local.txt \
+    && rm -rf /wheels
 
 COPY src ./src
 
