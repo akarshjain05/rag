@@ -17,6 +17,7 @@ class ConversationStore:
     def __init__(self, max_size: int = 1000):
         self._conversations: Dict[str, List[Turn]] = {}
         self._metadata: OrderedDict[str, dict] = OrderedDict()
+        self._interrupted: Dict[str, str] = {}
         self.max_size = max_size
         
     def _evict_if_needed(self):
@@ -27,6 +28,17 @@ class ConversationStore:
 
     def get_history(self, conversation_id: str) -> List[Turn]:
         return self._conversations.get(conversation_id, [])
+
+    def mark_interrupted(self, conversation_id: str, question: str) -> None:
+        """Records the question in flight when the client disconnected (Stop),
+        so an immediate 'continue' can resume it. Overwrites any prior pending
+        question -- only the most recent stop is resumable."""
+        self._interrupted[conversation_id] = question
+
+    def pop_interrupted(self, conversation_id: str) -> str | None:
+        """One-shot: consumed whether or not the caller ends up using it, so it
+        can't resurface for some unrelated later message."""
+        return self._interrupted.pop(conversation_id, None)
 
     def append_turn(self, conversation_id: str, turn: Turn) -> None:
         self._evict_if_needed()

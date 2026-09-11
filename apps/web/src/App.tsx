@@ -694,14 +694,12 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
       });
     } catch (err) {
       if (err.name === 'AbortError') {
-        setMessages(prev => [...prev, { role: 'assistant', content: "[Discarded]" }]);
-        if (messages.length === 0) {
-          // This was the first turn of a new conversation and nothing was
-          // ever persisted server-side -- don't leave the UI pointed at a
-          // conversation_id that has no real history behind it.
-          skipFetch.current = true;
-          setConversationId(null);
-        }
+        setMessages(prev => [...prev, { role: 'assistant', content: '[Discarded — type "continue" to resume this question]' }]);
+        // Keep the same conversationId. Nothing was persisted server-side for
+        // the stopped turn either way, so history is still genuinely empty --
+        // but preserving the id lets the backend recognize an immediate
+        // "continue" as a request to resume this exact question instead of
+        // starting a second, disconnected conversation.
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: "Error: " + err.message }]);
       }

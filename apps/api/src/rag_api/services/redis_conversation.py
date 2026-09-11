@@ -12,6 +12,17 @@ class RedisConversationStore:
         raw = self._client.get(f"conv:{conversation_id}")
         return [Turn(**t) for t in json.loads(raw)] if raw else []
 
+    def mark_interrupted(self, conversation_id: str, question: str) -> None:
+        self._client.setex(f"interrupted:{conversation_id}", 900, question)  # 15 min TTL
+
+    def pop_interrupted(self, conversation_id: str) -> str | None:
+        key = f"interrupted:{conversation_id}"
+        question = self._client.get(key)
+        if question is not None:
+            self._client.delete(key)
+            return question.decode('utf-8') if isinstance(question, bytes) else question
+        return None
+
     def append_turn(self, conversation_id: str, turn: Turn) -> None:
         history = self.get_history(conversation_id)
         if not history:

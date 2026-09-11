@@ -9,6 +9,14 @@ from rag_api.services.conversation import Turn
 from rag_api.services.query_condensation import normalize_query, condense_query, generate_hyde, expand_query, should_expand_query
 from rag_api.domain.generation.generation import build_sources
 
+_CONTINUE_PHRASES = {
+    "continue", "continue please", "please continue", "keep going",
+    "go on", "go ahead", "carry on", "resume",
+}
+
+def _is_continue_request(text: str) -> bool:
+    return text.strip().strip(".!?").lower() in _CONTINUE_PHRASES
+
 class QueryOrchestrationService:
     def __init__(self, retriever, llm_client, generator, conversation_store, settings, normalizer_llm_client, background_tasks):
         self.retriever = retriever
@@ -28,6 +36,14 @@ class QueryOrchestrationService:
         normalizer_llm_client = self.normalizer_llm_client
         
         search_query = payload.question
+        display_question = payload.question
+
+        if payload.conversation_id:
+            pending_question = store.pop_interrupted(payload.conversation_id)
+            if pending_question and _is_continue_request(payload.question):
+                log.info("query.resumed_after_stop", conversation_id=payload.conversation_id)
+                search_query = pending_question
+                display_question = pending_question
 
         history = []
         if payload.conversation_id:
@@ -49,7 +65,7 @@ class QueryOrchestrationService:
             cached_sources = cached_payload.sources
             cid = payload.conversation_id or store.create_conversation()
             store.append_turn(cid, Turn(
-                user=payload.question, 
+                user=display_question, 
                 assistant=cached_payload.answer, 
                 sources=[s.model_dump() for s in cached_sources], 
                 confidence_info={
@@ -149,6 +165,7 @@ class QueryOrchestrationService:
                 # collapses "continue" into an empty standalone query, which
                 # is what produced the "no question provided" response.
                 cid = payload.conversation_id or store.create_conversation()
+                store.mark_interrupted(cid, payload.question)
 
                 def _log_discarded_result(task: "asyncio.Task") -> None:
                     if task.cancelled():
@@ -172,7 +189,7 @@ class QueryOrchestrationService:
             "composite": float(result.composite_confidence) if result.composite_confidence is not None else None
         }
         
-        store.append_turn(cid, Turn(user=payload.question, assistant=result.answer, sources=sources_dicts, confidence_info=confidence_info))
+        store.append_turn(cid, Turn(user=display_question, assistant=result.answer, sources=sources_dicts, confidence_info=confidence_info))
         
         dense_only_sources = None
         if payload.compare_dense_only:
