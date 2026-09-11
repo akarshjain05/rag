@@ -50,6 +50,7 @@ def main():
         settings.llm_provider,
         model=settings.anthropic_model if settings.llm_provider == "anthropic" else settings.openai_llm_model,
         api_key=settings.anthropic_api_key if settings.llm_provider == "anthropic" else settings.openai_api_key,
+        base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
     )
 
     examples = load_golden_dataset(args.dataset)

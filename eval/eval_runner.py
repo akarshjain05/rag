@@ -104,6 +104,9 @@ def run_eval_suite(
                 retrieval_confidence=gen_result.retrieval_confidence,
                 used_citation_markers_count=len(gen_result.used_citation_markers),
                 retrieved_chunks_count=len(chunks[:top_k]),
+                ttft=gen_result.ttft,
+                total_latency=gen_result.total_latency,
+                cost=gen_result.cost,
             )
         )
     return results
@@ -130,7 +133,7 @@ def run_chunking_strategy_comparison(
     }
 
 
-_METRICS = ["answer_correctness", "faithfulness", "retrieval_relevance", "recall_at_5", "ndcg_at_10", "answer_relevance", "citation_accuracy", "citation_coverage"]
+_METRICS = ["answer_correctness", "faithfulness", "retrieval_relevance", "recall_at_5", "ndcg_at_10", "answer_relevance", "citation_accuracy", "citation_coverage", "ttft_avg", "total_latency_avg", "total_cost"]
 
 
 def format_comparison_report(comparison: dict[str, dict]) -> str:

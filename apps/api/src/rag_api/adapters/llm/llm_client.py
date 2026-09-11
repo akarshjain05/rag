@@ -21,6 +21,13 @@ class LLMClient(ABC):
 
     @abstractmethod
     def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str: ...
+    
+    def generate_with_metrics(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> tuple[str, dict]:
+        import time
+        start = time.time()
+        ans = self.generate(system, user, history)
+        latency = time.time() - start
+        return ans, {"ttft": latency, "total_latency": latency, "cost": 0.0}
 
     @abstractmethod
     def build_image_content(self, image_url: str) -> dict: ...
@@ -178,6 +185,62 @@ class OpenAILLMClient(LLMClient):
                         continue
                 raise e
 
+    def generate_with_metrics(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> tuple[str, dict]:
+        import openai
+        import time
+        if isinstance(system, list):
+            system_str = "".join([block.get("text", "") for block in system])
+            messages = [{"role": "system", "content": system_str}]
+        else:
+            messages = [{"role": "system", "content": system}]
+            
+        history_msgs = list(history) if history else []
+        
+        while True:
+            current_messages = messages + history_msgs + [{"role": "user", "content": user}]
+            try:
+                kwargs = {
+                    "model": self._model,
+                    "max_tokens": self._max_tokens,
+                    "messages": current_messages,
+                    "stream": True,
+                    "stream_options": {"include_usage": True}
+                }
+                
+                if "kimi-k3" in self._model:
+                    kwargs["temperature"] = 1
+                    kwargs["seed"] = 0
+                    kwargs["extra_body"] = {"reasoning_effort": "max"}
+                    
+                start_time = time.time()
+                ttft = None
+                ans_chunks = []
+                usage = None
+                
+                resp = self._client.chat.completions.create(**kwargs)
+                for chunk in resp:
+                    if ttft is None:
+                        ttft = time.time() - start_time
+                    if getattr(chunk.choices, '__len__', lambda: 0)() > 0 and getattr(chunk.choices[0].delta, 'content', None):
+                        ans_chunks.append(chunk.choices[0].delta.content)
+                    if hasattr(chunk, "usage") and chunk.usage:
+                        usage = chunk.usage
+                        
+                total_latency = time.time() - start_time
+                ans = "".join(ans_chunks)
+                cost = 0.0
+                if usage:
+                    cost = (usage.prompt_tokens * 0.005 + usage.completion_tokens * 0.015) / 1000.0
+                    
+                return ans, {"ttft": ttft or total_latency, "total_latency": total_latency, "cost": cost}
+            except openai.BadRequestError as e:
+                if e.code == 'context_length_exceeded' or 'context_length_exceeded' in str(e) or 'maximum context length' in str(e):
+                    if len(history_msgs) > 0:
+                        history_msgs.pop(0)
+                        if history_msgs and history_msgs[0].get("role") == "assistant":
+                            history_msgs.pop(0)
+                        continue
+                raise e
 
     def build_image_content(self, image_url: str) -> dict:
         return {"type": "image_url", "image_url": {"url": image_url}}

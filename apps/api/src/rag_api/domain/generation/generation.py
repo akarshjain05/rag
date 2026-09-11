@@ -104,6 +104,9 @@ class GenerationResult:
     completeness: float | None = None
     composite_confidence: float | None = None
     unsupported_citation_markers: list[int] = field(default_factory=list)
+    ttft: float | None = None
+    total_latency: float | None = None
+    cost: float | None = None
 
 
 def _build_context_block(chunks: list[RetrievedChunk], pruning_threshold: float = 0.30) -> str:
@@ -308,7 +311,7 @@ class AnswerGenerator:
 
         start = time.perf_counter()
         with tracer.start_as_current_span("generation.llm_call"):
-            raw_answer = self.llm_client.generate(SYSTEM_PROMPT, user_prompt, history=history)  # type: ignore[union-attr]
+            raw_answer, gen_metrics = self.llm_client.generate_with_metrics(SYSTEM_PROMPT, user_prompt, history=history)  # type: ignore[union-attr]
         llm_calls_total.labels(stage="generation", provider=self.llm_client.provider_name).inc()
         llm_call_seconds.labels(stage="generation").observe(time.perf_counter() - start)
         valid, invalid = _extract_and_validate_citations(raw_answer, len(chunks))
@@ -343,4 +346,7 @@ class AnswerGenerator:
             completeness=completeness,
             composite_confidence=composite,
             unsupported_citation_markers=unsupported,
+            ttft=gen_metrics.get("ttft"),
+            total_latency=gen_metrics.get("total_latency"),
+            cost=gen_metrics.get("cost"),
         )

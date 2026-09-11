@@ -60,6 +60,9 @@ class EvalCaseResult:
     retrieval_confidence: float | None
     used_citation_markers_count: int
     retrieved_chunks_count: int
+    ttft: float | None
+    total_latency: float | None
+    cost: float | None
 
 
 def _mean(values: list[float | None]) -> float | None:
@@ -88,6 +91,9 @@ def _summarize_group(results: list[EvalCaseResult]) -> dict:
         "citation_accuracy": _mean([r.citation_accuracy for r in results]),
         "citation_coverage": _mean([r.citation_coverage for r in results]),
         "source_panel_precision": _mean(source_panel_precisions),
+        "ttft_avg": _mean([r.ttft for r in results]),
+        "total_latency_avg": _mean([r.total_latency for r in results]),
+        "total_cost": sum(r.cost for r in results if r.cost is not None),
     }
 
 
