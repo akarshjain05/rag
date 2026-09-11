@@ -43,7 +43,7 @@ from rag_api.adapters.vectorstore.vector_store import VectorStore  # noqa: E402
 from rag_api.domain.generation.verification import CitationVerifier  # noqa: E402
 from eval.eval_runner import format_comparison_report, run_chunking_strategy_comparison, run_eval_suite  # noqa: E402
 from eval.golden_dataset import load_golden_dataset  # noqa: E402
-from eval.judges import AnswerCorrectnessJudge, FaithfulnessJudge  # noqa: E402
+from eval.judges import AnswerCorrectnessJudge, FaithfulnessJudge, AnswerRelevanceJudge, CitationAccuracyJudge  # noqa: E402
 from eval.metrics import summarize_results  # noqa: E402
 
 DEFAULT_DATASET = Path(__file__).parent / "golden_qa.json"
@@ -99,6 +99,8 @@ def main() -> None:
         )
         correctness_judge = AnswerCorrectnessJudge(llm_client)
         faithfulness_judge = FaithfulnessJudge(llm_client)
+        answer_relevance_judge = AnswerRelevanceJudge(llm_client)
+        citation_accuracy_judge = CitationAccuracyJudge(llm_client)
 
         print(f"Loaded {len(examples)} golden examples from {args.dataset}")
 
@@ -111,7 +113,7 @@ def main() -> None:
 
             print(f"\nRunning {len(examples)} examples x {len(strategies)} strategies (this makes real LLM calls)...")
             comparison = run_chunking_strategy_comparison(
-                examples, retriever, generator, correctness_judge, faithfulness_judge, strategies=strategies, top_k=args.top_k
+                examples, retriever, generator, correctness_judge, faithfulness_judge, answer_relevance_judge, citation_accuracy_judge, strategies=strategies, top_k=args.top_k
             )
             print()
             print(format_comparison_report(comparison))
@@ -122,7 +124,7 @@ def main() -> None:
 
             print(f"\nRunning {len(examples)} examples (this makes real LLM calls)...")
             results = run_eval_suite(
-                examples, retriever, generator, correctness_judge, faithfulness_judge,
+                examples, retriever, generator, correctness_judge, faithfulness_judge, answer_relevance_judge, citation_accuracy_judge,
                 chunking_strategy=args.chunking_strategy, top_k=args.top_k,
             )
             summary = summarize_results(results)

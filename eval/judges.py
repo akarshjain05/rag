@@ -1,21 +1,10 @@
 """LLM-as-judge evaluators for the eval suite.
 
-Two judges, deliberately checking different things:
-
-- AnswerCorrectnessJudge: does the generated answer convey the same key
-  information as the hand-written golden answer? Category-aware -- an
-  "unanswerable" question is correct if the system declined rather than
-  fabricated; an "ambiguous" question is correct if the answer surfaces the
-  ambiguity or clearly answers one reasonable reading, not if it silently
-  assumes the only possible reading.
-
-- FaithfulnessJudge: is every claim in the answer grounded in the full
-  retrieved context, cited or not? This is broader than the runtime
-  citation-accuracy check (`app.verification.CitationVerifier`), which only
-  checks claims that already carry a citation marker against their
-  specific cited excerpt. An answer can slip in an uncited, hallucinated
-  claim while every *cited* claim checks out -- citation accuracy alone
-  can't see that; faithfulness is what catches it.
+Judges include:
+- AnswerCorrectnessJudge
+- FaithfulnessJudge (CoT)
+- AnswerRelevanceJudge
+- CitationAccuracyJudge
 """
 from __future__ import annotations
 
@@ -43,15 +32,12 @@ def _parse_json_object(raw: str) -> dict | None:
 
 
 def join_chunk_texts(chunks: list[RetrievedChunk]) -> str:
-    return "\n\n".join(f"({c.metadata.get('source_document', 'unknown')}) {c.text}" for c in chunks)
+    return "\n\n".join(f"[{i+1}] ({c.metadata.get('source_document', 'unknown')}) {c.text}" for i, c in enumerate(chunks))
 
 
-# --------------------------------------------------------------------------
-# Answer correctness
-# --------------------------------------------------------------------------
 @dataclass
 class CorrectnessResult:
-    correct: bool | None  # None if the judge's response couldn't be parsed
+    correct: bool | None
     reasoning: str | None = None
 
 
@@ -95,19 +81,13 @@ class AnswerCorrectnessJudge:
         parsed = _parse_json_object(raw)
         if parsed is None:
             return CorrectnessResult(correct=None)
-
         correct = parsed.get("correct")
-        if not isinstance(correct, bool):
-            return CorrectnessResult(correct=None, reasoning=parsed.get("reasoning"))
-        return CorrectnessResult(correct=correct, reasoning=parsed.get("reasoning"))
+        return CorrectnessResult(correct=correct if isinstance(correct, bool) else None, reasoning=parsed.get("reasoning"))
 
 
-# --------------------------------------------------------------------------
-# Faithfulness
-# --------------------------------------------------------------------------
 @dataclass
 class FaithfulnessResult:
-    grounded_fraction: float | None  # None if nothing could be parsed; 1.0 vacuously if there were no claims
+    grounded_fraction: float | None
     claim_count: int
 
 
@@ -120,13 +100,18 @@ class FaithfulnessJudge:
         if not claims:
             return FaithfulnessResult(grounded_fraction=1.0, claim_count=0)
 
-        claims_block = "\n".join(f"[{i}] {c.claim_text}" for i, c in enumerate(claims, start=1))
+        claims_block = "\n".join(f"Claim {i}: {c.claim_text}" for i, c in enumerate(claims, start=1))
         context = join_chunk_texts(retrieved_chunks)
         system = (
-            "You check whether each numbered claim from an AI-generated answer is grounded in the provided "
-            "context -- i.e. a careful reader could verify the claim from the context, regardless of whether "
-            'the claim happens to carry a citation marker. Respond with ONLY a JSON object: {"grounded": '
-            '{"1": true, "2": false}}. No other text.'
+            "You are an expert evaluator. Your task is to evaluate whether each claim in the AI-generated answer is strictly grounded in the provided context.\n"
+            "Process each claim step by step (Chain-of-Thought). First, identify which sentences in the context support or contradict the claim. "
+            "Then, determine if the claim is fully supported (true) or contains unverified information (false).\n\n"
+            'Finally, output a JSON object in this format:\n'
+            '{\n'
+            '  "reasoning": "1. Claim 1 is supported by... 2. Claim 2 is not supported because...",\n'
+            '  "grounded": {"1": true, "2": false}\n'
+            '}\n'
+            "Ensure the JSON object is the final part of your response."
         )
         user = f"Context:\n\n{context}\n\nClaims:\n\n{claims_block}"
 
@@ -139,13 +124,84 @@ class FaithfulnessJudge:
         if not isinstance(grounded_field, dict):
             return FaithfulnessResult(grounded_fraction=None, claim_count=len(claims))
 
-        grounded_count = 0
-        for key, value in grounded_field.items():
-            try:
-                idx = int(key)
-            except (TypeError, ValueError):
-                continue
-            if 1 <= idx <= len(claims) and value is True:
-                grounded_count += 1
-
+        grounded_count = sum(1 for k, v in grounded_field.items() if str(k).isdigit() and 1 <= int(k) <= len(claims) and v is True)
         return FaithfulnessResult(grounded_fraction=grounded_count / len(claims), claim_count=len(claims))
+
+
+@dataclass
+class AnswerRelevanceResult:
+    relevance_score: float | None
+    reasoning: str | None = None
+
+
+class AnswerRelevanceJudge:
+    def __init__(self, llm_client: LLMClient):
+        self.llm_client = llm_client
+
+    def judge(self, question: str, answer: str) -> AnswerRelevanceResult:
+        system = (
+            "Evaluate how relevant the generated answer is to the user's question.\n"
+            "An answer is relevant if it directly addresses the question without rambling, adding unnecessary filler, or ignoring the core intent.\n"
+            "Use Chain-of-Thought reasoning, then output a JSON object with a score between 0.0 and 1.0 (1.0 = perfectly concise and relevant).\n"
+            'Format:\n'
+            '{\n'
+            '  "reasoning": "...",\n'
+            '  "score": 1.0\n'
+            '}'
+        )
+        user = f"Question: {question}\n\nAnswer: {answer}"
+
+        raw = self.llm_client.generate(system, user)
+        parsed = _parse_json_object(raw)
+        if parsed is None:
+            return AnswerRelevanceResult(relevance_score=None)
+        score = parsed.get("score")
+        return AnswerRelevanceResult(relevance_score=float(score) if score is not None else None, reasoning=parsed.get("reasoning"))
+
+
+@dataclass
+class CitationAccuracyResult:
+    accuracy: float | None
+    reasoning: str | None = None
+
+
+class CitationAccuracyJudge:
+    def __init__(self, llm_client: LLMClient):
+        self.llm_client = llm_client
+
+    def judge(self, answer: str, retrieved_chunks: list[RetrievedChunk]) -> CitationAccuracyResult:
+        import re
+        citation_pattern = re.compile(r'【(\d+)】|\[(\d+)\]')
+        citations_found = citation_pattern.findall(answer)
+        if not citations_found:
+            return CitationAccuracyResult(accuracy=1.0, reasoning="No citations to check.")
+
+        # Extract sentences with citations
+        # We'll just pass the answer and the context chunks and ask the LLM to verify every citation marker.
+        context = join_chunk_texts(retrieved_chunks)
+        system = (
+            "You are evaluating the Citation Accuracy of an AI response. The response contains citation markers like [1] or 【1】.\n"
+            "Your task is to verify if the text immediately preceding each citation marker is factually supported by the specific source chunk indicated by that number.\n"
+            "Use Chain-of-Thought reasoning. Evaluate each cited claim against its referenced chunk. If a claim points to [1], it MUST be supported by chunk 1.\n"
+            'Output a JSON object with a boolean for each citation marker instance:\n'
+            '{\n'
+            '  "reasoning": "...",\n'
+            '  "citations_correct": {"1": true, "2": false, "3": true}\n'
+            '}'
+        )
+        user = f"Context:\n\n{context}\n\nAnswer:\n\n{answer}"
+
+        raw = self.llm_client.generate(system, user)
+        parsed = _parse_json_object(raw)
+        if parsed is None:
+            return CitationAccuracyResult(accuracy=None)
+        
+        citations_correct = parsed.get("citations_correct", {})
+        if not isinstance(citations_correct, dict) or not citations_correct:
+            return CitationAccuracyResult(accuracy=None, reasoning=parsed.get("reasoning"))
+
+        correct_count = sum(1 for v in citations_correct.values() if v is True)
+        return CitationAccuracyResult(
+            accuracy=correct_count / len(citations_correct),
+            reasoning=parsed.get("reasoning")
+        )

@@ -7,7 +7,7 @@ from __future__ import annotations
 from rag_api.domain.generation.generation import AnswerGenerator
 from rag_api.domain.retrieval.retrieval import HybridRetriever
 from eval.golden_dataset import GoldenExample
-from eval.judges import AnswerCorrectnessJudge, FaithfulnessJudge
+from eval.judges import AnswerCorrectnessJudge, FaithfulnessJudge, AnswerRelevanceJudge, CitationAccuracyJudge
 from eval.metrics import EvalCaseResult, compute_retrieval_relevance, summarize_results
 
 
@@ -17,6 +17,8 @@ def run_eval_suite(
     generator: AnswerGenerator,
     correctness_judge: AnswerCorrectnessJudge,
     faithfulness_judge: FaithfulnessJudge,
+    answer_relevance_judge: AnswerRelevanceJudge,
+    citation_accuracy_judge: CitationAccuracyJudge,
     *,
     chunking_strategy: str | None = None,
     top_k: int = 5,
@@ -40,15 +42,26 @@ def run_eval_suite(
                 correctness = correctness_judge.judge(example, gen_result.answer, gen_result.mode)
                 break
             except openai.RateLimitError:
-                print("Rate limit reached. Sleeping 5 seconds...")
                 time.sleep(5)
         while True:
             try:
                 faithfulness = faithfulness_judge.judge(gen_result.answer, chunks)
                 break
             except openai.RateLimitError:
-                print("Rate limit reached. Sleeping 5 seconds...")
                 time.sleep(5)
+        while True:
+            try:
+                ans_relevance = answer_relevance_judge.judge(example.question, gen_result.answer)
+                break
+            except openai.RateLimitError:
+                time.sleep(5)
+        while True:
+            try:
+                cit_accuracy = citation_accuracy_judge.judge(gen_result.answer, chunks)
+                break
+            except openai.RateLimitError:
+                time.sleep(5)
+
         relevance = compute_retrieval_relevance(chunks, example.expected_source_documents)
 
         results.append(
@@ -63,7 +76,9 @@ def run_eval_suite(
                 correctness_reasoning=correctness.reasoning,
                 faithfulness=faithfulness.grounded_fraction,
                 retrieval_relevance=relevance,
-                citation_accuracy=gen_result.citation_coverage,
+                answer_relevance=ans_relevance.relevance_score,
+                citation_accuracy=cit_accuracy.accuracy,
+                citation_coverage=gen_result.citation_coverage,
                 citation_coverage_basis=gen_result.citation_coverage_basis,
                 retrieval_confidence=gen_result.retrieval_confidence,
                 used_citation_markers_count=len(gen_result.used_citation_markers),
@@ -79,25 +94,21 @@ def run_chunking_strategy_comparison(
     generator: AnswerGenerator,
     correctness_judge: AnswerCorrectnessJudge,
     faithfulness_judge: FaithfulnessJudge,
+    answer_relevance_judge: AnswerRelevanceJudge,
+    citation_accuracy_judge: CitationAccuracyJudge,
     *,
     strategies: list[str],
     top_k: int = 5,
 ) -> dict[str, dict]:
-    """Assumes the corpus is already ingested under every strategy in
-    `strategies` (chunk IDs are namespaced `{source}::{strategy}::{index}`,
-    so ingesting the same corpus three times under three strategies is
-    safe and non-colliding -- see `app.pipeline.IngestionPipeline`). Runs
-    the full suite once per strategy, filtering retrieval to that
-    strategy's chunks each time, and returns {strategy: summarize_results(...)}."""
     return {
         strategy: summarize_results(
-            run_eval_suite(examples, retriever, generator, correctness_judge, faithfulness_judge, chunking_strategy=strategy, top_k=top_k)
+            run_eval_suite(examples, retriever, generator, correctness_judge, faithfulness_judge, answer_relevance_judge, citation_accuracy_judge, chunking_strategy=strategy, top_k=top_k)
         )
         for strategy in strategies
     }
 
 
-_METRICS = ["answer_correctness", "faithfulness", "retrieval_relevance", "citation_accuracy"]
+_METRICS = ["answer_correctness", "faithfulness", "retrieval_relevance", "answer_relevance", "citation_accuracy", "citation_coverage"]
 
 
 def format_comparison_report(comparison: dict[str, dict]) -> str:

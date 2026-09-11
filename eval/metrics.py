@@ -34,7 +34,9 @@ class EvalCaseResult:
     correctness_reasoning: str | None
     faithfulness: float | None
     retrieval_relevance: float | None
+    answer_relevance: float | None
     citation_accuracy: float | None
+    citation_coverage: float | None
     citation_coverage_basis: str | None
     retrieval_confidence: float | None
     used_citation_markers_count: int
@@ -61,7 +63,9 @@ def _summarize_group(results: list[EvalCaseResult]) -> dict:
         "answer_correctness": _correctness_mean(results),
         "faithfulness": _mean([r.faithfulness for r in results]),
         "retrieval_relevance": _mean([r.retrieval_relevance for r in results]),
+        "answer_relevance": _mean([r.answer_relevance for r in results]),
         "citation_accuracy": _mean([r.citation_accuracy for r in results]),
+        "citation_coverage": _mean([r.citation_coverage for r in results]),
         "source_panel_precision": _mean(source_panel_precisions),
     }
 
