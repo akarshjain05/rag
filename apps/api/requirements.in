@@ -33,3 +33,5 @@ opentelemetry-instrumentation-fastapi>=0.43b0
 prometheus-client>=0.19.0
 prometheus-fastapi-instrumentator>=6.1.0
 sentry-sdk[fastapi]>=1.39.0
+ragas>=0.1.7
+datasets>=2.19.0
