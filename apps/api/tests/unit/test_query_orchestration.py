@@ -59,3 +59,12 @@ def test_reactive_crag_expansion_prompt_construction(mock_llm_client):
     assert "synonyms" in prompt_used.lower(), "CRAG prompt MUST instruct the LLM to generate synonyms."
     assert "technical terms" in prompt_used.lower(), "CRAG prompt MUST ask for domain-specific terms."
     assert clean_query in call_args[1], "The clean query was not passed to the CRAG LLM."
+
+from rag_api.services.query_orchestration import _is_continue_request
+
+def test_is_continue_request_matches_known_phrases():
+    for phrase in ["continue", "Continue.", "please continue", "keep going!", "resume"]:
+        assert _is_continue_request(phrase) is True
+
+def test_is_continue_request_rejects_unrelated_text():
+    assert _is_continue_request("what is the vacation policy") is False

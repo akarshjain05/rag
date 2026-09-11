@@ -555,6 +555,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
   const [query, setQuery] = React.useState("");
   const [messages, setMessages] = React.useState([]);
   const [sources, setSources] = React.useState([]);
+  const [denseOnlySources, setDenseOnlySources] = React.useState([]);
   const [usedMarkers, setUsedMarkers] = React.useState<number[]>([]);
   const [unsupportedMarkers, setUnsupportedMarkers] = React.useState<number[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -597,6 +598,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
     if (conversationId) {
       import('./lib/api').then(({ fetchConversation }) => {
         fetchConversation(conversationId).then(res => {
+          setDenseOnlySources([]);
           if (res.history) {
             const mapped = [];
             res.history.forEach(t => {
@@ -652,6 +654,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
     
     // Clear previous interaction metadata
     setSources([]);
+    setDenseOnlySources([]);
     setUsedMarkers([]);
     setUnsupportedMarkers([]);
     setConfidenceInfo(null);
@@ -683,6 +686,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
         { role: 'assistant', content: res.answer, markers: res.used_citation_markers || [] }
       ]);
       setSources(res.sources || []);
+      setDenseOnlySources(res.dense_only_sources || []);
       setUsedMarkers(res.used_citation_markers || []);
       setUnsupportedMarkers(res.unsupported_citation_markers || []);
       setConfidenceInfo({
@@ -897,6 +901,31 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
                           </span>
                         )
                       ) : null}
+                    </div>
+                 </div>
+               ))}
+             </div>
+           </details>
+        )}
+        
+        {compareDenseOnly && denseOnlySources.length > 0 && (
+           <details className="pt-8 border-t border-border group/dense-sources">
+             <summary className="font-sans text-[13px] text-ink-secondary mb-4 uppercase tracking-wider cursor-pointer list-none flex items-center gap-2 hover:text-ink transition-colors">
+               <span>Dense-only comparison ({denseOnlySources.length})</span>
+               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-open/dense-sources:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+             </summary>
+             <p className="text-[12px] text-ink-muted mb-4 font-sans">
+               What plain dense-vector search alone would have retrieved -- no sparse/BM25, no reranking. Compare against Sources above.
+             </p>
+             <div className="flex flex-col gap-4">
+               {(denseOnlySources || []).map((s, i) => (
+                 <div key={i} className="bg-surface-card border border-border border-t-[3px] border-t-ink-muted p-4 flex flex-col gap-3">
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-mono text-[12px] text-ink">{s.source_document}</span>
+                      {s.dense_rank && <span className="font-mono text-[11px] text-ink-muted">DENSE RANK: {s.dense_rank}</span>}
+                    </div>
+                    <div className="font-serif text-[15px] leading-relaxed text-ink-secondary border-l-2 border-border-strong pl-4 italic line-clamp-4">
+                      "{s.text}"
                     </div>
                  </div>
                ))}

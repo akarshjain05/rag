@@ -82,3 +82,21 @@ def test_expand_query_prompt_assumes_clean_spelling():
     system_arg, _ = mock_llm.generate.call_args[0]
     assert "spell" in system_arg.lower()
     assert "assume" in system_arg.lower()
+
+def test_mark_and_pop_interrupted_round_trips():
+    store = ConversationStore()
+    cid = store.create_conversation()
+    store.mark_interrupted(cid, "What is the escalation process?")
+    assert store.pop_interrupted(cid) == "What is the escalation process?"
+
+def test_pop_interrupted_is_one_shot():
+    store = ConversationStore()
+    cid = store.create_conversation()
+    store.mark_interrupted(cid, "some question")
+    store.pop_interrupted(cid)
+    assert store.pop_interrupted(cid) is None
+
+def test_pop_interrupted_returns_none_when_nothing_marked():
+    store = ConversationStore()
+    cid = store.create_conversation()
+    assert store.pop_interrupted(cid) is None

@@ -23,7 +23,7 @@ def client(tmp_path):
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(dimension=128),
         llm_mode="extractive",  # exercises the full pipeline with zero API keys
-        vector_store=VectorStore(tmp_path / "chroma", settings.collection_name),
+        vector_store=VectorStore(tmp_path / "chroma", settings.collection_name, dense_dimension=128),
         )
     return TestClient(app)
 
@@ -135,7 +135,7 @@ def test_query_translates_provider_failure_into_clean_502(tmp_path):
         settings,
         embedding_client=FailingEmbedder(),
         llm_mode="extractive",
-        vector_store=VectorStore(tmp_path / "chroma2", settings.collection_name),
+        vector_store=VectorStore(tmp_path / "chroma2", settings.collection_name, dense_dimension=128),
         )
     failing_client = TestClient(app)
 
@@ -166,7 +166,7 @@ def test_query_with_reranker_wired_returns_rerank_scores(tmp_path):
             return reordered[:top_k]
 
     settings = Settings(chroma_persist_dir=tmp_path / "chroma3")
-    store = VectorStore(tmp_path / "chroma3", settings.collection_name)
+    store = VectorStore(tmp_path / "chroma3", settings.collection_name, dense_dimension=128)
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
@@ -200,7 +200,7 @@ def test_reranker_auto_built_from_settings_when_not_overridden(tmp_path):
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma4", settings.collection_name),
+        vector_store=VectorStore(tmp_path / "chroma4", settings.collection_name, dense_dimension=128),
         )
 
     assert isinstance(app.state.retriever.reranker, LLMJudgeReranker)
@@ -217,7 +217,7 @@ def test_llm_client_auto_built_from_settings_when_nothing_overridden(tmp_path, m
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
-        vector_store=VectorStore(tmp_path / "chroma5", settings.collection_name),
+        vector_store=VectorStore(tmp_path / "chroma5", settings.collection_name, dense_dimension=128),
         )
 
     assert app.state.generator.mode == "llm"
@@ -241,7 +241,7 @@ def test_citation_verifier_auto_built_when_llm_available_and_enabled(tmp_path):
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma6", settings.collection_name),
+        vector_store=VectorStore(tmp_path / "chroma6", settings.collection_name, dense_dimension=128),
         )
 
     assert app.state.generator.citation_verifier is not None
@@ -256,7 +256,7 @@ def test_citation_verifier_not_built_when_disabled_in_settings(tmp_path):
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma7", settings.collection_name),
+        vector_store=VectorStore(tmp_path / "chroma7", settings.collection_name, dense_dimension=128),
         )
 
     assert app.state.generator.citation_verifier is None
@@ -272,7 +272,7 @@ def test_citation_verifier_not_built_in_extractive_mode_even_if_enabled(tmp_path
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_mode="extractive",
-        vector_store=VectorStore(tmp_path / "chroma8", settings.collection_name),
+        vector_store=VectorStore(tmp_path / "chroma8", settings.collection_name, dense_dimension=128),
         )
 
     assert app.state.generator.citation_verifier is None
@@ -280,7 +280,7 @@ def test_citation_verifier_not_built_in_extractive_mode_even_if_enabled(tmp_path
 
 def test_query_low_confidence_response_over_http(tmp_path):
     settings = Settings(chroma_persist_dir=tmp_path / "chroma9", low_confidence_threshold=0.99)  # near-impossible to clear
-    store = VectorStore(tmp_path / "chroma9", settings.collection_name)
+    store = VectorStore(tmp_path / "chroma9", settings.collection_name, dense_dimension=128)
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
@@ -398,7 +398,7 @@ def test_typo_query_recovers_via_normalization(tmp_path):
     settings = Settings(chroma_persist_dir=tmp_path / "chroma")
     app = create_app(
         settings, embedding_client=DeterministicFakeEmbeddingClient(), llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma", settings.collection_name),
+        vector_store=VectorStore(tmp_path / "chroma", settings.collection_name, dense_dimension=128),
         reranker=ScoreByQueryReranker(),
     )
     client = TestClient(app)
@@ -436,3 +436,27 @@ def test_retrieve_async_primary_call_receives_temporal_filter(client, monkeypatc
     assert "temporal_filter" in call_kwargs
     assert call_kwargs["temporal_filter"] == {"target_date": "2024-01-01"}
 
+
+def test_stop_then_continue_resumes_the_original_question(tmp_path):
+    fake_llm = MagicMock()
+    fake_llm.provider_name = "fake"
+    fake_llm.generate.return_value = "Escalation goes through four steps [1]."
+
+    settings = Settings(chroma_persist_dir=tmp_path / "chroma_resume")
+    app = create_app(
+        settings, embedding_client=DeterministicFakeEmbeddingClient(), llm_client=fake_llm,
+        vector_store=VectorStore(tmp_path / "chroma_resume", settings.collection_name, dense_dimension=128),
+    )
+    client = TestClient(app)
+    client.post("/v1/ingest", files=[("files", ("handbook.md", MD_CONTENT, "text/markdown"))])
+
+    store = app.state.conversation_store
+    cid = store.create_conversation()
+    store.mark_interrupted(cid, "What is the escalation process?")
+
+    resp = client.post("/v1/ask", json={"question": "continue", "conversation_id": cid})
+
+    assert resp.status_code == 200
+    assert resp.json()["mode"] != "no_context"
+    history = store.get_history(cid)
+    assert history[-1].user == "What is the escalation process?"  # real question persisted, not "continue"
