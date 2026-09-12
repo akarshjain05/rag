@@ -434,7 +434,7 @@ export default function ChatView({ conversationId, setConversationId, setMobileM
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAsk()}
             placeholder="Ask the archive..." 
-            className="flex-1 bg-transparent border-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink"
+            className="flex-1 bg-transparent border-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink focus:outline-none focus:ring-0"
             disabled={loading}
           />
           <button 

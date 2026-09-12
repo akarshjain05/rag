@@ -37,9 +37,9 @@ export default function HistoryView({ onSelect }) {
  <button 
  key={c.id} 
  onClick={() => onSelect(c.id)}
- className="flex justify-between items-center p-4 bg-surface-card border border-border rounded-sm hover:border-accent hover:text-accent transition-colors cursor-pointer text-left focus-visible:focus-visible:ring-2 focus-visible:ring-accent"
+ className="flex justify-between items-center p-4 bg-surface-card border border-border rounded-md hover:bg-border/30 transition-colors cursor-pointer text-left focus:outline-none"
  >
- <span className="font-medium">{c.title}</span>
+ <span className="font-medium text-ink group-hover:text-ink">{c.title}</span>
  <span className="text-xs text-ink-muted">{new Date(c.updated_at * 1000).toLocaleString()}</span>
  </button>
  ))}
