@@ -144,18 +144,27 @@ class HybridRetriever:
         # Hard Cutoff Threshold: Drop chunks that the reranker identified as mathematically irrelevant.
         pruned_chunks = [chunk for chunk in reranked_chunks if chunk.rerank_score is not None and chunk.rerank_score >= self.context_pruning_threshold]
 
-        # Enforce document diversity: max 2 chunks per document so a single doc doesn't squeeze out multi-hop context
-        final_chunks = []
+        # Enforce document diversity (max 2 chunks per doc) BUT backfill if diversity wasn't earned
+        selected = []
         doc_counts = {}
-        for chunk in pruned_chunks:
-            doc = chunk.metadata.get("source_document", "unknown")
-            if doc_counts.get(doc, 0) < 2:
-                final_chunks.append(chunk)
-                doc_counts[doc] = doc_counts.get(doc, 0) + 1
-            if len(final_chunks) == top_k:
-                break
+        skipped = []
 
-        return final_chunks
+        for chunk in pruned_chunks:
+            if len(selected) >= top_k:
+                break
+            doc = chunk.metadata.get("source_document", "unknown")
+            if doc_counts.get(doc, 0) >= 2:
+                skipped.append(chunk)
+                continue
+            selected.append(chunk)
+            doc_counts[doc] = doc_counts.get(doc, 0) + 1
+
+        for chunk in skipped:  # backfill from capped docs if diversity wasn't earned
+            if len(selected) >= top_k:
+                break
+            selected.append(chunk)
+
+        return selected
 
     def retrieve(
         self,
