@@ -42,8 +42,12 @@ def make_result(category, correct=True, faithfulness=1.0, relevance=1.0, citatio
     return EvalCaseResult(
         example_id="x", question="q", category=category, chunking_strategy="structure_aware",
         generated_answer="a", mode="llm", answer_correct=correct, correctness_reasoning=None,
-        faithfulness=faithfulness, retrieval_relevance=relevance, citation_accuracy=citation_accuracy,
-        citation_coverage_basis="verified",
+        faithfulness=faithfulness, retrieval_relevance=relevance, 
+        recall_at_5=1.0, ndcg_at_10=1.0, answer_relevance=1.0,
+        citation_accuracy=citation_accuracy, citation_coverage=1.0,
+        citation_coverage_basis="verified", retrieval_confidence=1.0,
+        used_citation_markers_count=1, retrieved_chunks_count=1,
+        ttft=1.0, total_latency=1.0, cost=0.0
     )
 
 
