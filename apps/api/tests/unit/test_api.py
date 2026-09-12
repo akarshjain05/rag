@@ -193,6 +193,7 @@ def test_reranker_auto_built_from_settings_when_not_overridden(tmp_path):
     opposed to the test above, which bypasses that by injecting one
     directly."""
     fake_llm = MagicMock()
+    fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
     fake_llm.generate.return_value = '{"1": 9}'
 
     settings = Settings(chroma_persist_dir=tmp_path / "chroma4", reranker_provider="llm_judge")
@@ -235,6 +236,7 @@ def test_ingest_empty_filename_rejected_by_upload_validation(client):
 
 def test_citation_verifier_auto_built_when_llm_available_and_enabled(tmp_path):
     fake_llm = MagicMock()
+    fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
     settings = Settings(chroma_persist_dir=tmp_path / "chroma6", citation_verification_enabled=True)
 
     app = create_app(
@@ -250,6 +252,7 @@ def test_citation_verifier_auto_built_when_llm_available_and_enabled(tmp_path):
 
 def test_citation_verifier_not_built_when_disabled_in_settings(tmp_path):
     fake_llm = MagicMock()
+    fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
     settings = Settings(chroma_persist_dir=tmp_path / "chroma7", citation_verification_enabled=False)
 
     app = create_app(
@@ -381,6 +384,7 @@ def test_typo_query_recovers_via_normalization(tmp_path):
             return [0.1] * 768
             
     fake_llm = MagicMock()
+    fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
     fake_llm.provider_name = "fake"
     def fake_generate(system, user, history=None):
         if "clean up a user's search query" in system.lower():
@@ -418,6 +422,7 @@ def test_retrieve_async_primary_call_receives_temporal_filter(client, monkeypatc
     
     client.app.state.settings.query_normalization_enabled = True
     fake_llm = MagicMock()
+    fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
     fake_llm.provider_name = "fake"
     fake_llm.generate.return_value = '{"clean_query": "test query", "target_date": "2024-01-01"}'
     
@@ -439,6 +444,7 @@ def test_retrieve_async_primary_call_receives_temporal_filter(client, monkeypatc
 
 def test_stop_then_continue_resumes_the_original_question(tmp_path):
     fake_llm = MagicMock()
+    fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
     fake_llm.provider_name = "fake"
     fake_llm.generate.return_value = "Escalation goes through four steps [1]."
 

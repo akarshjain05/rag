@@ -18,22 +18,12 @@ class HybridRetriever:
         embedding_client: EmbeddingClient,
         vector_store: VectorStore,
         *,
-        dense_top_k: int = 10,
-        sparse_top_k: int = 10,
-        rrf_k: int = 60,
-        dense_weight: float = 1.0,
-        sparse_weight: float = 1.0,
         reranker: Reranker | None = None,
         rerank_candidate_pool: int = 20,
         context_pruning_threshold: float = 0.30,
     ):
         self.embedding_client = embedding_client
         self.vector_store = vector_store
-        self.dense_top_k = dense_top_k
-        self.sparse_top_k = sparse_top_k
-        self.rrf_k = rrf_k
-        self.dense_weight = dense_weight
-        self.sparse_weight = sparse_weight
         self.reranker = reranker
         self.rerank_candidate_pool = rerank_candidate_pool
         self.context_pruning_threshold = context_pruning_threshold
@@ -107,7 +97,7 @@ class HybridRetriever:
 
         from functools import partial
         if dense_only:
-            func = partial(self.vector_store.query, query_embedding, top_k=self.dense_top_k, where=where, temporal_filter=temporal_filter)
+            func = partial(self.vector_store.query, query_embedding, top_k=top_k, where=where, temporal_filter=temporal_filter)
             dense = await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
             return [
                 RetrievedChunk(

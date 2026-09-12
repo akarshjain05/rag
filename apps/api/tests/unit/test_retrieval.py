@@ -150,7 +150,7 @@ def test_hybrid_retriever_finds_relevant_chunk_by_keyword_and_meaning(fake_embed
     _index_chunk(vector_store, fake_embedder, "vacation", "employees accrue vacation days each month", {"source_document": "handbook.md", "chunking_strategy": "structure_aware", "section_heading": "", "page_number": -1})
     _index_chunk(vector_store, fake_embedder, "remote", "remote work requires manager approval", {"source_document": "handbook.md", "chunking_strategy": "structure_aware", "section_heading": "", "page_number": -1})
 
-    retriever = HybridRetriever(fake_embedder, vector_store, dense_top_k=5, sparse_top_k=5)
+    retriever = HybridRetriever(fake_embedder, vector_store)
     results = retriever.retrieve("how many vacation days do employees accrue", top_k=2)
 
     assert results
@@ -177,7 +177,7 @@ def test_dense_only_skips_sparse_and_fusion_entirely(fake_embedder, vector_store
     _index_chunk(vector_store, fake_embedder, "a", "vacation policy accrual details", {"source_document": "h.md"})
     _index_chunk(vector_store, fake_embedder, "b", "remote work approval details", {"source_document": "h.md"})
 
-    retriever = HybridRetriever(fake_embedder, vector_store, dense_top_k=5, sparse_top_k=5)
+    retriever = HybridRetriever(fake_embedder, vector_store)
     results = retriever.retrieve("vacation policy", top_k=2, dense_only=True)
 
     assert len(results) == 2
@@ -230,7 +230,6 @@ def test_hybrid_retriever_with_reranker_fuses_to_the_larger_candidate_pool(fake_
     fake_reranker = _FakeReranker()
     retriever = HybridRetriever(
         fake_embedder, vector_store,
-        dense_top_k=15, sparse_top_k=15,
         reranker=fake_reranker, rerank_candidate_pool=12,
     )
 
@@ -245,7 +244,7 @@ def test_hybrid_retriever_without_reranker_fuses_straight_to_top_k(fake_embedder
     for i in range(15):
         _index_chunk(vector_store, fake_embedder, f"chunk_{i}", f"vacation policy detail number {i}", {"source_document": "h.md"})
 
-    retriever = HybridRetriever(fake_embedder, vector_store, dense_top_k=15, sparse_top_k=15)
+    retriever = HybridRetriever(fake_embedder, vector_store)
     results = retriever.retrieve("vacation policy", top_k=3)
 
     assert len(results) == 3

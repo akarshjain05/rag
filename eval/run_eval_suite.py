@@ -90,7 +90,7 @@ def main() -> None:
         vector_store = VectorStore(tmp_path / "chroma", "eval_collection", dense_dimension=embedding_client.dimension)
         pipeline = IngestionPipeline(embedding_client, vector_store)
         retriever = HybridRetriever(
-            embedding_client, vector_store, dense_top_k=args.top_k * 2, sparse_top_k=args.top_k * 2
+            embedding_client, vector_store, 
         )
         generator = AnswerGenerator(
             llm_client,

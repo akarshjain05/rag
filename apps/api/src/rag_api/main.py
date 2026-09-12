@@ -132,11 +132,6 @@ def create_app(
     retriever = HybridRetriever(
         embedding_client,
         vector_store,
-        dense_top_k=settings.dense_top_k,
-        sparse_top_k=settings.sparse_top_k,
-        rrf_k=settings.rrf_k,
-        dense_weight=settings.rrf_dense_weight,
-        sparse_weight=settings.rrf_sparse_weight,
         reranker=reranker,
         rerank_candidate_pool=settings.rerank_candidate_pool,
         context_pruning_threshold=settings.context_pruning_threshold,

@@ -32,10 +32,6 @@ class LLMClient(ABC):
     @abstractmethod
     def build_image_content(self, image_url: str) -> dict: ...
 
-    @abstractmethod
-    def build_image_content(self, image_url: str) -> dict:
-        return {"type": "image_url", "image_url": {"url": image_url}}
-
     def describe_image(self, image_bytes: bytes, media_type: str, prompt: str) -> str: ...
 
 
@@ -44,7 +40,7 @@ class AnthropicLLMClient(LLMClient):
     def provider_name(self) -> str:
         return 'anthropic'
 
-    def __init__(self, model: str = "claude-sonnet-4-5", api_key: str | None = None, max_tokens: int = 1024, timeout: float = 30.0):
+    def __init__(self, model: str = "claude-sonnet-4-5", api_key: str | None = None, max_tokens: int = 1024, timeout: float = 120.0):
         from anthropic import Anthropic  # local import: optional dependency
 
         if not api_key:
@@ -133,7 +129,7 @@ class OpenAILLMClient(LLMClient):
     def provider_name(self) -> str:
         return 'openai'
 
-    def __init__(self, model: str = "gpt-4o", api_key: str | None = None, base_url: str | None = None, max_tokens: int = 1024, timeout: float = 30.0):
+    def __init__(self, model: str = "gpt-4o", api_key: str | None = None, base_url: str | None = None, max_tokens: int = 1024, timeout: float = 120.0):
         from openai import OpenAI  # local import: optional dependency
 
         if not api_key:

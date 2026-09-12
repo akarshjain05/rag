@@ -109,11 +109,9 @@ class GenerationResult:
     cost: float | None = None
 
 
-def _build_context_block(chunks: list[RetrievedChunk], pruning_threshold: float = 0.30) -> str:
+def _build_context_block(chunks: list[RetrievedChunk]) -> str:
     blocks = []
     for i, c in enumerate(chunks, start=1):
-        if c.rerank_score is not None and c.rerank_score < pruning_threshold:
-            continue
 
         loc = [c.metadata.get("source_document", "unknown")]
         section = c.metadata.get("section_heading")
@@ -285,16 +283,11 @@ class AnswerGenerator:
                 citation_coverage_basis="extractive",
                 composite_confidence=composite,
             )
-
-        # DYNAMIC CONTEXT PRUNING: Only pass chunks that survived the threshold to the LLM to prevent 'Lost in the Middle' hallucinations!
-        pruned_chunks = chunks
-        if self.low_confidence_threshold is not None:
-            pruned_chunks = [c for c in chunks if (c.rerank_score is None) or (c.rerank_score >= self.low_confidence_threshold)]
             
-        context_block = _build_context_block(pruned_chunks, self.low_confidence_threshold)
+        context_block = _build_context_block(chunks)
         user_prompt_text = f"<excerpts>\n{context_block}\n</excerpts>\n\n<question>{query}</question>"
 
-        if _looks_ambiguous(query, pruned_chunks):
+        if _looks_ambiguous(query, chunks):
             user_prompt_text += (
                 "\n\n<ambiguity_signal>The excerpts define more than one distinct term sharing "
                 "the same root word as this question. Per the ambiguity_rules, address the "

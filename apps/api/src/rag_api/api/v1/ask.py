@@ -5,9 +5,12 @@ from rag_api.api.deps import get_orchestrator
 from rag_api.api.auth import verify_api_key
 from rag_api.core.logging import log
 
+from rag_api.core.rate_limit import limiter
+
 router = APIRouter(prefix="", tags=["ask"], dependencies=[Depends(verify_api_key)])
 
 @router.post("/ask", response_model=QueryResponse)
+@limiter.limit("20/minute")
 async def ask(
     payload: QueryRequest,
     request: Request,

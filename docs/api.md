@@ -99,8 +99,6 @@ Removes every chunk (across all chunking strategies) belonging to
 ## `GET /v1/images/{image_hash}`
 
 Serves a previously-extracted embedded image by content hash.
-Image storage during ingestion is currently disabled by a pipeline bug
-(see gaps doc) — this endpoint has no images to serve until that's fixed.
 
 ## Planned: `POST /v1/ingest/large` and `GET /v1/ingest/jobs/{job_id}`
 
