@@ -61,11 +61,11 @@ class Settings(BaseSettings):
     dedup_similarity_threshold: float = 0.95
 
     # --- Retrieval ------------------------------------------------------------
-    hybrid_top_k: int = 5
+    hybrid_top_k: int = 3
     # --- Reranking (optional second pass over the fused pool) -----------------
     reranker_provider: str = "cross_encoder"  # none | cross_encoder | llm_judge
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-    rerank_candidate_pool: int = 150
+    rerank_candidate_pool: int = 25
 
     # --- Generation quality: citation verification, confidence, graceful "I don't know" ---
     citation_verification_enabled: bool = True  # LLM-as-judge; no-ops automatically without an LLM client
