@@ -94,7 +94,7 @@ export default function KnowledgeBase() {
  };
 
  return (
- <div className="flex-1 p-8 flex flex-col overflow-hidden">
+ <div className="flex-1 flex flex-col overflow-hidden bg-surface-card">
  <input 
   ref={fileInputRef} 
   type="file" 
@@ -103,8 +103,7 @@ export default function KnowledgeBase() {
   className="hidden" 
   disabled={uploading} 
  />
- <div className="flex justify-between items-center mb-6">
- <h2 className="text-xl font-semibold">Knowledge Base</h2>
+ <div className="flex justify-end items-center p-6 border-b border-border">
  <div className="relative">
  {selectedDocs.size > 0 ? (
  <button onClick={handleBulkDelete} className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint rounded-sm text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer">
@@ -123,22 +122,25 @@ export default function KnowledgeBase() {
  </div>
  
  {uploading && progress && (
- <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-sm flex justify-between items-center text-sm text-blue-500">
+ <div className="m-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-sm flex justify-between items-center text-sm text-blue-500">
  <span>{progress.msg}</span>
  <span className="font-mono">{progress.pct}</span>
  </div>
  )}
 
- <div className="flex-1 overflow-auto bg-surface-card rounded-sm border border-border">
+ <div className="flex-1 overflow-auto">
  {loading ? (
  <div className="p-8 text-center text-ink-secondary">Loading documents...</div>
  ) : docs.length === 0 ? (
  <div className="p-12 text-center text-ink-secondary flex flex-col items-center">
- <div className="cursor-pointer hover:opacity-50 transition-opacity" onClick={() => fileInputRef.current?.click()}>
-   <Folder className="w-12 h-12 mb-4 opacity-20 hover:opacity-100 transition-opacity mx-auto" />
+ <div 
+   className="cursor-pointer w-20 h-20 rounded-full flex items-center justify-center transition-colors hover:bg-surface-card" 
+   onClick={() => fileInputRef.current?.click()}
+ >
+   <Folder className="w-10 h-10 opacity-40 hover:opacity-80 transition-opacity" />
  </div>
- <p>Your knowledge base is empty.</p>
- <p className="text-sm mt-2 opacity-60">Upload PDFs, Markdown, or text files to begin.</p>
+ <p className="mt-2">Your knowledge base is empty.</p>
+ <p className="text-sm mt-1 opacity-60">Upload PDFs, Markdown, or text files to begin.</p>
  </div>
  ) : (
  <table className="w-full text-sm text-left">
