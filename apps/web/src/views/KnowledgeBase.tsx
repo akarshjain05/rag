@@ -103,7 +103,7 @@ export default function KnowledgeBase() {
   className="hidden" 
   disabled={uploading} 
  />
- <div className="flex justify-end items-center p-6 border-b border-border">
+ <div className="flex justify-end items-center p-6">
  <div className="relative">
  {selectedDocs.size > 0 ? (
  <button onClick={handleBulkDelete} className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint rounded-sm text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer">
