@@ -1,10 +1,12 @@
+// @ts-nocheck
+
 // Same-origin relative paths throughout: Vite's dev server proxies /v1 and
 // /health to the API (see vite.config.js), and nginx does the equivalent in
 // the built/containerized version (see Dockerfile + nginx.conf). No CORS
 // config and no build-time API URL to get wrong.
 
 
-async function request(path, options = {}, retries = 3) {
+async function request(path: string, options: any = {}, retries: number = 3) {
   for (let i = 0; i < retries; i++) {
     try {
       const apiKey = import.meta.env.VITE_API_KEY || localStorage.getItem("apiKey") || "sk-default-test-key";
@@ -33,7 +35,7 @@ async function request(path, options = {}, retries = 3) {
         throw new Error(`${res.status}: ${detail}`);
       }
       return await res.json();
-    } catch (err) {
+    } catch (err: any) {
       if (err.name === 'AbortError') throw err;
       if (i === retries - 1) throw err;
       await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));

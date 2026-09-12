@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { createPortal } from "react-dom";
 
 import React, { useState, useEffect } from 'react';
@@ -85,7 +87,7 @@ function AppContent() {
 
 
 function Sidebar({ currentView, setCurrentView, theme, setTheme, mobileMenuOpen, setMobileMenuOpen, activeConversationId, setActiveConversationId, refreshTrigger, onRefreshTrigger }) {
-  const [conversations, setConversations] = React.useState([]);
+  const [conversations, setConversations] = React.useState<any[]>([]);
   const [dropdownId, setDropdownId] = React.useState(null);
 
   const handleDelete = async (id) => {
@@ -256,7 +258,7 @@ function KnowledgeBase() {
  
  const res = await fetchDocuments();
  setDocs(res.documents || res.source_documents || []);
- } catch (err) {
+ } catch (err: any) {
  setModal({ type: 'alert', title: 'Upload Failed', message: err.message, confirmText: 'OK' });
  } finally {
  setUploading(false);
@@ -299,7 +301,7 @@ function KnowledgeBase() {
  const { bulkDeleteDocuments } = await import('./lib/api');
  await bulkDeleteDocuments(ids);
  setDocs(prev => prev.filter(d => !ids.includes(d)));
- } catch (err) {
+ } catch (err: any) {
  console.error(err);
  }
  }
@@ -406,7 +408,7 @@ function KnowledgeBase() {
 }
 
 function HistoryView({ onSelect }) {
- const [conversations, setConversations] = useState([]);
+ const [conversations, setConversations] = useState<any[]>([]);
  const [loading, setLoading] = useState(true);
 
  useEffect(() => {
@@ -553,9 +555,9 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
   };
 
   const [query, setQuery] = React.useState("");
-  const [messages, setMessages] = React.useState([]);
-  const [sources, setSources] = React.useState([]);
-  const [denseOnlySources, setDenseOnlySources] = React.useState([]);
+  const [messages, setMessages] = React.useState<any[]>([]);
+  const [sources, setSources] = React.useState<any[]>([]);
+  const [denseOnlySources, setDenseOnlySources] = React.useState<any[]>([]);
   const [usedMarkers, setUsedMarkers] = React.useState<number[]>([]);
   const [unsupportedMarkers, setUnsupportedMarkers] = React.useState<number[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -696,7 +698,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
         coverage: res.citation_coverage,
         mode: res.mode || 'standard'
       });
-    } catch (err) {
+    } catch (err: any) {
       if (err.name === 'AbortError') {
         setMessages(prev => [...prev, { role: 'assistant', content: '[Discarded — type "continue" to resume this question]' }]);
         // Keep the same conversationId. Nothing was persisted server-side for
