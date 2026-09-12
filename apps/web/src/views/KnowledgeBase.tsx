@@ -95,7 +95,7 @@ export default function KnowledgeBase() {
  };
 
  return (
- <div className="flex-1 flex flex-col overflow-hidden bg-surface-card">
+ <div className="flex-1 flex flex-col overflow-hidden bg-surface-card relative">
  <input 
   ref={fileInputRef} 
   type="file" 
@@ -104,16 +104,16 @@ export default function KnowledgeBase() {
   className="hidden" 
   disabled={uploading} 
  />
- <div className="flex justify-end items-center p-6">
+ <div className="absolute top-0 right-0 p-6 z-10">
  <div className="relative">
  {selectedDocs.size > 0 ? (
- <button onClick={handleBulkDelete} className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint rounded-sm text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer">
+ <button onClick={handleBulkDelete} className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint rounded-sm text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer bg-surface-card">
  <Trash2 className="w-4 h-4" /> Delete {selectedDocs.size} Selected
  </button>
  ) : (
  <button 
   onClick={() => fileInputRef.current?.click()} 
-  className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint hover:text-accent rounded-sm text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer" 
+  className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint hover:text-accent rounded-sm text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer bg-surface-card shadow-sm" 
   disabled={uploading}
  >
  {uploading ? "Uploading..." : "+ Upload File"}
@@ -155,10 +155,11 @@ export default function KnowledgeBase() {
    </p>
  </div>
  ) : (
+ <div className="pt-20 px-6 pb-6">
  <table className="w-full text-sm text-left">
  <thead className="text-xs uppercase bg-surface-card border-b border-border">
  <tr>
- <th className="px-6 py-4 w-12 text-center">
+ <th className="px-4 py-4 w-12 text-center">
  <input 
  type="checkbox" 
  className="rounded border-border cursor-pointer"
@@ -169,14 +170,14 @@ export default function KnowledgeBase() {
  }}
  />
  </th>
- <th className="px-6 py-4 font-medium text-ink-secondary">Document Name</th>
- <th className="px-6 py-4 font-medium text-ink-secondary text-right">Actions</th>
+ <th className="px-4 py-4 font-medium text-ink-secondary">Document Name</th>
+ <th className="px-4 py-4 font-medium text-ink-secondary text-right">Actions</th>
  </tr>
  </thead>
  <tbody>
  {(docs || []).map((doc, i) => (
- <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors group">
- <td className="px-6 py-4 w-12 text-center">
+ <tr key={i} className="border-b border-border/50 hover:bg-surface-sunken transition-colors group">
+ <td className="px-4 py-4 w-12 text-center">
  <input 
  type="checkbox" 
  className="rounded border-border cursor-pointer"
@@ -184,11 +185,11 @@ export default function KnowledgeBase() {
  onChange={() => toggleSelect(doc)}
  />
  </td>
- <td className="px-6 py-4 flex items-center gap-3">
+ <td className="px-4 py-4 flex items-center gap-3">
  <FileText className="w-4 h-4 text-ink-muted" />
  {doc}
  </td>
- <td className="px-6 py-4 text-right">
+ <td className="px-4 py-4 text-right">
  <button onClick={() => handleDelete(doc)} className="text-ink-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1 cursor-pointer">
  <Trash2 className="w-4 h-4" />
  </button>
@@ -197,6 +198,7 @@ export default function KnowledgeBase() {
  ))}
  </tbody>
  </table>
+ </div>
  )}
  </div>
  <Modal isOpen={!!modal} onClose={() => setModal(null)} {...modal} isAlert={modal?.type === "alert"} />
