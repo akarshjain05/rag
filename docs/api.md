@@ -33,7 +33,7 @@ Multipart file upload, repeatable `files` field. Accepts `.md`,
 `.markdown`, `.txt`, `.html`, `.htm`, `.pdf`, `.docx`, `.pptx`, `.xlsx`.
 Optional `?chunking_strategy=` query param overrides the configured
 default for this call. One broken file does not fail the whole batch —
-check each report's `error` field.
+check each report's `error` field. The `limit_upload_size` middleware correctly handles chunked transfer-encoding requests (returns 411 Length Required).
 
 ```bash
 curl -X POST localhost:8000/v1/ingest \
@@ -82,8 +82,10 @@ curl -X POST localhost:8000/v1/ask \
 | `compare_dense_only` | bool, default false | also retrieves with dense search alone (no sparse, no fusion, no reranking) and returns it in `dense_only_sources`, for side-by-side comparison. Only one answer is generated either way |
 | `image_url` | string, optional | analyze an image alongside the text context |
 
+Disconnected client requests actively cancel their background `gen_task` to prevent runaway LLM costs.
+
 Full response shape: [`03-request-response-schemas.md`](./03-request-response-schemas.md).
-`mode` is one of `"llm"`, `"extractive"`, `"low_confidence"`, or `"no_context"`.
+`mode` is one of `"llm"`, `"extractive"`, `"low_confidence"`, `"no_context"`, or `"expanded_query"`.
 
 ## `GET /v1/documents`
 
@@ -130,7 +132,7 @@ browser-based callers.
 
 `/v1/ask` is the most expensive route — up to five sequential LLM calls
 per request in the worst case (condensation + HyDE + CRAG expansion +
-generation + citation verification). `slowapi` is actively enforced on this route. It is currently limited to **20 requests per minute** to prevent runaway LLM costs.
+generation + citation verification). `slowapi` is actively enforced on this route. It is currently limited to **20 requests per minute** to prevent runaway LLM costs. Additionally, `@limiter.limit("5/minute")` was added to `/v1/ingest` and `/v1/ingest/large` endpoints.
 # Request / Response Schemas
 
 Source: `rag_api/schemas/schemas.py` (pydantic — the HTTP contract layer;
@@ -180,7 +182,9 @@ kept separate from the plain-dataclass pipeline models in
 | `content_type` | `str \| None` | `"text"` or one of the image content types |
 | `image_url` | `str \| None` | `/v1/images/{hash}` if this chunk carries an image |
 | `dense_rank` | `int \| None` | — |
+| `dense_score` | `float \| None` | passed through from retrieval |
 | `sparse_rank` | `int \| None` | `None` when the chunk came from dense-only retrieval |
+| `sparse_score` | `float \| None` | passed through from retrieval |
 | `rerank_score` | `float \| None` | `None` when no reranker is configured |
 
 ## `IngestResponse` / `IngestReportSchema`

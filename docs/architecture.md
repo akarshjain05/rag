@@ -17,7 +17,7 @@ Three layers:
   coupling, so it is usable as a library or from a script.
 - **`rag_api/adapters/`** — everything that talks to an external system:
   Qdrant, embedding providers (OpenAI/local), LLM providers
-  (Anthropic/OpenAI), image storage, sparse indexing.
+  (Anthropic/OpenAI), image storage, sparse indexing. (Note: OpenAI client is configured with `max_retries=2` to gracefully absorb 429s).
 - **`rag_api/api/`** — the FastAPI HTTP surface on top of the above.
 
 `apps/web` is a separate React/Vite dashboard that talks to the API over
@@ -45,6 +45,9 @@ documents (.md/.txt/.html/.pdf/.docx/.pptx/.xlsx)
 
                       QUERY
 User question
+        │
+        ▼
+ [Multi-hop decomposition] orchestration layer decomposes complex questions into targeted sub-queries, executes them concurrently, and fuses the results
         │
         ▼
  [query condensation]   only if there is prior conversation history (drops context if entirely unrelated)
@@ -244,7 +247,8 @@ straight to the final `top_k`.
 
 ## Query pre-processing (`/v1/ask`, all optional)
 
-1. **Query condensation** (`query_condensation.py::condense_query`) —
+1. **Multi-hop query decomposition** — the orchestration layer decomposes complex questions into targeted sub-queries, executes them concurrently, and fuses the results.
+2. **Query condensation** (`query_condensation.py::condense_query`) —
    only runs if the request carries a `conversation_id` with prior
    history; rewrites a follow-up question into a standalone query. To protect
    vector integrity, the LLM is constrained to strict JSON outputs, preventing
@@ -253,7 +257,7 @@ straight to the final `top_k`.
    and appends it to the search query to improve vector-space overlap
    with the real answer.
 3. **Semantic Caching** — instantly returns previously generated answers
-   if the exact intent (Cosine Similarity > 0.95) was recently asked. Includes
+   if the exact intent (Cosine Similarity > 0.95) was recently asked. The semantic cache hits are deterministic now: the keys strictly incorporate `top_k`, `temporal_filter`, and `verify_citations`. Includes
    production-grade resilience mechanisms:
    - **Negative Cache Prevention:** Refuses to cache low-confidence or "I don't know" answers.
    - **Fail-Open Timeouts:** 250ms strict timeouts gracefully bypass the cache if the vector DB hangs.
@@ -265,7 +269,7 @@ straight to the final `top_k`.
 5. **CRAG expansion loop** — after the first retrieval, if a reranker is
    configured and the top rerank score is `< 0.80`, the query is expanded
    with LLM-generated synonyms/architectural terms and retrieval is re-run.
-   The expanded result is kept only if its top score actually improved.
+   The expanded result is kept only if its top score actually improved (properly surfacing `mode="expanded_query"` if it triggers).
 
 Each of these is a separate LLM call. Chained together with generation
 and citation verification, a single request can issue **up to five**
@@ -291,6 +295,7 @@ measured.
   verbatim with `[1]` — a zero-API-key demo path.
 - In `mode="llm"`, every claim is expected to carry a `[N]` citation
   marker referencing a numbered context excerpt.
+- Disconnected client requests actively cancel their background `gen_task` to prevent runaway LLM costs.
 
 ## Citation validation — two independent layers
 
@@ -321,8 +326,7 @@ measured.
   whole question (only available when citation verification ran).
 
 `compute_composite_confidence()` combines them as a weighted average
-(retrieval 50%, coverage 30%, completeness 20%), documented as exactly
-that — a consistent ordinal signal for this system, not a calibrated
+(retrieval 50%, coverage 30%, completeness 20%), correctly scaling relative weights when citation verification metrics are missing to avoid false 1.0 inflation. This acts as a consistent ordinal signal for this system, not a calibrated
 cross-system probability.
 
 ## Related documents
@@ -348,7 +352,7 @@ and can run as a library or script.
 | `PageText` | One page/slide of extracted text | `page_number` (1-indexed), `text`, `extraction_method` (`native`/`ocr`) |
 | `ExtractedImage` | An embedded image found during loading | `image_hash`, `page_number`, `content_type` (`image_ocr`/`image_caption`/`image_untranscribed`), `derived_text` |
 | `Chunk` | A chunk ready for embedding + indexing | `text`, `source_document`, `chunking_strategy`, `chunk_index`, `chunk_id` (derived: `{source}::{strategy}::{index}`), `section_heading`, `page_number` |
-| `RetrievedChunk` | A chunk returned from retrieval, with scoring provenance | `dense_rank`, `sparse_rank`, `fused_score`, `rerank_score`, `dense_similarity` |
+| `RetrievedChunk` | A chunk returned from retrieval, with scoring provenance | `dense_rank`, `sparse_rank`, `dense_score`, `sparse_score`, `fused_score`, `rerank_score`, `dense_similarity` |
 | `ClaimVerification` | One sentence-level claim from a generated answer | `claim_text`, `citation_markers`, `supported` (`True`/`False`/`None`=not checked), `support_level` (`full`/`partial`/`none`) |
 | `IngestReport` | Per-file ingestion result | `chunks_created`, `chunks_inserted`, `duplicates_skipped`, `chunks_skipped_low_quality`, `error` |
 

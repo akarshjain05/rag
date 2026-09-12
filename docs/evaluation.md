@@ -11,7 +11,7 @@ only checks whether the right chunks were found.
 
 ## Dataset
 
-57 hand-written examples (`eval/golden_qa.json`) against 8 fictional
+57 hand-written examples (`eval/aurora_qa.json`) against 8 fictional
 company policy documents (`eval/golden_corpus/`), across four categories:
 
 | Category | Count | What it tests |
@@ -36,7 +36,7 @@ python eval/run_eval_suite.py --dataset my_qa.json --docs-dir my_docs/
 
 **Needs a real LLM** (`LLM_PROVIDER=anthropic` or `openai`) — both judge
 metrics below require an LLM judge; there is no zero-API-key mode for
-this harness (unlike the main pipeline's extractive fallback).
+this harness (unlike the main pipeline's extractive fallback). The eval pipeline now properly catches `anthropic.RateLimitError` to gracefully handle rate limits during bulk evaluation.
 
 ## The two LLM-as-judge metrics
 
@@ -171,7 +171,7 @@ without any offline judge:
 | `retrieval_confidence` | exponentially-decayed weighted average of chunk similarity/rerank scores, sorted descending, weight `0.5^i` | a long tail of weak matches doesn't drag down a strong top hit; a sparse-only hit (no dense signal) contributes `0.0` |
 | `citation_coverage` | fraction of claims judged well-cited | basis is `"verified"` when an LLM judge actually checked support, `"structural"` when only "has a citation at all" was checkable, `"extractive"` (trivially `1.0`) in extractive mode |
 | `completeness` | LLM-judge 0–1 rating of whether the answer addresses the whole question | only computed when citation verification ran |
-| `composite_confidence` | `0.50 * retrieval + 0.30 * coverage + 0.20 * completeness` (missing sub-scores default to neutral values, not zero, before weighting) | a plain weighted mean, explicitly not a calibrated cross-system probability — a consistent ordinal signal for *this* system only |
+| `composite_confidence` | `0.50 * retrieval + 0.30 * coverage + 0.20 * completeness` (correctly scales relative weights when citation verification metrics are missing, avoiding false 1.0 inflation) | a plain weighted mean, explicitly not a calibrated cross-system probability — a consistent ordinal signal for *this* system only |
 
 ## Interpreting confidence numbers
 

@@ -23,8 +23,9 @@ graph TD
 
     %% Query Flow
     subgraph RETRIEVAL & GENERATION PIPELINE
-        Q[User Query] --> R1[Dense Search]
-        Q --> R2[Sparse Search]
+        Q[User Query] --> MD[Multi-Hop Decomposition]
+        MD -. Sub-queries .-> R1[Dense Search]
+        MD -. Sub-queries .-> R2[Sparse Search]
         
         R1 --> S[Reciprocal Rank Fusion]
         R2 --> S
