@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchDocuments, deleteDocument, ingest } from '../lib/api';
-import { Folder, FileText, Trash2 } from 'lucide-react';
+import { Folder, FileText, Trash2, CloudUpload } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 
 export default function KnowledgeBase() {
@@ -9,6 +9,7 @@ export default function KnowledgeBase() {
  const [loading, setLoading] = useState(true);
  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
  const [uploading, setUploading] = useState(false);
+ const [dragOver, setDragOver] = useState(false);
  const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
  const [modal, setModal] = useState<any>(null);
  const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,15 +133,26 @@ export default function KnowledgeBase() {
  {loading ? (
  <div className="p-8 text-center text-ink-secondary">Loading documents...</div>
  ) : docs.length === 0 ? (
- <div className="p-12 text-center text-ink-secondary flex flex-col items-center">
  <div 
-   className="cursor-pointer w-20 h-20 rounded-full flex items-center justify-center transition-colors hover:bg-surface-card" 
-   onClick={() => fileInputRef.current?.click()}
+   className="p-12 text-center text-ink-secondary flex flex-col items-center justify-center h-full"
+   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+   onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
+   onDrop={(e) => { e.preventDefault(); setDragOver(false); handleUpload({ target: { files: e.dataTransfer.files }}); }}
  >
-   <Folder className="w-10 h-10 opacity-40 hover:opacity-80 transition-opacity" />
- </div>
- <p className="mt-2">Your knowledge base is empty.</p>
- <p className="text-sm mt-1 opacity-60">Upload PDFs, Markdown, or text files to begin.</p>
+   <div 
+     className={`cursor-pointer w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-all duration-200 ${
+       dragOver ? 'bg-accent/20 scale-110' : 'bg-surface-sunken hover:bg-accent/10 hover:scale-105'
+     }`}
+     onClick={() => fileInputRef.current?.click()}
+   >
+     <CloudUpload className={`w-8 h-8 transition-colors ${dragOver ? 'text-accent' : 'text-ink-muted'}`} />
+   </div>
+   <p className="font-medium text-ink mb-1">
+     {dragOver ? 'Drop files here' : 'Your knowledge base is empty'}
+   </p>
+   <p className="text-sm opacity-60">
+     {dragOver ? '' : 'Drag & drop files here, or click to browse'}
+   </p>
  </div>
  ) : (
  <table className="w-full text-sm text-left">
