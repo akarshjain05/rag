@@ -64,7 +64,7 @@ export default function Sidebar({ currentView, setCurrentView, theme, setTheme, 
           {(conversations || []).map(c => (
             <div key={c.id} className={`group relative flex items-center rounded-md cursor-pointer transition-colors ${(currentView === 'chat' && activeConversationId === c.id) || dropdownId === c.id ? 'bg-canvas text-ink' : 'text-ink-secondary hover:text-ink hover:bg-canvas'}`}>
               <button
-                onClick={() => { setActiveConversationId(c.id); setCurrentView('chat'); setMobileMenuOpen(false); }}
+                onClick={() => { setActiveConversationId(c.id); setMobileMenuOpen(false); }}
                 className={`flex-1 text-left font-sans text-[13px] py-2.5 px-3 truncate rounded-md transition-colors cursor-pointer ${currentView === 'chat' && activeConversationId === c.id ? 'border-l-2 border-accent' : 'border-l-2 border-transparent'}`}
               >
                 {c.title}
