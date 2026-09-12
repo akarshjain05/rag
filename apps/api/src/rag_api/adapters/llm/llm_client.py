@@ -74,6 +74,81 @@ class AnthropicLLMClient(LLMClient):
                         continue
                 raise e
 
+    def generate_with_metrics(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> tuple[str, dict]:
+        import anthropic
+        import time
+        messages = list(history) if history else []
+        messages.append({"role": "user", "content": user})
+        
+        while True:
+            try:
+                start = time.time()
+                resp = self._client.messages.create(
+                    model=self._model,
+                    max_tokens=self._max_tokens,
+                    system=system,
+                    messages=messages,
+                )
+                total_latency = time.time() - start
+                ans = "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
+                cost = 0.0
+                if hasattr(resp, "usage") and resp.usage:
+                    if "sonnet" in self._model.lower():
+                        cost = (resp.usage.input_tokens * 3.0 + resp.usage.output_tokens * 15.0) / 1_000_000.0
+                    elif "haiku" in self._model.lower():
+                        cost = (resp.usage.input_tokens * 0.25 + resp.usage.output_tokens * 1.25) / 1_000_000.0
+                    elif "opus" in self._model.lower():
+                        cost = (resp.usage.input_tokens * 15.0 + resp.usage.output_tokens * 75.0) / 1_000_000.0
+                    else:
+                        cost = (resp.usage.input_tokens * 3.0 + resp.usage.output_tokens * 15.0) / 1_000_000.0
+                return ans, {"ttft": total_latency, "total_latency": total_latency, "cost": cost}
+            except anthropic.BadRequestError as e:
+                err_msg = str(e).lower()
+                if "too long" in err_msg or "context length" in err_msg or "exceed" in err_msg:
+                    if len(messages) > 1:
+                        messages.pop(0)
+                        if messages and messages[0].get("role") == "assistant":
+                            messages.pop(0)
+                        continue
+                raise e
+
+    def generate_with_metrics(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> tuple[str, dict]:
+        import anthropic
+        import time
+        messages = list(history) if history else []
+        messages.append({"role": "user", "content": user})
+        
+        while True:
+            try:
+                start = time.time()
+                resp = self._client.messages.create(
+                    model=self._model,
+                    max_tokens=self._max_tokens,
+                    system=system,
+                    messages=messages,
+                )
+                total_latency = time.time() - start
+                ans = "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
+                cost = 0.0
+                if hasattr(resp, "usage") and resp.usage:
+                    if "sonnet" in self._model.lower():
+                        cost = (resp.usage.input_tokens * 3.0 + resp.usage.output_tokens * 15.0) / 1_000_000.0
+                    elif "haiku" in self._model.lower():
+                        cost = (resp.usage.input_tokens * 0.25 + resp.usage.output_tokens * 1.25) / 1_000_000.0
+                    elif "opus" in self._model.lower():
+                        cost = (resp.usage.input_tokens * 15.0 + resp.usage.output_tokens * 75.0) / 1_000_000.0
+                    else:
+                        cost = (resp.usage.input_tokens * 3.0 + resp.usage.output_tokens * 15.0) / 1_000_000.0
+                return ans, {"ttft": total_latency, "total_latency": total_latency, "cost": cost}
+            except anthropic.BadRequestError as e:
+                err_msg = str(e).lower()
+                if "too long" in err_msg or "context length" in err_msg or "exceed" in err_msg:
+                    if len(messages) > 1:
+                        messages.pop(0)
+                        if messages and messages[0].get("role") == "assistant":
+                            messages.pop(0)
+                        continue
+                raise e
 
     def build_image_content(self, image_url: str) -> dict:
         import urllib.request
