@@ -32,6 +32,19 @@ jobs:
       run: |
         PYTHONPATH=apps/api/src pytest apps/api/tests/unit -v --cov=rag_api
 
+    - name: Run Evals and Check Regression
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      run: |
+        # Only run evals if we have API keys in CI (e.g., not on external PRs)
+        if [ -n "$GEMINI_API_KEY" ]; then
+          PYTHONPATH=apps/api/src python eval/run_eval_suite.py --dataset eval/golden_qa.json --docs-dir eval/golden_corpus --output eval/current_run.json
+          python eval/check_regression.py eval/aurora_baseline.json eval/current_run.json
+        else
+          echo "Skipping evals due to missing API keys"
+        fi
+
   frontend:
     runs-on: ubuntu-latest
     steps:

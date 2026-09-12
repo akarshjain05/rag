@@ -54,7 +54,7 @@ DEFAULT_CORPUS = Path(__file__).parent / "golden_corpus"
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
-    parser.add_argument("--docs-dir", type=Path, default=DEFAULT_CORPUS)
+    parser.add_argument("--output", type=str, default="eval/aurora_baseline.json"); parser.add_argument("--docs-dir", type=Path, default=DEFAULT_CORPUS)
     parser.add_argument("--compare-chunking-strategies", action="store_true")
     parser.add_argument(
         "--chunking-strategy", default="structure_aware", choices=[s.value for s in ChunkingStrategy]
@@ -142,7 +142,7 @@ def main() -> None:
                     print(f"GENERATED: {r.generated_answer}")
             print(json.dumps(summary, indent=2))
 
-            with open("eval/aurora_baseline.json", "w") as f:
+            with open(args.output, "w") as f:
                 json.dump(summary, f, indent=2)
 
 

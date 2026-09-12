@@ -64,6 +64,7 @@ class CitationVerifier:
             with tracer.start_as_current_span("verification_completeness.llm_call"):
                 raw = self.llm_client.generate(
                     'Rate how completely the answer addresses every part of the question, 0.0-1.0. '
+                    'CRITICAL: If the answer explicitly states that it cannot fully answer the question because information is missing from the provided excerpts, you MUST heavily penalize the completeness score (e.g., 0.0 if the core question is unanswered, or 0.5 if it is only a partial answer). '
                     'Respond with ONLY a JSON object: {"completeness": 0.8}. No other text.',
                     f"Question: {query}\n\nAnswer: {answer}",
                     history
@@ -87,6 +88,7 @@ class CitationVerifier:
             'the core claim but the claim omits a minor caveat/condition present in the excerpt), or "none" '
             '(unsupported or contradicted). '
             'Also rate how completely the answer addresses every part of the question, 0.0-1.0. '
+            'CRITICAL: If the answer explicitly states that it cannot fully answer the question because information is missing from the provided excerpts, you MUST heavily penalize the completeness score (e.g., 0.0 if the core question is unanswered, or 0.5 if it is only a partial answer). '
             'Respond with ONLY a JSON object: '
             '{"claims": {"1": "full", "2": "partial"}, "completeness": 0.8} '
             'A claim that states the correct core fact but omits a secondary exception or edge case is still well-supported.'
