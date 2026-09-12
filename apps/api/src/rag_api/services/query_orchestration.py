@@ -113,7 +113,7 @@ class QueryOrchestrationService:
                 chunking_strategy=strategy_value,
                 original_query=search_query,
                 document_filter=payload.document_filter,
-                # Option B: Removed hard temporal_filter to prevent Qdrant from outright dropping valid historical chunks
+                temporal_filter=temporal_filter,
             )
         )
         
@@ -134,6 +134,7 @@ class QueryOrchestrationService:
                             chunking_strategy=strategy_value,
                             original_query=search_query,
                             document_filter=payload.document_filter,
+                            temporal_filter=temporal_filter,
                         )
                     )
                     new_max_score = max([c.rerank_score or 0.0 for c in crag_chunks]) if crag_chunks else 0.0
