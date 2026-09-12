@@ -126,12 +126,11 @@ credentials or an API key are in play, since a wildcard origin combined
 with permissive methods/headers defeats the purpose of the key check for
 browser-based callers.
 
-## Rate limiting (planned)
+## Rate limiting (Active)
 
 `/v1/ask` is the most expensive route — up to five sequential LLM calls
 per request in the worst case (condensation + HyDE + CRAG expansion +
-generation + citation verification). A per-key or per-IP rate limit
-(e.g. `slowapi`) is planned ahead of any public exposure.
+generation + citation verification). `slowapi` is actively enforced on this route. It is currently limited to **20 requests per minute** to prevent runaway LLM costs.
 # Request / Response Schemas
 
 Source: `rag_api/schemas/schemas.py` (pydantic — the HTTP contract layer;

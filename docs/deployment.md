@@ -137,10 +137,7 @@ upper-cased (e.g. `embedding_provider` → `EMBEDDING_PROVIDER`).
 
 | Field | Default | Status |
 |---|---|---|
-| `dense_top_k` / `sparse_top_k` | `150` / `150` | **`sparse_top_k` currently unread** — Qdrant's hybrid prefetch is hardcoded to `limit=60` internally |
 | `hybrid_top_k` | `5` | — |
-| `rrf_k` | `60` | **currently unread** — RRF constant is Qdrant's internal default, not settings-driven |
-| `rrf_dense_weight` / `rrf_sparse_weight` | `1.0` / `1.0` | **currently unread** |
 
 ## Reranking
 

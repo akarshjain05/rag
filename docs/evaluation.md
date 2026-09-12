@@ -148,9 +148,11 @@ correctly on top of it.
 | Metric | Source | Range | `None` when |
 |---|---|---|---|
 | `answer_correct` | `AnswerCorrectnessJudge` | `bool \| None` | judge response unparseable |
-| `faithfulness` | `FaithfulnessJudge.grounded_fraction` | `[0,1] \| None` | judge response unparseable; `1.0` vacuously if the answer had zero claims |
+| `answer_relevance` | `AnswerRelevanceJudge` | `[0,1] \| None` | LLM-as-a-judge scores relevance of response |
+| `citation_accuracy` | `CitationAccuracyJudge` | `[0,1] \| None` | LLM-as-a-judge verifies cited chunks actually prove the claim |
+| `faithfulness` | `FaithfulnessJudge.grounded_fraction` | `[0,1] \| None` | Now uses Chain-of-Thought for rigorous verification |
 | `retrieval_relevance` | `compute_retrieval_relevance` | `[0,1] \| None` | `None` specifically for `unanswerable` examples — no expected documents exist to score recall against |
-| `citation_accuracy` | pipeline's own `citation_coverage` | `[0,1] \| None` | read directly from the live `GenerationResult`, not recomputed |
+| `citation_coverage` | pipeline's own `citation_coverage` | `[0,1] \| None` | read directly from the live `GenerationResult`, not recomputed |
 
 `summarize_results()` averages each metric only over cases that produced
 a non-`None` value for it (`_mean`) — a structurally-inapplicable metric
