@@ -1,7 +1,7 @@
 // @ts-nocheck
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchDocuments, deleteDocument, ingest } from '../lib/api';
-import { Folder, FileText, Trash2, Upload, CloudUpload } from 'lucide-react';
+import { Folder, FileText, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 
 export default function KnowledgeBase() {
@@ -11,16 +11,15 @@ export default function KnowledgeBase() {
  const [uploading, setUploading] = useState(false);
  const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
  const [modal, setModal] = useState<any>(null);
- const [dragOver, setDragOver] = useState(false);
  const fileInputRef = useRef<HTMLInputElement>(null);
 
- const processFiles = useCallback(async (files: FileList | File[]) => {
- if (!files || files.length === 0) return;
+ const handleUpload = async (e) => {
+ if (!e.target.files?.length) return;
  setUploading(true);
- setDragOver(false);
  setProgress({ pct: 0, msg: "Starting upload..." });
  try {
- const uploadRes = await ingest(files, (pct, msg) => {
+ const { ingest, fetchDocuments } = await import('../lib/api');
+ const uploadRes = await ingest(e.target.files, (pct, msg) => {
  setProgress({ pct, msg });
  }, null);
  
@@ -38,40 +37,18 @@ export default function KnowledgeBase() {
  setProgress(null);
  if (fileInputRef.current) fileInputRef.current.value = '';
  }
- }, []);
-
- const handleUpload = (e) => {
- processFiles(e.target.files);
  };
 
- const handleDrop = useCallback((e: React.DragEvent) => {
- e.preventDefault();
- e.stopPropagation();
- setDragOver(false);
- if (e.dataTransfer.files?.length) {
-   processFiles(e.dataTransfer.files);
- }
- }, [processFiles]);
-
- const handleDragOver = useCallback((e: React.DragEvent) => {
- e.preventDefault();
- e.stopPropagation();
- setDragOver(true);
- }, []);
-
- const handleDragLeave = useCallback((e: React.DragEvent) => {
- e.preventDefault();
- e.stopPropagation();
- setDragOver(false);
- }, []);
 
  useEffect(() => {
+ import('../lib/api').then(({ fetchDocuments }) => {
  fetchDocuments().then(res => {
  setDocs(res.source_documents || []);
  setLoading(false);
  }).catch(err => {
  console.error(err);
  setLoading(false);
+ });
  });
  }, []);
 
@@ -102,7 +79,6 @@ export default function KnowledgeBase() {
  }
  });
  };
-
  const handleDelete = (doc) => {
  setModal({
  type: 'confirm',
@@ -119,90 +95,59 @@ export default function KnowledgeBase() {
 
  return (
  <div className="flex-1 p-8 flex flex-col overflow-hidden">
- {/* Hidden file input — never visible, triggered via ref */}
- <input
-   ref={fileInputRef}
-   type="file"
-   multiple
-   onChange={handleUpload}
-   className="hidden"
-   disabled={uploading}
-   accept=".pdf,.md,.txt,.html,.htm,.docx,.csv,.json"
+ <input 
+  ref={fileInputRef} 
+  type="file" 
+  multiple 
+  onChange={handleUpload} 
+  className="hidden" 
+  disabled={uploading} 
  />
-
  <div className="flex justify-between items-center mb-6">
  <h2 className="text-xl font-semibold">Knowledge Base</h2>
- <div className="flex items-center gap-3">
+ <div className="relative">
  {selectedDocs.size > 0 ? (
- <button onClick={handleBulkDelete} className="px-4 py-2 border border-red-400 text-red-400 hover:bg-red-400/10 rounded-md text-sm font-medium transition-colors flex items-center gap-2">
+ <button onClick={handleBulkDelete} className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint rounded-sm text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer">
  <Trash2 className="w-4 h-4" /> Delete {selectedDocs.size} Selected
  </button>
  ) : (
- <button
-   onClick={() => fileInputRef.current?.click()}
-   disabled={uploading}
-   className="px-4 py-2 bg-accent text-white hover:bg-accent/90 rounded-md text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm hover:shadow-md"
+ <button 
+  onClick={() => fileInputRef.current?.click()} 
+  className="px-4 py-2 border border-accent text-accent hover:bg-accent-tint hover:text-accent rounded-sm text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer" 
+  disabled={uploading}
  >
- <Upload className="w-4 h-4" />
- {uploading ? "Uploading..." : "Upload Files"}
+ {uploading ? "Uploading..." : "+ Upload File"}
  </button>
  )}
  </div>
  </div>
  
  {uploading && progress && (
- <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-md flex justify-between items-center text-sm text-blue-400">
- <div className="flex items-center gap-3">
-   <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-   <span>{progress.msg}</span>
- </div>
- <span className="font-mono text-xs bg-blue-500/20 px-2 py-1 rounded">{progress.pct}%</span>
+ <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-sm flex justify-between items-center text-sm text-blue-500">
+ <span>{progress.msg}</span>
+ <span className="font-mono">{progress.pct}</span>
  </div>
  )}
 
- <div
-   className={`flex-1 overflow-auto bg-surface-card rounded-md border-2 transition-all duration-200 ${
-     dragOver
-       ? 'border-accent border-dashed bg-accent/5 scale-[1.005]'
-       : 'border-border'
-   }`}
-   onDrop={handleDrop}
-   onDragOver={handleDragOver}
-   onDragLeave={handleDragLeave}
- >
+ <div className="flex-1 overflow-auto bg-surface-card rounded-sm border border-border">
  {loading ? (
- <div className="p-8 text-center text-ink-secondary">
-   <div className="w-6 h-6 border-2 border-ink-muted border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-   Loading documents...
- </div>
+ <div className="p-8 text-center text-ink-secondary">Loading documents...</div>
  ) : docs.length === 0 ? (
- <div
-   className="p-16 text-center text-ink-secondary flex flex-col items-center justify-center h-full cursor-pointer group"
-   onClick={() => fileInputRef.current?.click()}
- >
- <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 transition-all duration-200 ${
-   dragOver
-     ? 'bg-accent/20 scale-110'
-     : 'bg-surface-canvas group-hover:bg-accent/10'
- }`}>
-   <CloudUpload className={`w-8 h-8 transition-colors ${dragOver ? 'text-accent' : 'text-ink-muted group-hover:text-accent'}`} />
+ <div className="p-12 text-center text-ink-secondary flex flex-col items-center">
+ <div className="cursor-pointer hover:opacity-50 transition-opacity" onClick={() => fileInputRef.current?.click()}>
+   <Folder className="w-12 h-12 mb-4 opacity-20 hover:opacity-100 transition-opacity mx-auto" />
  </div>
- <p className="text-base font-medium text-ink mb-1">
-   {dragOver ? 'Drop files here' : 'Your knowledge base is empty'}
- </p>
- <p className="text-sm opacity-60 mb-4">
-   {dragOver ? '' : 'Drag & drop files here, or click to browse'}
- </p>
- <p className="text-xs opacity-40">Supports PDF, Markdown, TXT, HTML, DOCX, CSV, JSON</p>
+ <p>Your knowledge base is empty.</p>
+ <p className="text-sm mt-2 opacity-60">Upload PDFs, Markdown, or text files to begin.</p>
  </div>
  ) : (
  <table className="w-full text-sm text-left">
- <thead className="text-xs uppercase bg-surface-card border-b border-border sticky top-0">
+ <thead className="text-xs uppercase bg-surface-card border-b border-border">
  <tr>
  <th className="px-6 py-4 w-12 text-center">
  <input 
  type="checkbox" 
- className="rounded border-border accent-accent cursor-pointer"
+ className="rounded border-border cursor-pointer"
  checked={docs.length > 0 && selectedDocs.size === docs.length}
  onChange={(e) => {
  if (e.target.checked) setSelectedDocs(new Set(docs));
@@ -210,35 +155,27 @@ export default function KnowledgeBase() {
  }}
  />
  </th>
- <th className="px-6 py-4 font-medium text-ink-secondary tracking-wider">Document Name</th>
- <th className="px-6 py-4 font-medium text-ink-secondary text-right tracking-wider">Actions</th>
+ <th className="px-6 py-4 font-medium text-ink-secondary">Document Name</th>
+ <th className="px-6 py-4 font-medium text-ink-secondary text-right">Actions</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-border">
+ <tbody>
  {(docs || []).map((doc, i) => (
- <tr key={i} className="hover:bg-surface-canvas/50 transition-colors group">
+ <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors group">
  <td className="px-6 py-4 w-12 text-center">
  <input 
  type="checkbox" 
- className="rounded border-border accent-accent cursor-pointer"
+ className="rounded border-border cursor-pointer"
  checked={selectedDocs.has(doc)}
  onChange={() => toggleSelect(doc)}
  />
  </td>
- <td className="px-6 py-4">
- <div className="flex items-center gap-3">
-   <div className="w-8 h-8 rounded-md bg-accent/10 flex items-center justify-center flex-shrink-0">
-     <FileText className="w-4 h-4 text-accent" />
-   </div>
-   <span className="font-medium truncate">{doc}</span>
- </div>
+ <td className="px-6 py-4 flex items-center gap-3">
+ <FileText className="w-4 h-4 text-ink-muted" />
+ {doc}
  </td>
  <td className="px-6 py-4 text-right">
- <button
-   onClick={() => handleDelete(doc)}
-   aria-label={`Delete ${doc}`}
-   className="text-ink-muted hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all p-2 rounded-md"
- >
+ <button onClick={() => handleDelete(doc)} className="text-ink-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1 cursor-pointer">
  <Trash2 className="w-4 h-4" />
  </button>
  </td>
@@ -252,3 +189,4 @@ export default function KnowledgeBase() {
  </div>
  );
 }
+
