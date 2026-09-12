@@ -18,7 +18,6 @@ class ErrorBoundary extends React.Component<any, any> {
  componentDidCatch(error, info) {
  this.setState({ info });
  console.error("ErrorBoundary caught an error", error, info);
- if ((window as any).Sentry) { (window as any).Sentry.captureException(error, { extra: info }); }
  }
  render() {
  if (this.state.hasError) {
@@ -42,7 +41,7 @@ export default function App() {
 }
 
 function AppContent() {
- const [currentView, setCurrentView] = useState<'chat' | 'knowledge' | 'history' | 'insights' | 'settings'>('chat');
+ const [currentView, setCurrentView] = useState<'chat' | 'knowledge' | 'history' | 'insights'>('chat');
  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
  const [refreshTrigger, setRefreshTrigger] = useState(0);
  
@@ -434,7 +433,7 @@ function HistoryView({ onSelect }) {
  <button 
  key={c.id} 
  onClick={() => onSelect(c.id)}
- className="flex justify-between items-center p-4 bg-surface-card border border-border rounded-sm hover:border-blue-500 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+ className="flex justify-between items-center p-4 bg-surface-card border border-border rounded-sm hover:border-blue-500 transition-colors text-left focus-visible:focus-visible:ring-2 focus-visible:ring-blue-500"
  >
  <span className="font-medium">{c.title}</span>
  <span className="text-xs text-ink-muted">{new Date(c.updated_at * 1000).toLocaleString()}</span>
@@ -947,7 +946,7 @@ function ChatView({ conversationId, setConversationId, setMobileMenuOpen, onNewM
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAsk()}
             placeholder="Ask the archive..." 
-            className="flex-1 bg-transparent border-none outline-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink focus-visible:ring-0"
+            className="flex-1 bg-transparent border-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink"
             disabled={loading}
           />
           <button 
