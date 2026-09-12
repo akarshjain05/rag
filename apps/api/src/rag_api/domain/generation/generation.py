@@ -181,19 +181,21 @@ def _extract_defined_terms(text: str) -> list[tuple[str, str]]:
 
 
 def _looks_ambiguous(query: str, chunks: list[RetrievedChunk]) -> bool:
-    """Narrow, conservative signal for one specific ambiguity shape: the
-    excerpt defines two or more multi-word terms sharing a common root
-    (e.g. two different "Recovery ___ Objective (R_O)" definitions), and
-    the query uses that root without naming a specific acronym. If the
-    query already names one of the acronyms, it's already disambiguated.
+    """Narrow, conservative signal for ambiguity:
+    1. The excerpt defines two or more multi-word terms sharing a common root.
+    2. The retrieved chunks include 2+ distinct section_headings from the same
+       source_document, which is a cheap, reliable proxy for 'this document
+       has multiple candidate sub-answers'."""
+       
+    doc_sections = {}
+    for c in chunks:
+        doc = c.metadata.get("source_document")
+        sec = c.metadata.get("section_heading")
+        if doc and sec:
+            doc_sections.setdefault(doc, set()).add(sec)
+            if len(doc_sections[doc]) >= 2:
+                return True
 
-    Deliberately NOT a general ambiguity detector -- an earlier version of
-    this checked "does the excerpt contain 2+ numbers and is the query
-    short", which sounds more general but false-fires on ordinary lookup
-    questions whose answer chunk happens to also mention unrelated figures
-    nearby (e.g. "how long are backups retained" over a chunk that also
-    states RTO/RPO). This version only fires on the specific, narrower
-    condition that actually caused a real failure."""
     terms: list[tuple[str, str]] = []
     for c in chunks:
         terms.extend(_extract_defined_terms(c.text))
