@@ -106,14 +106,14 @@ export default function Sidebar({ currentView, setCurrentView, theme, setTheme, 
         <div className="p-4 border-t border-border flex flex-col gap-3">
           <button
             onClick={() => { setCurrentView('knowledge'); setMobileMenuOpen(false); }}
-            className={`text-left text-[13px] font-sans px-2 py-1.5 rounded-md cursor-pointer transition-colors ${currentView === 'knowledge' ? 'text-ink bg-surface-card' : 'text-ink-secondary hover:text-ink hover:bg-surface-card'}`}
+            className={`text-left text-[13px] font-sans px-3 py-2.5 rounded-md cursor-pointer transition-colors ${currentView === 'knowledge' ? 'text-ink bg-canvas' : 'text-ink-secondary hover:text-ink hover:bg-canvas'}`}
           >
             Knowledge Base
           </button>
         </div>
 
         <div className="p-6 pt-4 border-t border-border flex justify-between items-center text-ink-muted">
-            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1 hover:text-ink hover:bg-surface-card rounded-md transition-colors cursor-pointer" aria-label="Toggle theme">
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-1.5 hover:text-ink hover:bg-canvas rounded-md transition-colors cursor-pointer" aria-label="Toggle theme">
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
         </div>
