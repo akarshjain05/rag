@@ -9,14 +9,16 @@ export default function KnowledgeBase() {
  const [loading, setLoading] = useState(true);
  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
  const [uploading, setUploading] = useState(false);
+ const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
  const [dragOver, setDragOver] = useState(false);
- const [progress, setProgress] = useState<{pct: string | number, msg: string} | null>(null);
+ const [progress, setProgress] = useState<{pct: number, msg: string} | null>(null);
  const [modal, setModal] = useState<any>(null);
  const fileInputRef = useRef<HTMLInputElement>(null);
 
  const handleUpload = async (e) => {
  if (!e.target.files?.length) return;
  setUploading(true);
+ setUploadingFiles(Array.from(e.target.files));
  setProgress({ pct: 0, msg: "Starting upload..." });
  try {
  const { ingest, fetchDocuments } = await import('../lib/api');
@@ -35,6 +37,7 @@ export default function KnowledgeBase() {
  setModal({ type: 'alert', title: 'Upload Failed', message: err.message, confirmText: 'OK' });
  } finally {
  setUploading(false);
+ setUploadingFiles([]);
  setProgress(null);
  if (fileInputRef.current) fileInputRef.current.value = '';
  }
@@ -122,17 +125,10 @@ export default function KnowledgeBase() {
  </div>
  </div>
  
- {uploading && progress && (
- <div className="mt-20 mx-6 mb-0 p-4 bg-blue-500/10 border border-blue-500/20 rounded-sm flex justify-between items-center text-sm text-blue-500 relative z-0">
- <span>{progress.msg}</span>
- <span className="font-mono">{progress.pct}</span>
- </div>
- )}
-
  <div className="flex-1 overflow-auto flex flex-col">
  {loading ? (
  <div className="flex-1 flex items-center justify-center text-ink-secondary">Loading documents...</div>
- ) : docs.length === 0 ? (
+ ) : docs.length === 0 && uploadingFiles.length === 0 ? (
  <div 
    className="flex-1 flex flex-col items-center justify-center text-center text-ink-secondary p-12"
    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -175,6 +171,30 @@ export default function KnowledgeBase() {
  </tr>
  </thead>
  <tbody>
+ {uploadingFiles.map((file, i) => (
+ <tr key={`uploading-${i}`} className="border-b border-border/50 bg-surface-sunken opacity-80">
+ <td className="px-4 py-4 w-12 text-center">
+ <div className="w-[13px] h-[13px] rounded border border-border/50 mx-auto"></div>
+ </td>
+ <td className="px-4 py-4 flex items-center gap-3 text-ink-muted">
+ <FileText className="w-4 h-4" />
+ {file.name}
+ </td>
+ <td className="px-4 py-4">
+ <div className="flex items-center justify-end gap-2 text-xs text-ink-muted">
+ {progress && (
+ <>
+ <svg className="transform -rotate-90 w-4 h-4">
+ <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" fill="transparent" className="opacity-20" />
+ <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" fill="transparent" className="text-accent transition-all duration-300" strokeDasharray="37.7" strokeDashoffset={37.7 - ((typeof progress.pct === 'number' ? progress.pct : parseInt(progress.pct.toString()) || 0) / 100 * 37.7)} />
+ </svg>
+ <span className="w-8 text-right">{progress.pct}%</span>
+ </>
+ )}
+ </div>
+ </td>
+ </tr>
+ ))}
  {(docs || []).map((doc, i) => (
  <tr key={i} className="border-b border-border/50 hover:bg-surface-sunken transition-colors group">
  <td className="px-4 py-4 w-12 text-center">
