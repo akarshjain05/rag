@@ -100,9 +100,9 @@ Removes every chunk (across all chunking strategies) belonging to
 
 Serves a previously-extracted embedded image by content hash.
 
-## Planned: `POST /v1/ingest/large` and `GET /v1/ingest/jobs/{job_id}`
+## `POST /v1/ingest/large` and `GET /v1/ingest/jobs/{job_id}`
 
-Not implemented yet. For files too large to process synchronously inside
+For files too large to process synchronously inside
 a request: upload → object storage → enqueue a background job → `202`
 with a `job_id`; poll `GET /v1/ingest/jobs/{job_id}` for status/progress.
 Design: [`../guides/04-large-file-ingestion.md`](04-large-file-ingestion.md).

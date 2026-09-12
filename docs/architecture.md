@@ -198,10 +198,10 @@ compute and store the sparse BM25 vector from the chunk text in the same
 call. See [Data Model](#data-model) for the collection
 schema.
 
-## Large-file ingestion (planned)
+## Large-file ingestion
 
 For files too large to load and chunk synchronously inside the API
-process, a separate streaming path is planned: the API uploads the raw
+process, a separate streaming path is implemented: the API uploads the raw
 file to object storage and enqueues a background job; a worker streams
 the file in bounded blocks (never materializing the whole file in
 memory), chunks with `RecursiveCharacterTextSplitter`, and embeds/upserts

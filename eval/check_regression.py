@@ -14,7 +14,7 @@ def check_regression(baseline_file: str, current_file: str, threshold: float = 0
     
     for category, base_metrics in baseline_cats.items():
         curr_metrics = current_cats.get(category, {})
-        for metric in ["answer_correctness", "faithfulness", "source_panel_precision", "citation_coverage"]:
+        for metric in ["answer_correctness", "faithfulness", "source_panel_precision", "citation_coverage", "recall_at_5", "ndcg_at_10", "retrieval_relevance", "answer_relevance"]:
             base_val = base_metrics.get(metric)
             curr_val = curr_metrics.get(metric)
             if base_val is not None and curr_val is not None:

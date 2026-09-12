@@ -126,6 +126,8 @@ class Settings(BaseSettings):
 
     # Observability
     sentry_dsn: str | None = None
+    sentry_traces_sample_rate: float = 0.1
+
     otlp_endpoint: str = "http://localhost:4318/v1/traces"
 
 
