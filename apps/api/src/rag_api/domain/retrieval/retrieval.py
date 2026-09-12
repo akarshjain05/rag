@@ -139,11 +139,23 @@ class HybridRetriever:
             return fused[:top_k]
             
         rerank_query = original_query if original_query else query
-        reranked_chunks = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.reranker.rerank, rerank_query, fused, top_k)
+        reranked_chunks = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.reranker.rerank, rerank_query, fused, fusion_pool_size)
         
         # Hard Cutoff Threshold: Drop chunks that the reranker identified as mathematically irrelevant.
-        # This saves tokens, reduces UI clutter, and prevents hallucination noise.
-        return [chunk for chunk in reranked_chunks if chunk.rerank_score is not None and chunk.rerank_score >= self.context_pruning_threshold]
+        pruned_chunks = [chunk for chunk in reranked_chunks if chunk.rerank_score is not None and chunk.rerank_score >= self.context_pruning_threshold]
+
+        # Enforce document diversity: max 2 chunks per document so a single doc doesn't squeeze out multi-hop context
+        final_chunks = []
+        doc_counts = {}
+        for chunk in pruned_chunks:
+            doc = chunk.metadata.get("source_document", "unknown")
+            if doc_counts.get(doc, 0) < 2:
+                final_chunks.append(chunk)
+                doc_counts[doc] = doc_counts.get(doc, 0) + 1
+            if len(final_chunks) == top_k:
+                break
+
+        return final_chunks
 
     def retrieve(
         self,
