@@ -10,8 +10,9 @@ from concurrent.futures import ThreadPoolExecutor
 # Isolate heavy synchronous CPU tasks (like chunking and ONNX embeddings) from the default asyncio thread pool
 ingest_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="ingest_worker")
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, HTTPException
+from fastapi import APIRouter, Depends, File, Query, UploadFile, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from rag_api.core.rate_limit import limiter
 from rag_api.schemas.schemas import IngestResponse, IngestReportSchema, DocumentsResponse, DeleteResponse
 from rag_api.domain.models import ChunkingStrategy
 from rag_api.api.deps import get_pipeline, get_vector_store, run_or_502, get_object_store
@@ -24,7 +25,9 @@ router = APIRouter(prefix="", tags=["documents"], dependencies=[Depends(verify_a
     summary="Ingest one or more documents (SSE Stream)",
     description="Accepts markdown, plaintext, HTML or PDF files (repeatable `files` field). Each file is loaded, chunked, embedded, deduplicated against the existing index, and added to both the dense and sparse indexes. One broken file doesn't fail the whole batch -- check each report's `error` field.",
 )
+@limiter.limit("5/minute")
 async def ingest_documents(
+    request: Request,
     files: list[UploadFile] = File(...),
     chunking_strategy: ChunkingStrategy | None = Query(default=None),
     pipeline = Depends(get_pipeline)
@@ -79,7 +82,8 @@ async def ingest_documents(
 
 
 @router.post("/ingest/large", summary="Enqueue a large file for async streaming ingestion")
-def ingest_large_file(file: UploadFile = File(...), object_store = Depends(get_object_store)):
+@limiter.limit("5/minute")
+def ingest_large_file(request: Request, file: UploadFile = File(...), object_store = Depends(get_object_store)):
     import uuid
     from rag_api.tasks import ingest_large_file_task
     key = f"uploads/{uuid.uuid4()}/{file.filename}"

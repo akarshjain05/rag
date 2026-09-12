@@ -6,7 +6,7 @@ from rag_api.api.deps import run_or_502, run_or_502_async
 from rag_api.schemas.schemas import QueryRequest, QueryResponse, SourceSchema, NormalizedQuery
 from rag_api.domain.models import ChunkingStrategy
 from rag_api.services.conversation import Turn
-from rag_api.services.query_condensation import normalize_query, condense_query, generate_hyde, expand_query, should_expand_query
+from rag_api.services.query_condensation import normalize_query, condense_query, generate_hyde, expand_query, should_expand_query, decompose_query
 from rag_api.domain.generation.generation import build_sources
 
 _CONTINUE_PHRASES = {
@@ -106,21 +106,35 @@ class QueryOrchestrationService:
         
         hyde_search_query = f"{search_query}\n\n{hyde_doc}" if hyde_doc else search_query
 
-        chunks = await run_or_502_async(
-            retriever.retrieve_async(
-                hyde_search_query, 
+        sub_queries = [hyde_search_query]
+        if llm_client and settings.query_condensation_enabled:
+            sub_queries = await run_or_502(decompose_query, hyde_search_query, llm_client)
+
+        async def _fetch_sub_query(sq):
+            return await retriever.retrieve_async(
+                sq, 
                 top_k=payload.top_k, 
                 chunking_strategy=strategy_value,
                 original_query=search_query,
                 document_filter=payload.document_filter,
                 temporal_filter=temporal_filter,
             )
-        )
+
+        import asyncio
+        sub_results = await run_or_502_async(asyncio.gather(*[_fetch_sub_query(sq) for sq in sub_queries]))
+        chunks = []
+        seen_chunk_ids = set()
+        for res_list in sub_results:
+            for c in res_list:
+                if c.chunk_id not in seen_chunk_ids:
+                    seen_chunk_ids.add(c.chunk_id)
+                    chunks.append(c)
         
         if retriever.reranker and llm_client:
             max_retries = settings.crag_max_retries
             retries = 0
             crag_enabled = settings.crag_expansion_enabled
+            was_expanded = False
             while retries < max_retries and crag_enabled:
                 retries += 1
                 max_score = max([c.rerank_score or 0.0 for c in chunks]) if chunks else 0.0
@@ -142,6 +156,7 @@ class QueryOrchestrationService:
                     if new_max_score > max_score:
                         chunks = crag_chunks
                         search_query = expanded_query 
+                        was_expanded = True
                     else:
                         break 
                 else:
@@ -160,6 +175,7 @@ class QueryOrchestrationService:
         
         while not gen_task.done():
             if await request.is_disconnected():
+                gen_task.cancel()
                 # Don't write "[Discarded]" into history as if it were a real
                 # answer -- condense_query() on the *next* turn treats prior
                 # history as ground truth, and a fake assistant reply here
@@ -201,10 +217,11 @@ class QueryOrchestrationService:
 
         store.log_query_metrics(float(result.retrieval_confidence) if result.retrieval_confidence is not None else 0.0)
 
+        final_mode = "expanded_query" if (retriever.reranker and llm_client and locals().get('was_expanded', False)) else result.mode
         response_obj = QueryResponse(
             conversation_id=cid,
             answer=result.answer,
-            mode=result.mode,
+            mode=final_mode,
             sources=[SourceSchema(**s) for s in result.sources],
             used_citation_markers=result.used_citation_markers,
             invalid_citation_markers=result.invalid_citation_markers,

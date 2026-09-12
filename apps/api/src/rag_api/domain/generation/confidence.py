@@ -70,10 +70,24 @@ def compute_composite_confidence(
     (retrieval_conf * 0.50) + (coverage * 0.30) + (completeness * 0.20)
     """
     retrieval = retrieval_confidence if retrieval_confidence is not None else 0.0
-    coverage = citation_coverage if citation_coverage is not None else 1.0
-    comp = completeness if completeness is not None else 1.0
+    weight_retrieval = 0.50
+    weight_coverage = 0.30
+    weight_comp = 0.20
     
-    composite = (retrieval * 0.50) + (coverage * 0.30) + (comp * 0.20)
+    val_coverage = citation_coverage if citation_coverage is not None else 0.0
+    val_comp = completeness if completeness is not None else 0.0
+    
+    if citation_coverage is None and completeness is None:
+        return float(round(retrieval, 4))
+    elif citation_coverage is None:
+        total_weight = weight_retrieval + weight_comp
+        composite = (retrieval * weight_retrieval + val_comp * weight_comp) / total_weight
+    elif completeness is None:
+        total_weight = weight_retrieval + weight_coverage
+        composite = (retrieval * weight_retrieval + val_coverage * weight_coverage) / total_weight
+    else:
+        composite = (retrieval * weight_retrieval) + (val_coverage * weight_coverage) + (val_comp * weight_comp)
+        
     return float(round(composite, 4))
 
 

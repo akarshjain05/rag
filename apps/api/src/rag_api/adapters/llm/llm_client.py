@@ -211,7 +211,7 @@ class OpenAILLMClient(LLMClient):
             raise ValueError("OPENAI_API_KEY is required for LLM_PROVIDER=openai")
         # Fail fast: if the upstream API (like NVIDIA NIM) goes down and returns 500s,
         # we do not want to silently hang for 5 minutes retrying dead endpoints.
-        self._client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout, max_retries=0)
+        self._client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout, max_retries=2)
         self._model = model
         
         if "kimi-k3" in self._model:

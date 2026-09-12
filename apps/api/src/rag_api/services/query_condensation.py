@@ -13,6 +13,26 @@ from rag_api.services.conversation import Turn
 from rag_api.schemas.schemas import NormalizedQuery
 
 
+def decompose_query(query: str, llm_client: LLMClient) -> list[str]:
+    system = (
+        "You are an expert query decomposer. The user query may be a complex, multi-hop question. "
+        "If it is, break it down into a list of simpler, distinct sub-queries that can be answered independently. "
+        "If the query is already simple and self-contained, return just the original query in the list. "
+        "Output ONLY raw JSON matching this schema: "
+        "{\"sub_queries\": [\"string\", \"string\"]}"
+    )
+    result_json_str = llm_client.generate(system, f"<query>\n{query}\n</query>")
+    import json
+    match = _JSON_OBJECT_RE.search(result_json_str)
+    if match:
+        try:
+            res = json.loads(match.group(0))
+            if "sub_queries" in res and isinstance(res["sub_queries"], list):
+                return res["sub_queries"]
+        except json.JSONDecodeError:
+            pass
+    return [query]
+
 @observe(as_type="generation", name="normalize_query")
 def normalize_query(query: str, llm_client: LLMClient) -> NormalizedQuery | str:
     """Step 1, proactive: fix spelling/typing errors and expand obvious acronyms.

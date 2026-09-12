@@ -446,7 +446,7 @@ class VectorStore:
             })
         return out
 
-    def semantic_cache_get(self, query_vector: list[float], threshold: float = 0.95, ttl_seconds: int = 604800, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> dict | None:
+    def semantic_cache_get(self, query_vector: list[float], threshold: float = 0.95, ttl_seconds: int = 604800, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None, top_k: int | None = None, temporal_filter: dict | None = None, verify_citations: bool | None = None) -> dict | None:
         import time
         must = []
         
@@ -457,6 +457,15 @@ class VectorStore:
             must.append(models.FieldCondition(key="document_filter", match=models.MatchAny(any=document_filter)))
         else:
             must.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="document_filter")))
+        
+        must.append(models.FieldCondition(key="top_k", match=models.MatchValue(value=top_k if top_k is not None else -1)))
+        
+        if temporal_filter and "target_date" in temporal_filter:
+            must.append(models.FieldCondition(key="temporal_filter", match=models.MatchValue(value=temporal_filter["target_date"])))
+        else:
+            must.append(models.IsEmptyCondition(is_empty=models.PayloadField(key="temporal_filter")))
+            
+        must.append(models.FieldCondition(key="verify_citations", match=models.MatchValue(value=verify_citations if verify_citations is not None else False)))
             
         res = self._client.query_points(
             collection_name=self.cache_collection,
@@ -475,7 +484,7 @@ class VectorStore:
             
         return point.payload["response"]
 
-    def semantic_cache_set(self, query_text: str, query_vector: list[float], response: dict, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
+    def semantic_cache_set(self, query_text: str, query_vector: list[float], response: dict, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None, top_k: int | None = None, temporal_filter: dict | None = None, verify_citations: bool | None = None) -> None:
         import uuid
         import time
         
@@ -499,6 +508,9 @@ class VectorStore:
                         "conversation_id": conversation_id or "",
                         "document_filter": document_filter or [],
                         "chunking_strategy": chunking_strategy or "",
+                        "top_k": top_k if top_k is not None else -1,
+                        "temporal_filter": temporal_filter["target_date"] if temporal_filter and "target_date" in temporal_filter else None,
+                        "verify_citations": verify_citations if verify_citations is not None else False,
                     }
                 )
             ]

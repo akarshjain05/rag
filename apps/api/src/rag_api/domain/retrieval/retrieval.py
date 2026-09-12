@@ -28,7 +28,7 @@ class HybridRetriever:
         self.rerank_candidate_pool = rerank_candidate_pool
         self.context_pruning_threshold = context_pruning_threshold
 
-    async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> QueryResponse | None:
+    async def semantic_cache_get(self, query: str, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None, top_k: int | None = None, temporal_filter: dict | None = None, verify_citations: bool | None = None) -> QueryResponse | None:
         try:
             query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
             query_vector = query_embedding[0]
@@ -41,7 +41,10 @@ class HybridRetriever:
                 ttl_seconds=604800,
                 conversation_id=conversation_id,
                 document_filter=document_filter,
-                chunking_strategy=chunking_strategy
+                chunking_strategy=chunking_strategy,
+                top_k=top_k,
+                temporal_filter=temporal_filter,
+                verify_citations=verify_citations
             )
             # Enforce a strict timeout; if vector store hangs, bypass cache immediately
             future = asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
@@ -56,7 +59,7 @@ class HybridRetriever:
             logging.getLogger(__name__).warning(f"Semantic cache GET failed (degrading to cache miss): {e}")
             return None
 
-    async def semantic_cache_set(self, query: str, response: QueryResponse, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None) -> None:
+    async def semantic_cache_set(self, query: str, response: QueryResponse, conversation_id: str | None = None, document_filter: list[str] | None = None, chunking_strategy: str | None = None, top_k: int | None = None, temporal_filter: dict | None = None, verify_citations: bool | None = None) -> None:
         try:
             query_embedding = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.embedding_client.embed, [query])
             query_vector = query_embedding[0]
@@ -69,7 +72,10 @@ class HybridRetriever:
                 response.model_dump(mode="json"),
                 conversation_id=conversation_id,
                 document_filter=document_filter,
-                chunking_strategy=chunking_strategy
+                chunking_strategy=chunking_strategy,
+                top_k=top_k,
+                temporal_filter=temporal_filter,
+                verify_citations=verify_citations
             )
             await asyncio.get_running_loop().run_in_executor(retrieval_executor, func)
         except Exception as e:

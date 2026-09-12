@@ -102,6 +102,7 @@ class RetrievedChunk:
     fused_score: float = 0.0
     rerank_score: float | None = None
     dense_similarity: float | None = None  # raw cosine similarity, when the chunk came from dense search
+    sparse_similarity: float | None = None
 
 
 @dataclass

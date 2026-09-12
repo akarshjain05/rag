@@ -143,6 +143,8 @@ def build_sources(chunks: list[RetrievedChunk]) -> list[dict]:
                 "dense_rank": c.dense_rank,
                 "sparse_rank": c.sparse_rank,
                 "rerank_score": float(c.rerank_score) if c.rerank_score is not None else None,
+                "dense_score": float(c.dense_similarity) if c.dense_similarity is not None else None,
+                "sparse_score": float(c.sparse_similarity) if c.sparse_similarity is not None else None,
             }
         )
     return sources

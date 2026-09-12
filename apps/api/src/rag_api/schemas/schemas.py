@@ -47,6 +47,8 @@ class SourceSchema(BaseModel):
     dense_rank: int | None = None
     sparse_rank: int | None = None
     rerank_score: float | None = None
+    dense_score: float | None = None
+    sparse_score: float | None = None
 
 
 

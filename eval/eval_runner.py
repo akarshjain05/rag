@@ -29,12 +29,13 @@ def run_eval_suite(
         chunks = retriever.retrieve(example.question, top_k=top_k * 2, chunking_strategy=chunking_strategy)
         import time
         import openai
+        import anthropic
         
         while True:
             try:
                 gen_result = generator.generate(example.question, chunks[:top_k])
                 break
-            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError) as e:
+            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError, anthropic.RateLimitError) as e:
                 print(f"Rate limit reached: {e}. Sleeping 5 seconds...")
                 time.sleep(5)
 
@@ -42,35 +43,35 @@ def run_eval_suite(
             try:
                 correctness = correctness_judge.judge(example, gen_result.answer, gen_result.mode)
                 break
-            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError) as e:
+            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError, anthropic.RateLimitError) as e:
                 print(f"Rate limit reached: {e}. Sleeping 5 seconds...")
                 time.sleep(5)
         while True:
             try:
                 faithfulness = faithfulness_judge.judge(gen_result.answer, chunks[:top_k])
                 break
-            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError) as e:
+            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError, anthropic.RateLimitError) as e:
                 print(f"Rate limit reached: {e}. Sleeping 5 seconds...")
                 time.sleep(5)
         while True:
             try:
                 ans_relevance = answer_relevance_judge.judge(example.question, gen_result.answer)
                 break
-            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError) as e:
+            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError, anthropic.RateLimitError) as e:
                 print(f"Rate limit reached: {e}. Sleeping 5 seconds...")
                 time.sleep(5)
         while True:
             try:
                 cit_accuracy = citation_accuracy_judge.judge(gen_result.answer, chunks[:top_k])
                 break
-            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError) as e:
+            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError, anthropic.RateLimitError) as e:
                 print(f"Rate limit reached: {e}. Sleeping 5 seconds...")
                 time.sleep(5)
         while True:
             try:
                 ctx_relevance = context_relevance_judge.judge(example.question, chunks)
                 break
-            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError) as e:
+            except (openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError, anthropic.RateLimitError) as e:
                 print(f"Rate limit reached: {e}. Sleeping 5 seconds...")
                 time.sleep(5)
 

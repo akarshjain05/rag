@@ -177,7 +177,7 @@ def main() -> None:
             print(f"  {report.source_file}: {status}")
 
         print(f"\nEvaluating {len(dataset)} queries at top_k={args.top_k}...")
-        summary = evaluate(dataset, embedding_client, vector_store, top_k=args.top_k, rrf_k=settings.rrf_k)
+        summary = evaluate(dataset, embedding_client, vector_store, top_k=args.top_k, rrf_k=60)
         _print_report(summary, args.top_k)
 
 

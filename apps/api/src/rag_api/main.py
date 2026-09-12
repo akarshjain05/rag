@@ -177,6 +177,9 @@ def create_app(
                 if content_length > settings.max_upload_bytes:
                     from fastapi.responses import JSONResponse
                     return JSONResponse(status_code=413, content={"detail": "Payload Too Large"})
+            elif request.headers.get("transfer-encoding") == "chunked":
+                from fastapi.responses import JSONResponse
+                return JSONResponse(status_code=411, content={"detail": "Length Required"})
         return await call_next(request)
 
     app.state.settings = settings
