@@ -62,14 +62,14 @@ export default function Sidebar({ currentView, setCurrentView, theme, setTheme, 
             History
           </div>
           {(conversations || []).map(c => (
-            <div key={c.id} className={`group relative flex items-center rounded-md cursor-pointer transition-colors ${currentView === 'chat' && activeConversationId === c.id ? 'bg-canvas text-ink' : 'text-ink-secondary hover:text-ink hover:bg-canvas'}`}>
+            <div key={c.id} className={`group relative flex items-center rounded-md cursor-pointer transition-colors ${(currentView === 'chat' && activeConversationId === c.id) || dropdownId === c.id ? 'bg-canvas text-ink' : 'text-ink-secondary hover:text-ink hover:bg-canvas'}`}>
               <button
                 onClick={() => { setActiveConversationId(c.id); setCurrentView('chat'); setMobileMenuOpen(false); }}
                 className={`flex-1 text-left font-sans text-[13px] py-2.5 px-3 truncate rounded-md transition-colors cursor-pointer ${currentView === 'chat' && activeConversationId === c.id ? 'border-l-2 border-accent' : 'border-l-2 border-transparent'}`}
               >
                 {c.title}
               </button>
-              <div className="absolute right-0 top-0 bottom-0 flex items-center pr-1 pl-6 opacity-0 group-hover:opacity-100 transition-opacity rounded-r-md bg-gradient-to-l from-canvas from-60% to-transparent pointer-events-none">
+              <div className={`absolute right-0 top-0 bottom-0 flex items-center pr-1 pl-6 transition-opacity rounded-r-md bg-gradient-to-l from-canvas from-60% to-transparent pointer-events-none ${dropdownId === c.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                 <button
                   id={`dropdown-btn-${c.id}`}
                   onClick={(e) => { e.stopPropagation(); setDropdownId(dropdownId === c.id ? null : c.id); }}
