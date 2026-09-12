@@ -34,11 +34,11 @@ jobs:
 
     - name: Run Evals and Check Regression
       env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       run: |
         # Only run evals if we have API keys in CI (e.g., not on external PRs)
-        if [ -n "$GEMINI_API_KEY" ]; then
+        if [ -n "$OPENAI_API_KEY" ] || [ -n "$ANTHROPIC_API_KEY" ]; then
           PYTHONPATH=apps/api/src python eval/run_eval_suite.py --dataset eval/golden_qa.json --docs-dir eval/golden_corpus --output eval/current_run.json
           python eval/check_regression.py eval/aurora_baseline.json eval/current_run.json
         else
