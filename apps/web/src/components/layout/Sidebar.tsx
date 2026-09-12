@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { createPortal } from "react-dom";
-import { MessageCircle, Folder, Clock, BarChart, FileText, X, Trash2, Moon, Sun, MoreHorizontal } from 'lucide-react';
+import { MessageCircle, Folder, Clock, BarChart, FileText, X, Trash2, Moon, Sun, MoreVertical } from 'lucide-react';
 
 export default function Sidebar({ currentView, setCurrentView, theme, setTheme, mobileMenuOpen, setMobileMenuOpen, activeConversationId, setActiveConversationId, refreshTrigger, onRefreshTrigger }) {
   const [conversations, setConversations] = React.useState<any[]>([]);
@@ -62,21 +62,21 @@ export default function Sidebar({ currentView, setCurrentView, theme, setTheme, 
             History
           </div>
           {(conversations || []).map(c => (
-            <div key={c.id} className={`group relative flex items-center rounded-md cursor-pointer transition-colors ${currentView === 'chat' && activeConversationId === c.id ? 'bg-surface-card text-ink' : 'text-ink-secondary hover:text-ink hover:bg-surface-card'}`}>
+            <div key={c.id} className={`group relative flex items-center rounded-md cursor-pointer transition-colors ${currentView === 'chat' && activeConversationId === c.id ? 'bg-canvas text-ink' : 'text-ink-secondary hover:text-ink hover:bg-canvas'}`}>
               <button
                 onClick={() => { setActiveConversationId(c.id); setCurrentView('chat'); setMobileMenuOpen(false); }}
                 className={`flex-1 text-left font-sans text-[13px] py-2.5 px-3 truncate rounded-md transition-colors cursor-pointer ${currentView === 'chat' && activeConversationId === c.id ? 'border-l-2 border-accent' : 'border-l-2 border-transparent'}`}
               >
                 {c.title}
               </button>
-              <div className="absolute right-0 top-0 bottom-0 flex items-center pr-2 pl-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-r-md bg-gradient-to-l from-surface-card from-60% to-transparent pointer-events-none">
+              <div className="absolute right-0 top-0 bottom-0 flex items-center pr-1 pl-6 opacity-0 group-hover:opacity-100 transition-opacity rounded-r-md bg-gradient-to-l from-canvas from-60% to-transparent pointer-events-none">
                 <button
                   id={`dropdown-btn-${c.id}`}
                   onClick={(e) => { e.stopPropagation(); setDropdownId(dropdownId === c.id ? null : c.id); }}
-                  className="p-1.5 text-ink-muted hover:text-ink hover:bg-border/50 rounded-md transition-colors cursor-pointer pointer-events-auto"
+                  className="p-1 text-ink-muted hover:text-ink hover:bg-border/50 rounded-md transition-colors cursor-pointer pointer-events-auto"
                   aria-label="More options"
                 >
-                  <MoreHorizontal className="w-4 h-4" />
+                  <MoreVertical className="w-3.5 h-3.5" />
                 </button>
               </div>
               {dropdownId === c.id && createPortal(
