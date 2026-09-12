@@ -18,14 +18,14 @@ def make_chunk(dense_similarity):
 # --------------------------------------------------------------------------
 # compute_retrieval_confidence
 # --------------------------------------------------------------------------
-def test_retrieval_confidence_averages_dense_similarity():
+def test_retrieval_confidence_uses_max_dense_similarity():
     chunks = [make_chunk(0.9), make_chunk(0.7)]
-    assert compute_retrieval_confidence(chunks) == pytest.approx(0.8333, abs=0.01)
+    assert compute_retrieval_confidence(chunks) == pytest.approx(0.9, abs=0.01)
 
 
 def test_retrieval_confidence_sparse_only_chunk_contributes_zero():
     chunks = [make_chunk(0.8), make_chunk(None)]  # second chunk: sparse-only hit
-    assert compute_retrieval_confidence(chunks) == pytest.approx(0.5333, abs=0.01)
+    assert compute_retrieval_confidence(chunks) == pytest.approx(0.8, abs=0.01)
 
 
 def test_retrieval_confidence_no_chunks_is_zero():

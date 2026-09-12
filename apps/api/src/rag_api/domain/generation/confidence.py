@@ -27,20 +27,13 @@ def compute_retrieval_confidence(chunks: list[RetrievedChunk]) -> float:
     if not chunks:
         return 0.0
 
-    def _decayed(values: list[float]) -> float:
-        scores = sorted(values, reverse=True)
-        if not scores:
-            return 0.0
-        weights = [0.5 ** i for i in range(len(scores))]
-        return float(np.average(scores, weights=weights))
+    def _chunk_score(c: RetrievedChunk) -> float:
+        d = c.dense_similarity if c.dense_similarity is not None else 0.0
+        if c.rerank_score is not None:
+            return 0.7 * c.rerank_score + 0.3 * d
+        return d
 
-    dense_score = _decayed([c.dense_similarity if c.dense_similarity is not None else 0.0 for c in chunks])
-
-    if any(c.rerank_score is not None for c in chunks):
-        rerank_score = _decayed([c.rerank_score if c.rerank_score is not None else 0.0 for c in chunks])
-        calibrated_score = 0.7 * rerank_score + 0.3 * dense_score
-    else:
-        calibrated_score = dense_score
+    calibrated_score = max(_chunk_score(c) for c in chunks)
 
     return float(max(0.0, min(1.0, round(calibrated_score, 4))))
 
