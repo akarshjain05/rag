@@ -123,7 +123,7 @@ export default function KnowledgeBase() {
  </div>
  
  {uploading && progress && (
- <div className="m-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-sm flex justify-between items-center text-sm text-blue-500">
+ <div className="mt-20 mx-6 mb-0 p-4 bg-blue-500/10 border border-blue-500/20 rounded-sm flex justify-between items-center text-sm text-blue-500 relative z-0">
  <span>{progress.msg}</span>
  <span className="font-mono">{progress.pct}</span>
  </div>
