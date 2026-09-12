@@ -188,7 +188,7 @@ export default function KnowledgeBase() {
  <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" fill="transparent" className="opacity-20" />
  <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" fill="transparent" className="text-accent transition-all duration-300" strokeDasharray="37.7" strokeDashoffset={37.7 - ((typeof progress.pct === 'number' ? progress.pct : parseInt(progress.pct.toString()) || 0) / 100 * 37.7)} />
  </svg>
- <span className="w-8 text-right">{progress.pct}%</span>
+ <span className="w-8 text-right tabular-nums">{String(progress.pct).replace('%', '')}%</span>
  </>
  )}
  </div>
