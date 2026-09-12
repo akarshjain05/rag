@@ -62,21 +62,23 @@ export default function Sidebar({ currentView, setCurrentView, theme, setTheme, 
             History
           </div>
           {(conversations || []).map(c => (
-            <div key={c.id} className="group relative flex items-center pr-2">
+            <div key={c.id} className={`group relative flex items-center rounded-md cursor-pointer transition-colors ${currentView === 'chat' && activeConversationId === c.id ? 'bg-surface-card text-ink' : 'text-ink-secondary hover:text-ink hover:bg-surface-card'}`}>
               <button
                 onClick={() => { setActiveConversationId(c.id); setCurrentView('chat'); setMobileMenuOpen(false); }}
-                className={`flex-1 text-left font-sans text-[13px] py-1.5 px-2 rounded-md truncate transition-colors cursor-pointer ${currentView === 'chat' && activeConversationId === c.id ? 'text-ink border-l-2 border-accent bg-surface-card' : 'text-ink-secondary hover:text-ink hover:bg-surface-card'}`}
+                className={`flex-1 text-left font-sans text-[13px] py-2.5 px-3 truncate rounded-md transition-colors cursor-pointer ${currentView === 'chat' && activeConversationId === c.id ? 'border-l-2 border-accent' : 'border-l-2 border-transparent'}`}
               >
                 {c.title}
               </button>
-              <button
-                id={`dropdown-btn-${c.id}`}
-                onClick={(e) => { e.stopPropagation(); setDropdownId(dropdownId === c.id ? null : c.id); }}
-                className="opacity-0 group-hover:opacity-100 p-1 text-ink-muted hover:text-ink hover:bg-surface-card rounded-md transition-opacity cursor-pointer"
-                aria-label="More options"
-              >
-                <MoreHorizontal className="w-3 h-3" />
-              </button>
+              <div className="absolute right-0 top-0 bottom-0 flex items-center pr-2 pl-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-r-md bg-gradient-to-l from-surface-card from-60% to-transparent pointer-events-none">
+                <button
+                  id={`dropdown-btn-${c.id}`}
+                  onClick={(e) => { e.stopPropagation(); setDropdownId(dropdownId === c.id ? null : c.id); }}
+                  className="p-1.5 text-ink-muted hover:text-ink hover:bg-border/50 rounded-md transition-colors cursor-pointer pointer-events-auto"
+                  aria-label="More options"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              </div>
               {dropdownId === c.id && createPortal(
                 <>
                   <div className="fixed inset-0 z-[100]" onClick={(e) => { e.stopPropagation(); setDropdownId(null); }} />
