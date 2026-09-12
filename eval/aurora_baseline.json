@@ -1,97 +1,97 @@
 {
   "overall": {
-    "n": 18,
-    "answer_correctness": 0.8888888888888888,
-    "faithfulness": 0.9537037037037037,
-    "retrieval_relevance": 1.0,
-    "recall_at_5": 1.0,
-    "ndcg_at_10": 0.9753953169047639,
+    "n": 57,
+    "answer_correctness": 0.8596491228070176,
+    "faithfulness": 1.0,
+    "retrieval_relevance": 0.8125,
+    "recall_at_5": 0.9333333333333333,
+    "ndcg_at_10": 0.9239752507819724,
     "answer_relevance": 1.0,
-    "citation_accuracy": 1.0,
-    "citation_coverage": 0.837962962962963,
-    "source_panel_precision": 0.37777777777777777,
-    "ttft_avg": 1.0615859826405842,
-    "total_latency_avg": 1.1747484869427152,
-    "total_cost": 0.13156500000000002
+    "citation_accuracy": 0.9824561403508771,
+    "citation_coverage": 0.7993197278911565,
+    "source_panel_precision": 0.7061224489795919,
+    "ttft_avg": 0.9836610190722407,
+    "total_latency_avg": 1.0359041885453828,
+    "total_cost": 0.17606
   },
   "by_category": {
     "ambiguous": {
-      "n": 3,
-      "answer_correctness": 0.6666666666666666,
-      "faithfulness": 0.8888888888888888,
-      "retrieval_relevance": 1.0,
+      "n": 8,
+      "answer_correctness": 0.75,
+      "faithfulness": 1.0,
+      "retrieval_relevance": 0.75,
       "recall_at_5": 1.0,
-      "ndcg_at_10": 1.0,
+      "ndcg_at_10": 0.9298143808647931,
       "answer_relevance": 1.0,
       "citation_accuracy": 1.0,
-      "citation_coverage": 0.6944444444444445,
-      "source_panel_precision": 0.3333333333333333,
-      "ttft_avg": 1.0419716040293376,
-      "total_latency_avg": 1.402086655298869,
-      "total_cost": 0.02687
+      "citation_coverage": 0.75,
+      "source_panel_precision": 0.638888888888889,
+      "ttft_avg": 0.9298075834910074,
+      "total_latency_avg": 1.0722196102142334,
+      "total_cost": 0.02643
     },
     "lookup": {
-      "n": 7,
-      "answer_correctness": 0.8571428571428571,
+      "n": 24,
+      "answer_correctness": 1.0,
       "faithfulness": 1.0,
       "retrieval_relevance": 1.0,
       "recall_at_5": 1.0,
-      "ndcg_at_10": 0.9472756790816368,
-      "answer_relevance": 1.0,
-      "citation_accuracy": 1.0,
-      "citation_coverage": 0.9285714285714286,
-      "source_panel_precision": 0.2,
-      "ttft_avg": 1.0749594143458776,
-      "total_latency_avg": 1.1166656698499406,
-      "total_cost": 0.047675
-    },
-    "multi_hop": {
-      "n": 5,
-      "answer_correctness": 1.0,
-      "faithfulness": 0.9,
-      "retrieval_relevance": 1.0,
-      "recall_at_5": 1.0,
       "ndcg_at_10": 1.0,
       "answer_relevance": 1.0,
       "citation_accuracy": 1.0,
-      "citation_coverage": 0.9,
-      "source_panel_precision": 0.48,
-      "ttft_avg": 1.0862468242645265,
-      "total_latency_avg": 1.2054994583129883,
-      "total_cost": 0.03722
+      "citation_coverage": 0.875,
+      "source_panel_precision": 0.7458333333333332,
+      "ttft_avg": 1.05169681708018,
+      "total_latency_avg": 1.0815120041370392,
+      "total_cost": 0.08050500000000001
+    },
+    "multi_hop": {
+      "n": 16,
+      "answer_correctness": 0.625,
+      "faithfulness": 1.0,
+      "retrieval_relevance": 0.5625,
+      "recall_at_5": 0.8,
+      "ndcg_at_10": 0.8,
+      "answer_relevance": 1.0,
+      "citation_accuracy": 1.0,
+      "citation_coverage": 0.8444444444444444,
+      "source_panel_precision": 0.7911111111111111,
+      "ttft_avg": 0.9291117827097575,
+      "total_latency_avg": 0.9797615528106689,
+      "total_cost": 0.05646
     },
     "unanswerable": {
-      "n": 3,
+      "n": 9,
       "answer_correctness": 1.0,
       "faithfulness": 1.0,
       "retrieval_relevance": null,
       "recall_at_5": null,
       "ndcg_at_10": null,
       "answer_relevance": 1.0,
-      "citation_accuracy": 1.0,
-      "citation_coverage": 0.6666666666666666,
-      "source_panel_precision": 0.6666666666666666,
-      "ttft_avg": 1.0088942845662434,
-      "total_latency_avg": 1.0316852728525798,
-      "total_cost": 0.0198
+      "citation_accuracy": 0.8888888888888888,
+      "citation_coverage": 0.25,
+      "source_panel_precision": 0.25,
+      "ttft_avg": 0.8607860207557678,
+      "total_latency_avg": 0.918319046497345,
+      "total_cost": 0.012665000000000001
     }
   },
   "confidence_calibration": {
     "0.0-0.3": {
-      "n": 0,
-      "answer_correctness": null
-    },
-    "0.3-0.6": {
-      "n": 4,
+      "n": 8,
       "answer_correctness": 0.75
     },
+    "0.3-0.6": {
+      "n": 1,
+      "answer_correctness": 1.0
+    },
     "0.6-0.8": {
-      "n": 14,
-      "answer_correctness": 0.9285714285714286
+      "n": 1,
+      "answer_correctness": 1.0
     },
     "0.8-1.0": {
-      "n": 0,
-      "answer_correctness": null
+      "n": 47,
+      "answer_correctness": 0.8723404255319149
     }
   }
 }
