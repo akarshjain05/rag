@@ -38,6 +38,7 @@ from rag_api.adapters.llm.llm_client import build_llm_client  # noqa: E402
 from rag_api.adapters.storage.loaders import SUPPORTED_EXTENSIONS  # noqa: E402
 from rag_api.domain.models import ChunkingStrategy  # noqa: E402
 from rag_api.services.ingest_service import IngestionPipeline  # noqa: E402
+from rag_api.domain.retrieval.reranker import build_reranker  # noqa: E402
 from rag_api.domain.retrieval.retrieval import HybridRetriever  # noqa: E402
 from rag_api.adapters.vectorstore.vector_store import VectorStore  # noqa: E402
 from rag_api.domain.generation.verification import CitationVerifier  # noqa: E402
@@ -58,7 +59,7 @@ def main() -> None:
     parser.add_argument(
         "--chunking-strategy", default="structure_aware", choices=[s.value for s in ChunkingStrategy]
     )
-    parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--top-k", type=int, default=3)
     args = parser.parse_args()
 
     settings = get_settings()
@@ -89,8 +90,11 @@ def main() -> None:
         tmp_path = Path(tmp)
         vector_store = VectorStore(tmp_path / "chroma", "eval_collection", dense_dimension=embedding_client.dimension)
         pipeline = IngestionPipeline(embedding_client, vector_store)
+        reranker = build_reranker(settings.reranker_provider, model_name=settings.reranker_model, llm_client=llm_client)
         retriever = HybridRetriever(
             embedding_client, vector_store, 
+            reranker=reranker,
+            rerank_candidate_pool=settings.rerank_candidate_pool,
         )
         generator = AnswerGenerator(
             llm_client,
@@ -130,7 +134,14 @@ def main() -> None:
                 chunking_strategy=args.chunking_strategy, top_k=args.top_k,
             )
             summary = summarize_results(results)
+            
+            for r in results:
+                if r.category == 'ambiguous' and not r.answer_correct:
+                    print(f"FAILED AMBIGUOUS CASE: {r.question}")
+                    print(f"REASONING: {r.correctness_reasoning}")
+                    print(f"GENERATED: {r.generated_answer}")
             print(json.dumps(summary, indent=2))
+
             with open("eval/aurora_baseline.json", "w") as f:
                 json.dump(summary, f, indent=2)
 
