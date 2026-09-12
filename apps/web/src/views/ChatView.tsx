@@ -78,6 +78,14 @@ export default function ChatView({ conversationId, setConversationId, setMobileM
   };
   const isInitialMount = React.useRef(true);
   const skipFetch = React.useRef(false);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [query]);
 
   React.useEffect(() => {
     if (skipFetch.current) {
@@ -428,13 +436,19 @@ export default function ChatView({ conversationId, setConversationId, setMobileM
       {/* Bottom Header / Input Area */}
       <footer className="mt-auto px-6 md:px-12 py-6 max-w-4xl w-full mx-auto shrink-0 bg-surface">
         <div className="relative border-b border-border-strong pb-2 flex items-end">
-          <input 
-            type="text" 
+          <textarea 
+            ref={textareaRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAsk()}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleAsk();
+              }
+            }}
             placeholder="Ask the archive..." 
-            className="flex-1 bg-transparent border-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink focus:outline-none focus:ring-0"
+            className="flex-1 bg-transparent border-none font-serif italic text-[18px] placeholder:text-ink-muted text-ink focus:outline-none focus:ring-0 resize-none overflow-y-auto max-h-[200px] py-0"
+            rows={1}
             disabled={loading}
           />
           <button 
