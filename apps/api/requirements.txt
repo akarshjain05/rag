@@ -553,3 +553,4 @@ yarl==1.24.5
 zstandard==0.25.0
     # via langsmith
 locust>=2.29.0
+pytesseract==0.3.13

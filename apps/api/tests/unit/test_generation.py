@@ -142,7 +142,7 @@ def test_extractive_mode_retrieval_confidence_reflects_chunk_similarity():
 # --------------------------------------------------------------------------
 def test_llm_mode_builds_context_with_citation_markers_and_source_metadata():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "Vacation accrues monthly [1]."
+    fake_llm.generate_with_metrics.return_value = ("Vacation accrues monthly [1].", {})
     chunks = [
         make_chunk("a", "Vacation accrues at 1.5 days per month.", section_heading="Vacation Policy"),
         make_chunk("b", "Remote work needs manager approval.", page_number=3),
@@ -156,7 +156,7 @@ def test_llm_mode_builds_context_with_citation_markers_and_source_metadata():
     assert result.used_citation_markers == [1]
     assert result.invalid_citation_markers == []
 
-    system_arg, user_arg = fake_llm.generate.call_args[0]
+    system_arg, user_arg = fake_llm.generate_with_metrics.call_args[0]
     assert "[1]" in user_arg and "[2]" in user_arg
     assert "Vacation Policy" in user_arg
     assert "page 3" in user_arg
@@ -165,7 +165,7 @@ def test_llm_mode_builds_context_with_citation_markers_and_source_metadata():
 
 def test_llm_mode_flags_hallucinated_citation_without_dropping_answer():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "This is covered in excerpt [7]."  # only 1 excerpt provided
+    fake_llm.generate_with_metrics.return_value = ("This is covered in excerpt [7].", {})  # only 1 excerpt provided
     chunks = [make_chunk("a", "Some real content.")]
     generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
 
@@ -181,7 +181,7 @@ def test_llm_mode_flags_hallucinated_citation_without_dropping_answer():
 # --------------------------------------------------------------------------
 def test_llm_mode_without_verifier_uses_structural_coverage_basis():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "Cited claim [1]. Uncited claim with no marker at all."
+    fake_llm.generate_with_metrics.return_value = ("Cited claim [1]. Uncited claim with no marker at all.", {})
     chunks = [make_chunk("a", "some excerpt")]
     generator = AnswerGenerator(llm_client=fake_llm, mode="llm")  # no citation_verifier
 
@@ -198,7 +198,7 @@ def test_llm_mode_without_verifier_uses_structural_coverage_basis():
 # --------------------------------------------------------------------------
 def test_llm_mode_with_verifier_uses_verified_coverage_and_flags_unsupported():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "Supported claim [1]. Unsupported claim [2]."
+    fake_llm.generate_with_metrics.return_value = ("Supported claim [1]. Unsupported claim [2].", {})
     fake_verifier = MagicMock(spec=CitationVerifier)
     fake_verifier.verify.return_value = VerificationResult(
         claims=[
@@ -221,7 +221,7 @@ def test_llm_mode_with_verifier_uses_verified_coverage_and_flags_unsupported():
 
 def test_llm_mode_composite_confidence_averages_the_three_subscores():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "Answer [1]."
+    fake_llm.generate_with_metrics.return_value = ("Answer [1].", {})
     fake_verifier = MagicMock(spec=CitationVerifier)
     fake_verifier.verify.return_value = VerificationResult(
         claims=[ClaimVerification(claim_text="Answer [1].", citation_markers=[1], supported=True)],
@@ -239,25 +239,25 @@ def test_llm_mode_composite_confidence_averages_the_three_subscores():
 
 def test_ambiguity_signal_fires_when_query_shares_root_with_two_defined_terms():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "Both apply [1]."
+    fake_llm.generate_with_metrics.return_value = ("Both apply [1].", {})
     chunks = [make_chunk("a", "The plan targets a Recovery Time Objective (RTO) of 4 hours and a Recovery Point Objective (RPO) of 1 hour.")]
     generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
 
     generator.generate("How long does recovery take?", chunks)
 
-    _, user_arg = fake_llm.generate.call_args[0]
+    _, user_arg = fake_llm.generate_with_metrics.call_args[0]
     assert "<ambiguity_signal>" in user_arg
 
 
 def test_ambiguity_signal_not_added_when_query_names_the_specific_acronym():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "1 hour [1]."
+    fake_llm.generate_with_metrics.return_value = ("1 hour [1].", {})
     chunks = [make_chunk("a", "The plan targets a Recovery Time Objective (RTO) of 4 hours and a Recovery Point Objective (RPO) of 1 hour.")]
     generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
 
     generator.generate("What is the disaster recovery RPO?", chunks)
 
-    _, user_arg = fake_llm.generate.call_args[0]
+    _, user_arg = fake_llm.generate_with_metrics.call_args[0]
     assert "<ambiguity_signal>" not in user_arg
 
 
@@ -267,23 +267,50 @@ def test_ambiguity_signal_not_added_for_unrelated_specific_question_over_the_sam
     RTO/RPO-style terms elsewhere -- this is the exact false-positive the
     broader "just count numbers" version of this heuristic produced."""
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "30 days [1]."
+    fake_llm.generate_with_metrics.return_value = ("30 days [1].", {})
     chunks = [make_chunk("a", "Daily backups are retained for 30 days. The plan also targets a Recovery Time Objective (RTO) of 4 hours and a Recovery Point Objective (RPO) of 1 hour.")]
     generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
 
     generator.generate("How long are daily backups retained?", chunks)
 
-    _, user_arg = fake_llm.generate.call_args[0]
+    _, user_arg = fake_llm.generate_with_metrics.call_args[0]
     assert "<ambiguity_signal>" not in user_arg
 
 
 def test_ambiguity_signal_not_added_when_chunk_has_no_defined_terms():
     fake_llm = MagicMock()
-    fake_llm.generate.return_value = "99.9% [1]."
+    fake_llm.generate_with_metrics.return_value = ("99.9% [1].", {})
     chunks = [make_chunk("a", "Aurora commits to 99.9% monthly uptime.")]
     generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
 
     generator.generate("What's the uptime?", chunks)
 
-    _, user_arg = fake_llm.generate.call_args[0]
+    _, user_arg = fake_llm.generate_with_metrics.call_args[0]
     assert "<ambiguity_signal>" not in user_arg
+
+def test_thresholds_diverge():
+    """Test that context_pruning_threshold (retrieval) and low_confidence_threshold (generation) are decoupled."""
+    from rag_api.domain.generation.generation import AnswerGenerator
+    from rag_api.domain.retrieval.retrieval import RetrievedChunk
+    
+    # Simulate the outcome of retrieval with context_pruning_threshold = 0.1
+    # It allowed a chunk with rerank_score = 0.2
+    low_score_chunk = RetrievedChunk(
+        text="A low quality chunk.",
+        metadata={"source_document": "low_qual.pdf"},
+        chunk_id="low_qual::1",
+        rerank_score=0.2
+    )
+    
+    # 1. Generator has low_confidence_threshold = 0.5
+    # The chunk arrived, but its confidence (0.2) is below 0.5.
+    generator_high_thresh = AnswerGenerator(llm_client=None, mode="extractive", low_confidence_threshold=0.5)
+    result_high = generator_high_thresh.generate("What?", [low_score_chunk])
+    assert result_high.mode == "low_confidence", "Generator should reject the chunk since 0.2 < 0.5"
+    
+    # 2. Generator has low_confidence_threshold = 0.1
+    # The chunk arrived, and its confidence (0.2) is >= 0.1.
+    generator_low_thresh = AnswerGenerator(llm_client=None, mode="extractive", low_confidence_threshold=0.1)
+    result_low = generator_low_thresh.generate("What?", [low_score_chunk])
+    assert result_low.mode == "extractive", "Generator should accept the chunk since 0.2 >= 0.1"
+
