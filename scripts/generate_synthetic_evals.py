@@ -38,8 +38,8 @@ def main():
         base_url=settings.openai_base_url if settings.llm_provider == "openai" else None
     )
     
-    corpus_dir = Path("eval/aurora_corpus")
-    out_file = Path("eval/aurora_qa_expanded.json")
+    corpus_dir = Path("eval/vellumiq_corpus")
+    out_file = Path("eval/vellumiq_qa_expanded.json")
     
     all_qa = []
     

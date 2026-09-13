@@ -1,4 +1,4 @@
-# Aurora Cloud Platform: Decoupled Retrieval & Observability
+# Vellumiq: Decoupled Retrieval & Observability
 
 A production-grade Retrieval-Augmented Generation (RAG) pipeline designed to solve the standard failure modes of naive LLM wrappers: temporal hallucinations, high token costs on repeat queries, and vocabulary mismatch. 
 
@@ -86,7 +86,7 @@ graph TD
 
 ## 📸 Interface & Citations
 
-![Aurora Cloud Platform Interface showing VERIFIED badge and chunk IDs](https://placehold.co/800x450/1e1e1e/ffffff.png?text=Aurora Cloud Platform+Dashboard+%7C+Add+Screenshot+Here)
+![Vellumiq Interface showing VERIFIED badge and chunk IDs](https://placehold.co/800x450/1e1e1e/ffffff.png?text=Vellumiq+Dashboard+%7C+Add+Screenshot+Here)
 
 The frontend strictly renders citations mapping directly to the deterministic `chunk_id` stored in the Qdrant payload, ensuring zero hallucinated sources.
 
@@ -95,7 +95,7 @@ This repository utilizes GitHub Actions to execute a continuous integration pipe
 
 - Spawns an ephemeral Qdrant service container.
 - Runs `pytest` integration suites to validate normalizer JSON extraction and Corrective RAG (CRAG) fallback logic.
-- Executes a full RAG evaluation harness against `aurora_qa.json`, validating custom regression tests.
+- Executes a full RAG evaluation harness against `vellumiq_qa.json`, validating custom regression tests.
 - Evaluates 8 robust quality metrics (including `recall_at_5`, `ndcg_at_10`, `retrieval_relevance`, and `answer_relevance`) through `check_regression.py`, catching regressions that basic accuracy checks miss.
 - Includes native resilience for `AnthropicRateLimitError` and `OpenAIRateLimitError` to survive rate limits during bulk evaluations.
 

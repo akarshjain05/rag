@@ -29,7 +29,7 @@ def main():
         base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
     )
 
-    docs = [Path("eval/aurora_corpus/adversarial_injection.txt")]
+    docs = [Path("eval/vellumiq_corpus/adversarial_injection.txt")]
     
     with tempfile.TemporaryDirectory() as tmp:
         vector_store = VectorStore(Path(tmp) / "qdrant", "adversarial_col", dense_dimension=embedding_client.dimension)

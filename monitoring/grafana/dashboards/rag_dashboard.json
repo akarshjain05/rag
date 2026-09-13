@@ -46,7 +46,7 @@
   ],
   "refresh": "5s",
   "schemaVersion": 38,
-  "title": "Aurora RAG Dashboard",
-  "uid": "aurora-rag-01",
+  "title": "Vellumiq RAG Dashboard",
+  "uid": "vellumiq-rag-01",
   "version": 1
 }

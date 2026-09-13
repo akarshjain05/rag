@@ -280,7 +280,7 @@ def test_ambiguity_signal_not_added_for_unrelated_specific_question_over_the_sam
 def test_ambiguity_signal_not_added_when_chunk_has_no_defined_terms():
     fake_llm = MagicMock()
     fake_llm.generate_with_metrics.return_value = ("99.9% [1].", {})
-    chunks = [make_chunk("a", "Aurora commits to 99.9% monthly uptime.")]
+    chunks = [make_chunk("a", "Vellumiq commits to 99.9% monthly uptime.")]
     generator = AnswerGenerator(llm_client=fake_llm, mode="llm")
 
     generator.generate("What's the uptime?", chunks)

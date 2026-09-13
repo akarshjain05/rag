@@ -26,8 +26,8 @@ from rag_api.adapters.vectorstore.vector_store import VectorStore
 from rag_api.domain.generation.verification import CitationVerifier
 from eval.golden_dataset import load_golden_dataset
 
-DEFAULT_DATASET = Path(__file__).parent / "golden_qa.json"
-DEFAULT_CORPUS = Path(__file__).parent / "golden_corpus"
+DEFAULT_DATASET = Path(__file__).parent / "vellumiq_qa.json"
+DEFAULT_CORPUS = Path(__file__).parent / "vellumiq_corpus"
 
 def main():
     parser = argparse.ArgumentParser(description="Run Ragas Eval")
@@ -103,8 +103,21 @@ def main():
         print("\nEvaluating with Ragas...")
         
         # Determine langchain models for ragas
-        eval_llm = ChatOpenAI(model=os.environ.get("OPENAI_LLM_MODEL", "gpt-3.5-turbo"))
-        eval_embeddings = OpenAIEmbeddings(model=os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"))
+        from langchain_openai import ChatOpenAI
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        from langchain.callbacks.manager import CallbackManager
+        
+        # Use Groq (or fallback) via OpenAI compatible endpoint, with high retry
+        eval_llm = ChatOpenAI(
+            model=os.environ.get("OPENAI_LLM_MODEL", "gpt-4o"),
+            base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            api_key=os.environ.get("OPENAI_API_KEY", "dummy"),
+            max_retries=10
+        )
+        
+        # Use local embeddings since Groq doesn't have embeddings
+        local_model = os.environ.get("LOCAL_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        eval_embeddings = HuggingFaceEmbeddings(model_name=local_model)
         
         result = evaluate(
             dataset,

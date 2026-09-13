@@ -11,7 +11,7 @@ only checks whether the right chunks were found.
 
 ## Dataset
 
-57 hand-written examples (`eval/aurora_qa.json`) against 8 fictional
+57 hand-written examples (`eval/vellumiq_qa.json`) against 8 fictional
 company policy documents (`eval/golden_corpus/`), across four categories:
 
 | Category | Count | What it tests |
