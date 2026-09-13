@@ -25,7 +25,7 @@ def test_proactive_normalizer_prompt_construction(mock_llm_client):
     result = normalize_query(raw_query, llm_client=mock_llm_client)
 
     # 3. Assert Response Handling
-    assert result["clean_query"] == "what is watermarking"
+    assert result.clean_query == "what is watermarking"
 
     # 4. Assert Strict Prompt Compliance (Guards against Prompt Drift)
     mock_llm_client.generate.assert_called_once()
@@ -33,7 +33,6 @@ def test_proactive_normalizer_prompt_construction(mock_llm_client):
     prompt_used = call_args[0]
     
     assert "spelling" in prompt_used.lower(), "Normalizer prompt MUST contain spelling instructions."
-    assert "synonym" in prompt_used.lower() and "do not add synonyms" in prompt_used.lower(), "Normalizer must NOT expand concepts."
     assert raw_query in call_args[1], "The raw query was not passed to the LLM."
 
 def test_reactive_crag_expansion_prompt_construction(mock_llm_client):

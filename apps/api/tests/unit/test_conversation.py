@@ -23,7 +23,7 @@ def test_condense_query_no_history():
 
 def test_condense_query_with_history():
     mock_llm = MagicMock()
-    mock_llm.generate.return_value = "What is the policy?"
+    mock_llm.generate.return_value = '{"is_followup": true, "standalone_query": "What is the policy?"}'
     history = [Turn("What is the vacation policy?", "It is 15 days.")]
     
     result = condense_query("Does it carry over?", history, mock_llm)
@@ -33,8 +33,8 @@ def test_condense_query_with_history():
     system_arg, user_arg = mock_llm.generate.call_args[0][:2]
     kwargs = mock_llm.generate.call_args[1]
     
-    assert "rewrite the follow-up" in system_arg
-    assert user_arg == "Does it carry over?"
+    assert "standalone" in system_arg
+    assert "Does it carry over?" in user_arg
     assert kwargs["history"] == [
         {"role": "user", "content": "What is the vacation policy?"},
         {"role": "assistant", "content": "It is 15 days."}
@@ -47,20 +47,20 @@ def test_normalize_query_fixes_typo():
     mock_llm = MagicMock()
     mock_llm.generate.return_value = '{"clean_query": "watermarking", "target_date": null}'
     result = normalize_query("wtaermakring", mock_llm)
-    assert result.get("clean_query") == "watermarking"
+    assert result.clean_query == "watermarking"
     system_arg, user_arg = mock_llm.generate.call_args[0]
     assert "spelling" in system_arg.lower() or "typing" in system_arg.lower()
-    assert user_arg == "wtaermakring"
+    assert "wtaermakring" in user_arg
 
 def test_normalize_query_leaves_clean_query_unchanged():
     mock_llm = MagicMock()
     mock_llm.generate.return_value = '{"clean_query": "what is watermarking?", "target_date": null}'
-    assert normalize_query("what is watermarking?", mock_llm).get("clean_query") == "what is watermarking?"
+    assert normalize_query("what is watermarking?", mock_llm).clean_query == "what is watermarking?"
 
 def test_normalize_query_strips_whitespace():
     mock_llm = MagicMock()
     mock_llm.generate.return_value = '{"clean_query": "watermarking", "target_date": null}'
-    assert normalize_query("wtaermakring", mock_llm).get("clean_query") == "watermarking"
+    assert normalize_query("wtaermakring", mock_llm).clean_query == "watermarking"
 
 def test_should_expand_query_true_for_zero_score():
     assert should_expand_query(0.0) is True
