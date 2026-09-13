@@ -4,6 +4,8 @@ from prometheus_client import Counter, Histogram
 tracer = trace.get_tracer("rag_api")
 
 llm_calls_total = Counter("rag_llm_calls_total", "LLM calls by pipeline stage", ["stage", "provider"])
+llm_input_tokens_total = Counter("rag_llm_input_tokens_total", "LLM input tokens by stage", ["stage", "provider"])
+llm_output_tokens_total = Counter("rag_llm_output_tokens_total", "LLM output tokens by stage", ["stage", "provider"])
 llm_call_seconds = Histogram("rag_llm_call_seconds", "LLM call latency by stage", ["stage"])
 retrieval_confidence = Histogram("rag_retrieval_confidence", "Distribution of retrieval confidence scores")
 import sentry_sdk

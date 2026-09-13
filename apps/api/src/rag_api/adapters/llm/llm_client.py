@@ -12,6 +12,7 @@ from __future__ import annotations
 from rag_api.core.logging import log
 
 from abc import ABC, abstractmethod
+from rag_api.core.observability import llm_input_tokens_total, llm_output_tokens_total
 
 
 class LLMClient(ABC):
@@ -214,6 +215,9 @@ class OpenAILLMClient(LLMClient):
                     kwargs["extra_body"] = {"reasoning_effort": "max"}
                     
                 resp = self._client.chat.completions.create(**kwargs)
+                if getattr(resp, 'usage', None):
+                    llm_input_tokens_total.labels(stage='unknown', provider='openai').inc(resp.usage.prompt_tokens)
+                    llm_output_tokens_total.labels(stage='unknown', provider='openai').inc(resp.usage.completion_tokens)
                 return resp.choices[0].message.content or ""
             except openai.BadRequestError as e:
                 # Handle OpenAI context_length_exceeded
@@ -272,8 +276,12 @@ class OpenAILLMClient(LLMClient):
                 if usage:
                     if hasattr(self, "_input_cost_per_1m") and (self._input_cost_per_1m > 0 or self._output_cost_per_1m > 0):
                         cost = (usage.prompt_tokens * self._input_cost_per_1m + usage.completion_tokens * self._output_cost_per_1m) / 1_000_000.0
+                        llm_input_tokens_total.labels(stage='generation', provider='openai').inc(usage.prompt_tokens)
+                        llm_output_tokens_total.labels(stage='generation', provider='openai').inc(usage.completion_tokens)
                     else:
                         cost = (usage.prompt_tokens * 5.0 + usage.completion_tokens * 15.0) / 1_000_000.0
+                        llm_input_tokens_total.labels(stage='generation', provider='openai').inc(usage.prompt_tokens)
+                        llm_output_tokens_total.labels(stage='generation', provider='openai').inc(usage.completion_tokens)
                     
                 return ans, {"ttft": ttft or total_latency, "total_latency": total_latency, "cost": cost}
             except openai.BadRequestError as e:
@@ -310,7 +318,10 @@ class OpenAILLMClient(LLMClient):
                 ]
             }]
         )
-        return resp.choices[0].message.content or ""
+        if getattr(resp, 'usage', None):
+                    llm_input_tokens_total.labels(stage='unknown', provider='openai').inc(resp.usage.prompt_tokens)
+                    llm_output_tokens_total.labels(stage='unknown', provider='openai').inc(resp.usage.completion_tokens)
+                return resp.choices[0].message.content or ""
 
 
 def build_llm_client(provider: str, **kwargs) -> LLMClient | None:
