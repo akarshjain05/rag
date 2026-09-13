@@ -48,7 +48,7 @@ graph TD
         subgraph Corrective RAG & Pruning
             T --> U{Evaluate Max Score}
             U -- "< 0.40" --> V[Graceful Refusal]
-            U -- "0.40 - 0.79" --> W[Query Expansion (mode='expanded_query')]
+            U -- "0.40 - 0.79" --> W["Query Expansion (mode='expanded_query')"]
             W -. expanded query .-> R1
             U -- "> 0.80" --> X[Dynamic Context Pruning]
             X -- Drop chunks < 0.30 --> Y[Clean Context Window]
