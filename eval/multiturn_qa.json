@@ -1,0 +1,21 @@
+[
+  {
+    "conversation_id": "conv-1",
+    "turns": [
+      {
+        "question": "What is the SLA for Aurora Database instances?",
+        "expected_answer_concepts": ["99.99%", "uptime"]
+      },
+      {
+        "question": "Does it apply to the development tier as well?",
+        "expected_answer_concepts": ["no", "does not apply", "production only"],
+        "pronoun_resolution_target": "Aurora Database instances SLA"
+      },
+      {
+        "question": "What happens if they miss that target?",
+        "expected_answer_concepts": ["service credits", "refund"],
+        "pronoun_resolution_target": "miss the 99.99% uptime SLA"
+      }
+    ]
+  }
+]
