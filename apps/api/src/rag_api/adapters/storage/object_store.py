@@ -13,9 +13,17 @@ class ObjectStore:
         )
 
         self.bucket = bucket
-        existing = {b["Name"] for b in self._client.list_buckets().get("Buckets", [])}
-        if bucket not in existing:
-            self._client.create_bucket(Bucket=bucket)
+        self._bucket_created = False
+
+    def _ensure_bucket(self):
+        if not self._bucket_created:
+            try:
+                existing = {b["Name"] for b in self._client.list_buckets().get("Buckets", [])}
+                if self.bucket not in existing:
+                    self._client.create_bucket(Bucket=self.bucket)
+                self._bucket_created = True
+            except Exception:
+                pass
 
     def upload_fileobj(self, fileobj, key: str) -> None:
         self._client.upload_fileobj(fileobj, self.bucket, key)

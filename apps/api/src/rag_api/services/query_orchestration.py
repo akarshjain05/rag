@@ -115,7 +115,7 @@ class QueryOrchestrationService:
                 sq, 
                 top_k=payload.top_k, 
                 chunking_strategy=strategy_value,
-                original_query=search_query,
+                rerank_query=search_query,
                 document_filter=payload.document_filter,
                 temporal_filter=temporal_filter,
             )
@@ -146,7 +146,7 @@ class QueryOrchestrationService:
                             expanded_query, 
                             top_k=payload.top_k, 
                             chunking_strategy=strategy_value,
-                            original_query=search_query,
+                            rerank_query=search_query,
                             document_filter=payload.document_filter,
                             temporal_filter=temporal_filter,
                         )

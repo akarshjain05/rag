@@ -109,14 +109,16 @@ def create_app(
 
 
 
-    image_store_instance = build_image_store(
-        settings.image_store_backend, 
-        base_dir=settings.image_store_path,
-        bucket=settings.object_store_bucket,
-        endpoint_url=settings.object_store_endpoint,
-        access_key=settings.object_store_access_key,
-        secret_key=settings.object_store_secret_key
-    )
+    image_store_instance = None
+    if settings.image_indexing_enabled:
+        image_store_instance = build_image_store(
+            settings.image_store_backend, 
+            base_dir=settings.image_store_path,
+            bucket=settings.object_store_bucket,
+            endpoint_url=settings.object_store_endpoint,
+            access_key=settings.object_store_access_key,
+            secret_key=settings.object_store_secret_key
+        )
 
 
     vision_model = settings.vision_caption_model or ("claude-3-5-sonnet-20241022" if settings.llm_provider == "anthropic" else "gpt-4o-mini")

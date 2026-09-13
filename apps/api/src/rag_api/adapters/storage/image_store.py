@@ -5,6 +5,7 @@ from pathlib import Path
 class ImageStore(ABC):
     @abstractmethod
     def put(self, image_bytes: bytes, content_type: str) -> str:
+        self._ensure_bucket()
         pass
     @abstractmethod
     def get(self, image_hash: str) -> tuple[bytes, str] | None:
@@ -21,6 +22,7 @@ class LocalImageStore(ImageStore):
         self._meta_dir.mkdir(exist_ok=True)
 
     def put(self, image_bytes: bytes, content_type: str) -> str:
+        self._ensure_bucket()
         image_hash = hashlib.sha256(image_bytes).hexdigest()
         filepath = self.base_dir / image_hash
         metapath = self._meta_dir / f"{image_hash}.meta"
@@ -52,11 +54,20 @@ class S3ImageStore(ImageStore):
             config=botocore.client.Config(s3={'addressing_style': 'path'}, signature_version='s3v4')
         )
         self.bucket = bucket
-        existing = {b["Name"] for b in self._client.list_buckets().get("Buckets", [])}
-        if bucket not in existing:
-            self._client.create_bucket(Bucket=bucket)
+        self._bucket_created = False
+        
+    def _ensure_bucket(self):
+        if not self._bucket_created:
+            try:
+                existing = {b["Name"] for b in self._client.list_buckets().get("Buckets", [])}
+                if self.bucket not in existing:
+                    self._client.create_bucket(Bucket=self.bucket)
+                self._bucket_created = True
+            except Exception:
+                pass
 
     def put(self, image_bytes: bytes, content_type: str) -> str:
+        self._ensure_bucket()
         import hashlib
         image_hash = hashlib.sha256(image_bytes).hexdigest()
         self._client.put_object(Bucket=self.bucket, Key=image_hash, Body=image_bytes, ContentType=content_type)

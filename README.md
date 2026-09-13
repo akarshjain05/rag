@@ -1,4 +1,4 @@
-# Enterprise RAG Architecture: Decoupled Retrieval & Observability
+# Aurora Cloud Platform: Decoupled Retrieval & Observability
 
 A production-grade Retrieval-Augmented Generation (RAG) pipeline designed to solve the standard failure modes of naive LLM wrappers: temporal hallucinations, high token costs on repeat queries, and vocabulary mismatch. 
 
@@ -86,7 +86,7 @@ graph TD
 
 ## 📸 Interface & Citations
 
-![Vellumiq Interface showing VERIFIED badge and chunk IDs](https://placehold.co/800x450/1e1e1e/ffffff.png?text=Vellumiq+Dashboard+%7C+Add+Screenshot+Here)
+![Aurora Cloud Platform Interface showing VERIFIED badge and chunk IDs](https://placehold.co/800x450/1e1e1e/ffffff.png?text=Aurora Cloud Platform+Dashboard+%7C+Add+Screenshot+Here)
 
 The frontend strictly renders citations mapping directly to the deterministic `chunk_id` stored in the Qdrant payload, ensuring zero hallucinated sources.
 

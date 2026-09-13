@@ -15,7 +15,7 @@ from rag_api.adapters.vectorstore.vector_store import VectorStore
 @pytest.fixture
 def client(tmp_path):
     settings = Settings(
-        chroma_persist_dir=tmp_path / "chroma",
+        qdrant_persist_dir=tmp_path / "qdrant",
         default_chunking_strategy="structure_aware",
         structure_max_section_size=500,
     )
@@ -23,7 +23,7 @@ def client(tmp_path):
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(dimension=128),
         llm_mode="extractive",  # exercises the full pipeline with zero API keys
-        vector_store=VectorStore(tmp_path / "chroma", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant", settings.collection_name, dense_dimension=128),
         )
     return TestClient(app)
 
@@ -130,12 +130,12 @@ def test_query_translates_provider_failure_into_clean_502(tmp_path):
         def embed(self, texts):
             raise OpenAIError("rate limit exceeded")
 
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma2")
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant2")
     app = create_app(
         settings,
         embedding_client=FailingEmbedder(),
         llm_mode="extractive",
-        vector_store=VectorStore(tmp_path / "chroma2", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant2", settings.collection_name, dense_dimension=128),
         )
     failing_client = TestClient(app)
 
@@ -165,8 +165,8 @@ def test_query_with_reranker_wired_returns_rerank_scores(tmp_path):
                 c.rerank_score = float(i)
             return reordered[:top_k]
 
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma3")
-    store = VectorStore(tmp_path / "chroma3", settings.collection_name, dense_dimension=128)
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant3")
+    store = VectorStore(tmp_path / "qdrant3", settings.collection_name, dense_dimension=128)
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
@@ -196,12 +196,12 @@ def test_reranker_auto_built_from_settings_when_not_overridden(tmp_path):
     fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
     fake_llm.generate.return_value = '{"1": 9}'
 
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma4", reranker_provider="llm_judge")
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant4", reranker_provider="llm_judge")
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma4", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant4", settings.collection_name, dense_dimension=128),
         )
 
     assert isinstance(app.state.retriever.reranker, LLMJudgeReranker)
@@ -213,12 +213,12 @@ def test_llm_client_auto_built_from_settings_when_nothing_overridden(tmp_path, m
     to create_app at all, so it must build from settings.llm_provider --
     every other test in this file bypasses this branch via an override."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma5", llm_provider="anthropic")
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant5", llm_provider="anthropic")
 
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
-        vector_store=VectorStore(tmp_path / "chroma5", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant5", settings.collection_name, dense_dimension=128),
         )
 
     assert app.state.generator.mode == "llm"
@@ -237,13 +237,13 @@ def test_ingest_empty_filename_rejected_by_upload_validation(client):
 def test_citation_verifier_auto_built_when_llm_available_and_enabled(tmp_path):
     fake_llm = MagicMock()
     fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma6", citation_verification_enabled=True)
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant6", citation_verification_enabled=True)
 
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma6", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant6", settings.collection_name, dense_dimension=128),
         )
 
     assert app.state.generator.citation_verifier is not None
@@ -253,13 +253,13 @@ def test_citation_verifier_auto_built_when_llm_available_and_enabled(tmp_path):
 def test_citation_verifier_not_built_when_disabled_in_settings(tmp_path):
     fake_llm = MagicMock()
     fake_llm.generate_with_metrics = MagicMock(side_effect=lambda *args, **kwargs: (fake_llm.generate.return_value, {"ttft": 0.5, "total_latency": 1.0, "cost": 0.0}))
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma7", citation_verification_enabled=False)
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant7", citation_verification_enabled=False)
 
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma7", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant7", settings.collection_name, dense_dimension=128),
         )
 
     assert app.state.generator.citation_verifier is None
@@ -269,21 +269,21 @@ def test_citation_verifier_not_built_when_disabled_in_settings(tmp_path):
 def test_citation_verifier_not_built_in_extractive_mode_even_if_enabled(tmp_path):
     """citation_verification_enabled=True is the default, but there's no
     LLM in extractive mode to judge with -- must no-op, not error."""
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma8", citation_verification_enabled=True)
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant8", citation_verification_enabled=True)
 
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
         llm_mode="extractive",
-        vector_store=VectorStore(tmp_path / "chroma8", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant8", settings.collection_name, dense_dimension=128),
         )
 
     assert app.state.generator.citation_verifier is None
 
 
 def test_query_low_confidence_response_over_http(tmp_path):
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma9", low_confidence_threshold=0.99)  # near-impossible to clear
-    store = VectorStore(tmp_path / "chroma9", settings.collection_name, dense_dimension=128)
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant9", low_confidence_threshold=0.99)  # near-impossible to clear
+    store = VectorStore(tmp_path / "qdrant9", settings.collection_name, dense_dimension=128)
     app = create_app(
         settings,
         embedding_client=DeterministicFakeEmbeddingClient(),
@@ -399,10 +399,10 @@ def test_typo_query_recovers_via_normalization(tmp_path):
                 c.rerank_score = score
             return candidates[:top_k]
 
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma")
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant")
     app = create_app(
         settings, embedding_client=DeterministicFakeEmbeddingClient(), llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant", settings.collection_name, dense_dimension=128),
         reranker=ScoreByQueryReranker(),
     )
     client = TestClient(app)
@@ -448,10 +448,10 @@ def test_stop_then_continue_resumes_the_original_question(tmp_path):
     fake_llm.provider_name = "fake"
     fake_llm.generate.return_value = "Escalation goes through four steps [1]."
 
-    settings = Settings(chroma_persist_dir=tmp_path / "chroma_resume")
+    settings = Settings(qdrant_persist_dir=tmp_path / "qdrant_resume")
     app = create_app(
         settings, embedding_client=DeterministicFakeEmbeddingClient(), llm_client=fake_llm,
-        vector_store=VectorStore(tmp_path / "chroma_resume", settings.collection_name, dense_dimension=128),
+        vector_store=VectorStore(tmp_path / "qdrant_resume", settings.collection_name, dense_dimension=128),
     )
     client = TestClient(app)
     client.post("/v1/ingest", files=[("files", ("handbook.md", MD_CONTENT, "text/markdown"))])

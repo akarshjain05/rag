@@ -89,7 +89,7 @@ class HybridRetriever:
         chunking_strategy: str | None = None,
         *,
         dense_only: bool = False,
-        original_query: str | None = None,
+        rerank_query: str | None = None,
         document_filter: list[str] | None = None,
         temporal_filter: dict | None = None,
     ) -> list[RetrievedChunk]:
@@ -179,7 +179,7 @@ class HybridRetriever:
         chunking_strategy: str | None = None,
         *,
         dense_only: bool = False,
-        original_query: str | None = None,
+        rerank_query: str | None = None,
     ) -> list[RetrievedChunk]:
         """Synchronous wrapper for eval/script usage ONLY. Never call from FastAPI."""
         try:
