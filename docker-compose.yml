@@ -183,8 +183,35 @@ services:
       minio:
         condition: service_started
     restart: unless-stopped
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus_alerts.yml:/etc/prometheus/prometheus_alerts.yml
+      - prometheus_data:/prometheus
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
 volumes:
   qdrant_data: null
   hf_cache: null
   fastembed_cache: null
   minio_data: null
+  prometheus_data: null
+  grafana_data: null
