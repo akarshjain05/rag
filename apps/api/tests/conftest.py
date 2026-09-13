@@ -125,3 +125,10 @@ def xlsx_path(tmp_path: Path) -> Path:
     
     wb.save(str(path))
     return path
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiting():
+    from rag_api.core.rate_limit import limiter
+    limiter.enabled = False
+    yield
+    limiter.enabled = True

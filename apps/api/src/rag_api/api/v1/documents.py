@@ -125,7 +125,9 @@ class BulkDeleteRequest(BaseModel):
     document_ids: list[str]
 
 @router.post("/documents/bulk_delete", summary="Bulk delete documents")
+@limiter.limit("5/minute")
 def bulk_delete_documents(
+    request: Request,
     payload: BulkDeleteRequest,
     vector_store: VectorStore = Depends(get_vector_store),
 ):
@@ -141,7 +143,9 @@ def bulk_delete_documents(
     return {"status": "ok", "chunks_deleted": deleted_count}
 
 @router.delete("/documents/{source_document}", response_model=DeleteResponse, summary="Remove a document from the index", description="Deletes every chunk (across all chunking strategies) belonging to `source_document` from both the vector store and the sparse index.")
+@limiter.limit("5/minute")
 def delete_document(
+    request: Request,
     source_document: str,
     vector_store = Depends(get_vector_store),
 ) -> DeleteResponse:
