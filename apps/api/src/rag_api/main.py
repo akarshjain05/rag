@@ -212,6 +212,14 @@ def create_app(
     app.state.normalizer_llm_client = normalizer_llm
     
     app.state.image_store = image_store_instance
+    
+    object_store_instance = ObjectStore(
+        settings.object_store_endpoint or "http://minio:9000",
+        settings.object_store_access_key or "minioadmin",
+        settings.object_store_secret_key or "minioadminpassword",
+        settings.object_store_bucket or "rag-pipeline-ingest"
+    )
+    app.state.object_store = object_store_instance
 
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     def health() -> HealthResponse:

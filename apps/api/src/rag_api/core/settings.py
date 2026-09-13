@@ -106,6 +106,7 @@ class Settings(BaseSettings):
     contextual_retrieval_fallback: str = "hierarchical"
     contextual_retrieval_section_target_tokens: int = 20_000
     query_condensation_enabled: bool = True
+    query_decomposition_enabled: bool = True
     query_normalization_enabled: bool = True
     crag_expansion_enabled: bool = True
     crag_threshold_upper: float = 0.80
