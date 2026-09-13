@@ -40,7 +40,7 @@ class AnthropicLLMClient(LLMClient):
     def provider_name(self) -> str:
         return 'anthropic'
 
-    def __init__(self, model: str = "claude-sonnet-4-5", api_key: str | None = None, max_tokens: int = 1024, timeout: float = 120.0):
+    def __init__(self, model: str = "claude-sonnet-4-5", api_key: str | None = None, max_tokens: int = 1024, timeout: float = 120.0, input_cost_per_1m: float = 0.0, output_cost_per_1m: float = 0.0):
         from anthropic import Anthropic  # local import: optional dependency
 
         if not api_key:
@@ -48,6 +48,8 @@ class AnthropicLLMClient(LLMClient):
         self._client = Anthropic(api_key=api_key, timeout=timeout)
         self._model = model
         self._max_tokens = max_tokens
+        self._input_cost_per_1m = input_cost_per_1m
+        self._output_cost_per_1m = output_cost_per_1m
 
     def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str:
         import anthropic
@@ -93,7 +95,9 @@ class AnthropicLLMClient(LLMClient):
                 ans = "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
                 cost = 0.0
                 if hasattr(resp, "usage") and resp.usage:
-                    if "sonnet" in self._model.lower():
+                    if hasattr(self, "_input_cost_per_1m") and (self._input_cost_per_1m > 0 or self._output_cost_per_1m > 0):
+                        cost = (resp.usage.input_tokens * self._input_cost_per_1m + resp.usage.output_tokens * self._output_cost_per_1m) / 1_000_000.0
+                    elif "sonnet" in self._model.lower():
                         cost = (resp.usage.input_tokens * 3.0 + resp.usage.output_tokens * 15.0) / 1_000_000.0
                     elif "haiku" in self._model.lower():
                         cost = (resp.usage.input_tokens * 0.25 + resp.usage.output_tokens * 1.25) / 1_000_000.0
@@ -131,7 +135,9 @@ class AnthropicLLMClient(LLMClient):
                 ans = "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
                 cost = 0.0
                 if hasattr(resp, "usage") and resp.usage:
-                    if "sonnet" in self._model.lower():
+                    if hasattr(self, "_input_cost_per_1m") and (self._input_cost_per_1m > 0 or self._output_cost_per_1m > 0):
+                        cost = (resp.usage.input_tokens * self._input_cost_per_1m + resp.usage.output_tokens * self._output_cost_per_1m) / 1_000_000.0
+                    elif "sonnet" in self._model.lower():
                         cost = (resp.usage.input_tokens * 3.0 + resp.usage.output_tokens * 15.0) / 1_000_000.0
                     elif "haiku" in self._model.lower():
                         cost = (resp.usage.input_tokens * 0.25 + resp.usage.output_tokens * 1.25) / 1_000_000.0
@@ -204,7 +210,7 @@ class OpenAILLMClient(LLMClient):
     def provider_name(self) -> str:
         return 'openai'
 
-    def __init__(self, model: str = "gpt-4o", api_key: str | None = None, base_url: str | None = None, max_tokens: int = 1024, timeout: float = 120.0):
+    def __init__(self, model: str = "gpt-4o", api_key: str | None = None, base_url: str | None = None, max_tokens: int = 1024, timeout: float = 120.0, input_cost_per_1m: float = 0.0, output_cost_per_1m: float = 0.0):
         from openai import OpenAI  # local import: optional dependency
 
         if not api_key:
@@ -218,6 +224,8 @@ class OpenAILLMClient(LLMClient):
             max_tokens = 16384
             
         self._max_tokens = max_tokens
+        self._input_cost_per_1m = input_cost_per_1m
+        self._output_cost_per_1m = output_cost_per_1m
 
     def generate(self, system: str | list[dict], user: str | list[dict], history: list[dict] | None = None) -> str:
         import openai
@@ -301,7 +309,10 @@ class OpenAILLMClient(LLMClient):
                 ans = "".join(ans_chunks)
                 cost = 0.0
                 if usage:
-                    cost = (usage.prompt_tokens * 0.005 + usage.completion_tokens * 0.015) / 1000.0
+                    if hasattr(self, "_input_cost_per_1m") and (self._input_cost_per_1m > 0 or self._output_cost_per_1m > 0):
+                        cost = (usage.prompt_tokens * self._input_cost_per_1m + usage.completion_tokens * self._output_cost_per_1m) / 1_000_000.0
+                    else:
+                        cost = (usage.prompt_tokens * 5.0 + usage.completion_tokens * 15.0) / 1_000_000.0
                     
                 return ans, {"ttft": ttft or total_latency, "total_latency": total_latency, "cost": cost}
             except openai.BadRequestError as e:

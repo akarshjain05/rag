@@ -70,6 +70,8 @@ def create_app(
             api_key=settings.anthropic_api_key if settings.llm_provider == "anthropic" else settings.openai_api_key,
             base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
             timeout=settings.llm_request_timeout_seconds,
+            input_cost_per_1m=settings.llm_input_cost_per_1m,
+            output_cost_per_1m=settings.llm_output_cost_per_1m,
         )
     llm_mode = llm_mode or ("extractive" if llm_client is None else "llm")
 
@@ -85,6 +87,8 @@ def create_app(
                     api_key=settings.anthropic_api_key if settings.llm_provider == "anthropic" else settings.openai_api_key,
                     base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
             timeout=settings.llm_request_timeout_seconds,
+            input_cost_per_1m=settings.llm_input_cost_per_1m,
+            output_cost_per_1m=settings.llm_output_cost_per_1m,
                 )
             else:
                 verifier_llm = llm_client
@@ -202,6 +206,8 @@ def create_app(
             api_key=settings.anthropic_api_key if settings.llm_provider == "anthropic" else settings.openai_api_key,
             base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
             timeout=settings.llm_request_timeout_seconds,
+            input_cost_per_1m=settings.llm_input_cost_per_1m,
+            output_cost_per_1m=settings.llm_output_cost_per_1m,
         )
     app.state.normalizer_llm_client = normalizer_llm
     
