@@ -48,7 +48,7 @@ graph TD
         subgraph Corrective RAG & Pruning
             T --> U{Evaluate Max Score}
             U -- "< 0.40" --> V[Graceful Refusal]
-            U -- "0.40 - 0.79" --> W[Query Expansion & Re-Search]
+            U -- "0.40 - 0.79" --> W[Query Expansion (mode='expanded_query')]
             W -. expanded query .-> R1
             U -- "> 0.80" --> X[Dynamic Context Pruning]
             X -- Drop chunks < 0.30 --> Y[Clean Context Window]
@@ -63,17 +63,24 @@ graph TD
     end
 ```
 
-**Edge Semantic Caching (Qdrant)**: Intercepts repeat queries using dense vector similarity to return answers in < 100ms at zero LLM cost. The cache is built with production resilience:
-- **Negative Cache Prevention:** The system strictly refuses to cache low-confidence or "I don't know" answers, ensuring failures are never permanently lodged in the cache.
-- **Fail-Open Timeouts:** Strict 250ms timeouts ensure that vector database hangs gracefully degrade to a cache miss, never stalling user requests.
-- **Global Context Sharing:** Standalone (first-turn) queries utilize a globally shared cache namespace, while follow-up queries uniquely isolate against conversation history.
-- **Aggressive Invalidation:** The entire semantic cache is flushed upon new document ingestion to ensure real-time accuracy.
+**Multi-Hop Query Decomposition**: The query orchestration layer automatically decomposes complex or multi-part questions (e.g. "compare X and Y") into targeted sub-queries. It executes retrieval concurrently for all sub-queries and fuses the results, dramatically improving retrieval relevance on multi-hop questions.
 
 **Query Normalization & Condensation**: A fast, cheap LLM rewrites user queries to fix typos, extracts temporal metadata, and resolves conversational follow-ups into standalone queries. To protect dense vector search integrity, the LLM is strictly constrained via Pydantic/JSON schemas to prevent "conversational filler" (e.g., *"Here is the rewritten query:"*) from polluting the mathematical embedding.
+
+**Edge Semantic Caching (Qdrant)**: Intercepts repeat queries using dense vector similarity to return answers in < 100ms at zero LLM cost. The cache is built with production resilience:
+- **Deterministic Keys:** Cache entries are strictly partitioned by `top_k`, `temporal_filter`, and `verify_citations` to prevent mismatched parameters from serving invalid payloads.
+- **Negative Cache Prevention:** The system strictly refuses to cache low-confidence or "I don't know" answers.
+- **Aggressive Invalidation:** The entire semantic cache is flushed upon new document ingestion to ensure real-time accuracy.
 
 **Temporal Hybrid Search (Qdrant)**: Combines BM25 keyword matching with dense vectors, dynamically applying `valid_from` and `valid_to` metadata constraints to strictly enforce point-in-time accuracy.
 
 **Cross-Encoder Reranking (FastEmbed)**: Runs locally on the FastAPI container CPU to re-score Qdrant's candidate chunks, pushing the most semantically relevant context to the top.
+
+**API Resilience & Cost Control**:
+- Ingestion endpoints are strictly rate-limited (`5/minute`) to prevent unbounded contextual indexing costs.
+- The `limit_upload_size` middleware validates chunked transfer-encoding requests (`411 Length Required`) to close nginx bypass loopholes.
+- Client disconnects actively cancel background LLM `gen_task` processes, ensuring aborted requests don't bleed API compute costs.
+- LLM Clients natively handle `429 RateLimit` backoffs (e.g. `max_retries=2`) to survive upstream throttle spikes.
 
 **Observability**: All LLM inputs/outputs are traced via Langfuse, and backend performance metrics/errors are captured by Sentry.
 
@@ -87,7 +94,10 @@ The frontend strictly renders citations mapping directly to the deterministic `c
 This repository utilizes GitHub Actions to execute a continuous integration pipeline on every push.
 
 - Spawns an ephemeral Qdrant service container.
-- Runs pytest integration suites to validate normalizer JSON extraction and Corrective RAG (CRAG) fallback logic.
+- Runs `pytest` integration suites to validate normalizer JSON extraction and Corrective RAG (CRAG) fallback logic.
+- Executes a full RAG evaluation harness against `aurora_qa.json`, validating custom regression tests.
+- Evaluates 8 robust quality metrics (including `recall_at_5`, `ndcg_at_10`, `retrieval_relevance`, and `answer_relevance`) through `check_regression.py`, catching regressions that basic accuracy checks miss.
+- Includes native resilience for `AnthropicRateLimitError` and `OpenAIRateLimitError` to survive rate limits during bulk evaluations.
 
 ## ⚠️ Limitations & Known Failure Modes
 Honestly stating unsupported inputs and known failure modes builds trust and makes your project highly credible.
