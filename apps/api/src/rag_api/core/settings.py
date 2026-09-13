@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     image_captioning_enabled: bool = False
     image_store_backend: str = "local"
     image_store_path: str = "./data/images"
-    vision_caption_model: str = "claude-sonnet-4-5"
+    vision_caption_model: str | None = None
     fetch_remote_html_images: bool = False
     sparse_index_provider: str = "in_memory"
     sparse_index_persist_dir: str = "/app/data/sparse_index"
@@ -109,7 +109,7 @@ class Settings(BaseSettings):
     query_decomposition_enabled: bool = True
     query_normalization_enabled: bool = True
     crag_expansion_enabled: bool = True
-    crag_threshold_upper: float = 0.80
+    crag_threshold_upper: float = 0.50
     crag_max_retries: int = 1
     context_pruning_threshold: float = 0.30
 

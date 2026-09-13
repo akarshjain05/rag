@@ -87,9 +87,17 @@ User question
 ```
 
 Depending on which optional stages are active, a single `/v1/ask` call can
-issue up to four sequential LLM round trips (condensation, HyDE, CRAG
-expansion, generation) plus a fifth for citation verification. See
-`README.md` for the plan to make each of these independently measurable and toggleable.
+issue up to **6-7 sequential LLM round trips** in the absolute worst case:
+1. Normalization
+2. Condensation (if in a multi-turn conversation)
+3. Multi-hop Decomposition (if complex)
+4. HyDE (if configured)
+5. CRAG Expansion (if initial retrieval scores low)
+6. Generation
+7. Verification
+*(Plus one additional LLM call per decomposed sub-query/retry if `RERANKER_PROVIDER=llm_judge` is set instead of the local cross-encoder).*
+
+See `README.md` for the plan to make each of these independently measurable and toggleable, and to implement strict per-request circuit breakers bounding runaway API costs.
 
 ## Deployment shape
 

@@ -119,10 +119,21 @@ def create_app(
     )
 
 
+    vision_model = settings.vision_caption_model or ("claude-3-5-sonnet-20241022" if settings.llm_provider == "anthropic" else "gpt-4o-mini")
+    vision_llm = build_llm_client(
+        provider=settings.llm_provider,
+        model=vision_model,
+        api_key=settings.anthropic_api_key if settings.llm_provider == "anthropic" else settings.openai_api_key,
+        base_url=settings.openai_base_url if settings.llm_provider == "openai" else None,
+        timeout=settings.llm_request_timeout_seconds,
+        input_cost_per_1m=settings.llm_input_cost_per_1m,
+        output_cost_per_1m=settings.llm_output_cost_per_1m,
+    )
+
     pipeline = IngestionPipeline(
         embedding_client,
         vector_store,
-        llm_client=llm_client,
+        llm_client=vision_llm,
         image_store=image_store_instance,
         default_strategy=ChunkingStrategy(settings.default_chunking_strategy),
         fixed_chunk_size=settings.fixed_chunk_size,
