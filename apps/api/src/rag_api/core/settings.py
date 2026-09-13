@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     citation_verifier_model: str | None = None
     normalizer_model: str | None = None
     llm_request_timeout_seconds: float = 30.0
+    llm_input_cost_per_1m: float = 0.0
+    llm_output_cost_per_1m: float = 0.0
     low_confidence_threshold: float = 0.3  # retrieval confidence below this skips generation entirely
     image_indexing_enabled: bool = False
     ocr_engine: str = "tesseract"
