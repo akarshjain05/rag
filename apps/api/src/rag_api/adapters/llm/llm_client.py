@@ -45,7 +45,8 @@ class AnthropicLLMClient(LLMClient):
 
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY is required for LLM_PROVIDER=anthropic")
-        self._client = Anthropic(api_key=api_key, timeout=timeout)
+        # Explicitly pin max_retries rather than relying on SDK defaults
+        self._client = Anthropic(api_key=api_key, timeout=timeout, max_retries=2)
         self._model = model
         self._max_tokens = max_tokens
         self._input_cost_per_1m = input_cost_per_1m
