@@ -144,7 +144,7 @@ class HybridRetriever:
         if self.reranker is None:
             return fused[:top_k]
             
-        rerank_query = original_query if original_query else query
+        rerank_query = rerank_query if rerank_query else query
         reranked_chunks = await asyncio.get_running_loop().run_in_executor(retrieval_executor, self.reranker.rerank, rerank_query, fused, fusion_pool_size)
         
         # Hard Cutoff Threshold: Drop chunks that the reranker identified as mathematically irrelevant.
@@ -197,6 +197,6 @@ class HybridRetriever:
                 top_k=top_k, 
                 chunking_strategy=chunking_strategy, 
                 dense_only=dense_only, 
-                original_query=original_query
+                rerank_query=rerank_query
             )
         )
