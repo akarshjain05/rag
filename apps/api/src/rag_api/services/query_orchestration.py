@@ -62,6 +62,10 @@ class QueryOrchestrationService:
         ))
         if cached_payload:
             log.info("semantic_cache.hit", query=search_query)
+            
+            # Log the metric for cache hits to ensure total_queries doesn't undercount
+            store.log_query_metrics(float(cached_payload.retrieval_confidence) if cached_payload.retrieval_confidence is not None else 0.0)
+            
             cached_sources = cached_payload.sources
             cid = payload.conversation_id or store.create_conversation()
             store.append_turn(cid, Turn(
